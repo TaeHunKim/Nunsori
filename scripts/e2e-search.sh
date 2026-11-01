@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Real-model search E2E on the emulator. Prereq: fixtures pushed (push-fixtures.sh), app installed, folder
-# Pictures/fixtures selected, EmbeddingGemma 2 downloaded and indexing finished (see CLAUDE.md).
-# Checks that the top hit of each (ASCII) query is the expected fixture. Korean queries: see CLAUDE.md.
+# Pictures/fixtures selected, EmbeddingGemma 2 downloaded and indexing finished (see AGENTS.md).
+# Checks that the top hit of each (ASCII) query is the expected fixture. Korean queries: see AGENTS.md.
 source "$(dirname "$0")/env.sh"
 fail=0
 name_of() { adb shell "content query --uri content://media/external/images/media/$1 --projection _display_name" | sed -E 's/.*_display_name=//; s/^copy[0-9]+_//' | tr -d '\r'; }

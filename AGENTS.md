@@ -1,0 +1,56 @@
+# Local Search Anything (Android)
+온디바이스 멀티모달 임베딩 + 시맨틱 검색 + 로컬 LLM RAG 앱. 패키지 `com.lsa.app`, Kotlin + Compose, minSdk 29 / target 36 / compile 37.
+
+## 문서 유지 규칙 (코드 구현 시 항상 적용)
+코드를 구현·수정할 때는 **같은 작업 안에서 관련 문서도 함께 갱신**하고, 코드와 문서를 같은 커밋에 넣는다. 갱신이 필요 없다고 판단하면 이유를 한 줄로 남긴다.
+
+| 변경 | 갱신할 문서 |
+|---|---|
+| 새 기능·화면·설정 | `README.md` + `README.ko.md`(기능 표), `docs/user-guide.md` |
+| 데이터 모델·파이프라인·패키지 구조 | `docs/architecture.md`, `docs/indexing.md` |
+| 랭킹·임계값·가중치 | `docs/search.md` |
+| 모델 추가·교체, 의존성, 라이선스 | `docs/models.md`, `THIRD_PARTY_NOTICES.md` |
+| 권한·네트워크·저장 데이터 | `docs/privacy.md` |
+| 빌드·스크립트·테스트 방법 | `docs/getting-started.md`, `docs/development.md` |
+| 계획·한계 변화 | `docs/roadmap.md` |
+
+- 영어판 README를 고치면 `README.ko.md`도 맞춘다. 문서에 적은 상수·경로는 코드와 일치하는지 확인한다.
+- 문서만 바꾼 변경은 코드 테스트를 다시 돌릴 필요 없지만 링크는 확인한다. 상세 설명은 `docs/`에 두고 이 파일에는 요약과 링크만 둔다.
+
+## 환경
+- JDK: Android Studio 내장 JBR (`scripts/env.sh`가 JAVA_HOME/ANDROID_HOME/PATH 설정). 셸에서 adb 등이 안 잡히면 `source scripts/env.sh`.
+- SDK: `~/Library/Android/sdk` (API 36 + 37.0 platform, NDK 28.2, CMake 3.31.6). AVD: `lsa_api36` (RAM 8GB, data 32GB).
+- MCP: `mobile-mcp` (.mcp.json) — 화면 스냅샷/탭/입력용. 빌드·로그는 아래 스크립트/gradlew 사용.
+
+## 워크플로우
+- `scripts/emu-start.sh [--window]` / `scripts/emu-stop.sh`
+- `scripts/run.sh` : installDebug + 앱 실행
+- `scripts/screenshot.sh` → `build/screens/*.png` (Read로 확인)
+- `scripts/logcat.sh [N]` : 앱 PID 로그 (죽었으면 에러 로그)
+- `scripts/push-fixtures.sh` : `test-fixtures/images/` → `/sdcard/Pictures/fixtures` (+MediaStore 스캔). 문서/음성/영상은 `/sdcard/Documents|Recordings|Movies/fixtures`에 직접 push
+- `./gradlew assembleDebug testDebugUnitTest` / `./gradlew connectedDebugAndroidTest`
+- 모델 파일(*.gguf, *.tflite, *.onnx 등)은 git 제외.
+
+## 앱 구조 (요약)
+이미지·텍스트·문서(PDF/Office)·음성·영상을 인덱싱하고 시맨틱 + 키워드로 검색한다. 모델은 APK에 넣지 않고 Settings에서 받는다(ML Kit OCR과 Silero VAD 0.6MB만 포함). 문자열은 `values/strings.xml`(en)과 `values-ko/strings.xml`(ko)의 키가 같아야 한다(`StringsParityTest`).
+- 데이터 `data/db`(`items` + `segments`, int8 벡터), 소스 `data/media`, 파이프라인 `indexing`(`IndexRunner.sync()`/`process()`, `pipelineKey`로 종류별 재처리), 검색 `search`(그룹별 상대 점수 + 키워드), 자동 인덱싱 `AutoIndexScheduler`, 모델 메모리 `ml/ModelResidency`.
+- 자세히: `docs/architecture.md`, `docs/indexing.md`, `docs/search.md`, `docs/models.md`.
+
+## 빌드 전 준비
+- `scripts/fetch-sherpa-onnx.sh`: sherpa-onnx AAR(`app/libs`)과 Silero VAD(`app/src/main/assets`)를 내려받는다. 둘 다 git에 올리지 않는다.
+
+## 조사 결과(Phase 0, 실측)
+- EmbeddingGemma 2 **740M만 오디오** 지원. `EmbeddingEngineConfig(audioBackend=…)`가 있어야 하고, 입력은 **WAV 바이트(16kHz mono)**. 한 입력은 **1024토큰 ≈ 40초**까지(30초 창 + 5초 겹침 사용).
+- `InputData.Image` 여러 장 리스트는 **벡터 1개**를 돌려준다(프레임별 평균과 코사인 0.90, 순서 무관). 클립당 최대 8장, 프레임당 `visionTokensPerImage=70`.
+- sherpa-onnx(SenseVoice int8 + Silero VAD)는 에뮬레이터에서 실시간의 ~2% 속도, 한국어·영어 인식 양호. 모델은 GitHub 릴리스 tar.bz2(163MB)라 앱이 받아 `ArchiveExtractor`로 푼다.
+
+## 실제 모델 E2E (에뮬레이터)
+- 테스트 파일은 커밋하지 않는다. 생성: `scripts/fetch-photo-fixtures.sh`, `uv run --with pillow scripts/make-text-fixtures.py`, `python3 scripts/make-doc-fixtures.py`, `uv run --with reportlab --with pillow --with python-docx --with python-pptx --with openpyxl scripts/make-office-fixtures.py`, `scripts/make-audio-fixtures.sh`(+ 영상은 ffmpeg로 장면 3개 mp4).
+- `scripts/e2e-setup.sh`(UI 구동 설정)는 `adb uiautomator`가 막히면 못 쓴다. 그 경우 mobile-mcp로 직접 진행. 검색은 `scripts/ui-search.sh "질의"`(영어) / mobile-mcp 입력 후 `scripts/search-result.sh`(한국어)로 결과 파일명을 확인.
+- 주의: `./gradlew connectedDebugAndroidTest`는 끝나고 앱을 제거해 받은 모델도 사라진다. 계측 테스트는 기기의 앱 설정에 의존하지 않게 작성한다.
+- 에뮬레이터는 CPU 추론. 실기기는 GPU 우선, 실패 시 CPU 폴백.
+
+## 한계
+- Office 문서는 폰에서 렌더링할 수 없어 텍스트 + 생성한 텍스트 카드 이미지만 쓴다. 구형 .doc/.ppt/.xls, hwp는 미지원.
+- 벡터는 메모리 전체 탐색(int8): 약 30만 세그먼트가 목표 규모. 키워드는 SQL LIKE(느려지면 FTS5 trigram 검토).
+- 영상은 장면/길이 기준 클립 임베딩이라 짧은 순간(몇 초 미만)은 놓칠 수 있다. 정밀도는 Settings에서 조절.
