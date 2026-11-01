@@ -11,6 +11,7 @@ import com.lsa.app.indexing.AutoIndexMode
 import com.lsa.app.indexing.ResidencyPolicy
 import com.lsa.app.indexing.video.VideoDetail
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore("settings")
@@ -24,6 +25,7 @@ class SettingsStore(private val context: Context) {
     private val kChargingOnly = booleanPreferencesKey("schedule_charging_only")
     private val kResidency = stringPreferencesKey("residency_policy")
     private val kOnboarding = booleanPreferencesKey("onboarding_done")
+    private val kLastVersion = intPreferencesKey("last_version_code")
     private val kAsr = stringPreferencesKey("asr_model_id")
     private val kSkipMusic = booleanPreferencesKey("skip_music")
     private val kVideoDetail = stringPreferencesKey("video_detail")
@@ -72,6 +74,10 @@ class SettingsStore(private val context: Context) {
             it[kOnboarding] = true
         }
     }
+
+    /** App version code the settings were last upgraded to; 0 on a fresh install. */
+    suspend fun lastVersionCode(): Int = context.dataStore.data.first()[kLastVersion] ?: 0
+    suspend fun setLastVersionCode(v: Int) { context.dataStore.edit { it[kLastVersion] = v } }
 
     /** Test hook: show the first-run dialog again. */
     suspend fun clearOnboardingForTest() { context.dataStore.edit { it.remove(kOnboarding) } }

@@ -45,6 +45,7 @@ flowchart TD
 | `indexing` | `IndexRunner`, `ItemSession`, `IndexingController`, `IndexingWorker`, `AutoIndexScheduler`, `PipelineKeys`, `ImageExtractor` |
 | `indexing/text` | `TextExtractor`, `TextChunker`, `MarkdownChunker`, `TextFormats`, `TextDecoder`, `TextRouting` |
 | `indexing/docs` | `PdfExtractor`, `PdfText`, `OfficeExtractor`, `OfficeParsers`, `TextCard`, `ThumbStore`, `ZipSource` |
+| `indexing/places` | `PlaceFinder`: offline GPS to place name (GeoNames cities, English and Korean) |
 | `indexing/audio` | `AudioExtractor`, `AudioDecoder`, `Pcm` (window planning), `SpeechTools` |
 | `indexing/video` | `VideoExtractor`, `VideoClips` |
 | `ml`, `ml/embedding`, `ml/ocr` | `ModelResidency`, `Embedder` and `EmbeddingGemma2Embedder`, `OcrEngine` and `MlKitOcrEngine` |
@@ -58,7 +59,7 @@ Defined in `data/db/Entities.kt`.
 
 **`items`** (one row per file): `sourceKey` (unique id of the source file), `kind` (`IMAGE, TEXT, DOC, AUDIO, VIDEO`), `uri`, `folderKey`
 (same form as MediaStore `RELATIVE_PATH`), `displayName`, `mimeType`, `sizeBytes`, `modifiedAt`, `title`, `durationMs`, `pageCount`,
-`width/height`, `dateTaken`, `latitude/longitude`, `status` (`IN_PROGRESS, DONE, FAILED, SKIPPED`), `error`, `embeddingModelId`,
+`width/height`, `dateTaken`, `latitude/longitude`, `place` (searchable place names, v3), `status` (`IN_PROGRESS, DONE, FAILED, SKIPPED`), `error`, `embeddingModelId`,
 `pipelineKey`, `progress`, `indexedAt`.
 
 **`segments`** (what is searched): `itemId`, `type`, `ordinal`, `startMs/endMs` (audio, video), `page`, `text`, `embedding`, `thumbPath`.
@@ -78,7 +79,9 @@ Defined in `data/db/Entities.kt`.
 
 **Vector format.** int8, stored as `[scale: float32][int8 × dim]` (`Quant`), 768 dims. Dot products are done in memory over all vectors.
 
-**Migrations.** `Migrations.kt` holds v1 to v2. Schema changes must ship a migration; derived data that can be recomputed is handled by `pipelineKey` instead.
+**Migrations.** The schema is at **v3** (`AppDatabase.VERSION`; v3 added `items.place`). `Migrations.kt` holds `MIGRATION_1_2`, `MIGRATION_2_3` and the ordered `ALL_MIGRATIONS` list that `LsaApplication` registers. There is no destructive fallback on upgrade; only a downgrade (older build over a newer one) rebuilds the index, because it is derived data. Derived data that can be recomputed without a schema change is handled by `pipelineKey` instead. Policy: [development.md](development.md#schema-and-version-changes).
+
+**App upgrades.** `AppUpgrade.run` (called from `LsaApplication`) compares the stored `last_version_code` with `BuildConfig.VERSION_CODE` and runs per-release steps for settings or file-layout changes. Auto Backup is disabled (`allowBackup="false"`): the index is derived and a restored database would not match missing thumbnails and models.
 
 ## 5. Indexing flow
 

@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Single place to bump the app version: major.minor.patch, versionCode = major*10000 + minor*100 + patch.
+val appVersionName = "0.2.0"
+val appVersionCode = appVersionName.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
+
 android {
     namespace = "com.lsa.app"
     compileSdk = 37
@@ -12,11 +16,11 @@ android {
         applicationId = "com.lsa.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = appVersionCode
+        versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     defaultConfig { ndk { abiFilters += listOf("arm64-v8a") } }
     androidResources { generateLocaleConfig = true }
     packaging { jniLibs { useLegacyPackaging = true } }

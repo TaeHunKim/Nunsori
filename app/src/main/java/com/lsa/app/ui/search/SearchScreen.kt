@@ -38,6 +38,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,12 +65,13 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.lsa.app.R
 import com.lsa.app.data.db.ItemStatus
 import com.lsa.app.rememberContainer
+import com.lsa.app.search.MetaMatch
 import com.lsa.app.ui.common.ItemDetailSheet
 import com.lsa.app.ui.common.ItemThumb
 import com.lsa.app.ui.common.locationLabel
 import com.lsa.app.ui.common.WarningCard
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(onOpenSettings: () -> Unit) {
     val container = rememberContainer()
@@ -88,6 +97,9 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { vm.search() }),
         )
+        FilterBar(vm)
+        val stale by vm.staleCount.collectAsStateWithLifecycle()
+        if (stale > 0) WarningCard(pluralStringResource(R.plurals.search_reindexing, stale, stale))
         when (val s = state) {
             SearchUi.Idle -> Hint(stringResource(R.string.search_idle))
             SearchUi.Loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
@@ -149,6 +161,11 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
                                     r.hit.textSim?.let { Badge(stringResource(R.string.badge_ocr), "%.2f".format(it)) }
                                     r.hit.audioSim?.let { Badge(stringResource(R.string.badge_audio), "%.2f".format(it)) }
                                     if (r.hit.keywordMatches > 0) Badge(stringResource(R.string.badge_keyword), null)
+                                    when (r.hit.metaMatch) {
+                                        MetaMatch.PLACE -> Badge(stringResource(R.string.badge_place), null)
+                                        MetaMatch.NAME -> Badge(stringResource(R.string.badge_name), null)
+                                        null -> {}
+                                    }
                                 }
                                 Text(
                                     listOfNotNull(r.summary.displayName, locationLabel(r.hit.best?.page, r.hit.best?.startMs)).joinToString(" · "),
@@ -180,5 +197,57 @@ private fun Badge(label: String, value: String?) {
             style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterBar(vm: SearchViewModel) {
+    var pickRange by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(
+                FileCategory.DOCUMENT to R.string.filter_documents, FileCategory.IMAGE to R.string.filter_images,
+                FileCategory.AUDIO to R.string.filter_audio, FileCategory.VIDEO to R.string.filter_video,
+            ).forEach { (cat, label) ->
+                FilterChip(selected = cat in vm.categories, onClick = { vm.toggleCategory(cat) }, label = { Text(stringResource(label)) })
+            }
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(
+                DatePreset.ALL to R.string.date_all, DatePreset.TODAY to R.string.date_today, DatePreset.WEEK to R.string.date_7d,
+                DatePreset.MONTH to R.string.date_30d, DatePreset.YEAR to R.string.date_year,
+            ).forEach { (p, label) ->
+                FilterChip(selected = vm.datePreset == p, onClick = { vm.selectDate(p) }, label = { Text(stringResource(label)) })
+            }
+            FilterChip(
+                selected = vm.datePreset == DatePreset.CUSTOM, onClick = { pickRange = true },
+                label = {
+                    val r = vm.customRange
+                    Text(
+                        if (vm.datePreset == DatePreset.CUSTOM && r != null) {
+                            val f = android.text.format.DateFormat.getMediumDateFormat(LocalContext.current)
+                            "${f.format(r.first)} - ${f.format(r.second)}"
+                        } else stringResource(R.string.date_custom),
+                    )
+                },
+            )
+        }
+    }
+    if (pickRange) {
+        val state = rememberDateRangePickerState()
+        DatePickerDialog(
+            onDismissRequest = { pickRange = false },
+            confirmButton = {
+                TextButton(
+                    enabled = state.selectedStartDateMillis != null,
+                    onClick = {
+                        val s = state.selectedStartDateMillis!!
+                        vm.setCustomRange(s, state.selectedEndDateMillis ?: s); pickRange = false
+                    },
+                ) { Text(stringResource(R.string.dialog_ok)) }
+            },
+            dismissButton = { TextButton(onClick = { pickRange = false }) { Text(stringResource(R.string.action_cancel)) } },
+        ) { DateRangePicker(state, Modifier.padding(top = 8.dp), showModeToggle = false) }
     }
 }

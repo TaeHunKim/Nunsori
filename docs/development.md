@@ -26,6 +26,7 @@ Setup: [getting-started.md](getting-started.md). Design: [architecture.md](archi
 | `push-fixtures.sh` | `test-fixtures/images` to `/sdcard/Pictures/fixtures` and MediaStore scan |
 | `fetch-sherpa-onnx.sh` | sherpa-onnx AAR and Silero VAD |
 | `goto-search.sh`, `ui-search.sh`, `ui-tap.sh`, `search-result.sh`, `e2e-search.sh`, `e2e-setup.sh` | UI automation helpers for E2E |
+| `make-places.py` | Rebuild `app/src/main/assets/places.tsv.gz` from GeoNames (downloads about 210 MB to `build/places-src`; the result is committed) |
 | `fetch-photo-fixtures.sh`, `make-text-fixtures.py`, `make-doc-fixtures.py`, `make-office-fixtures.py`, `make-audio-fixtures.sh` | Generate fixtures |
 
 ## Fixtures
@@ -47,6 +48,18 @@ Push documents, audio and video to `/sdcard/Documents|Recordings|Movies/fixtures
 - Log tags: `LSA.Residency`, `LSA.Auto`, `LSA.Search`.
 - Inspect the DB: `adb shell "run-as com.lsa.app sqlite3 databases/lsa.db 'select status,count(*) from items group by status'"`.
 - mobile-mcp (`.mcp.json`) lists screen elements and taps; the first-run dialog is a separate window and may need coordinate taps.
+
+## Schema and version changes
+
+Version: `appVersionName` in `app/build.gradle.kts` (`major.minor.patch`); `versionCode = major*10000 + minor*100 + patch`. Settings show the app and database version.
+
+Any change to an `@Entity` must, in the same commit:
+1. bump `AppDatabase.VERSION`,
+2. add `MIGRATION_n_n+1` in `data/db/Migrations.kt` and append it to `ALL_MIGRATIONS`,
+3. commit the generated `app/schemas/.../n+1.json`,
+4. add a migration test in `MigrationTest` (the chain test `everyExportedSchemaMigratesToTheLatestVersion` fails if one is missing).
+
+Never use `fallbackToDestructiveMigration` for upgrades. Changes that only affect derived output go into `PipelineKeys` instead (reprocesses just that kind). Settings or file-layout changes go into a step in `AppUpgrade`. To test an upgrade by hand, index with the previous build, then `adb install -r` the new one.
 
 ## Conventions
 

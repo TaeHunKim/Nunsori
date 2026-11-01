@@ -261,6 +261,11 @@ fun SettingsScreen() {
         }
         HorizontalDivider()
 
+        // --- About
+        Section(R.string.about_title, null)
+        Text(stringResource(R.string.about_version, com.lsa.app.BuildConfig.VERSION_NAME, com.lsa.app.data.db.AppDatabase.VERSION))
+        Text(stringResource(R.string.about_places_credit), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
         // --- HF token
         Section(R.string.settings_token, R.string.settings_token_desc)
         var token by remember(savedToken) { mutableStateOf(savedToken) }

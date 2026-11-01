@@ -5,7 +5,9 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lsa.app.data.db.AppDatabase
+import com.lsa.app.data.db.ALL_MIGRATIONS
 import com.lsa.app.data.db.MIGRATION_1_2
+import com.lsa.app.data.db.MIGRATION_2_3
 import com.lsa.app.ml.embedding.Quant
 import com.lsa.app.ml.embedding.VectorMath
 import org.junit.Assert.assertArrayEquals
@@ -65,5 +67,30 @@ class MigrationTest {
         }
         db.query("SELECT recursive FROM indexed_folders").use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
         db.query("SELECT name FROM sqlite_master WHERE name = 'images'").use { assertEquals("old table dropped", 0, it.count) }
+    }
+    private val itemV2 = """INSERT INTO items (sourceKey, kind, uri, folderKey, displayName, mimeType, sizeBytes, modifiedAt, title, durationMs,
+        pageCount, width, height, dateTaken, latitude, longitude, status, error, embeddingModelId, pipelineKey, progress, indexedAt)
+        VALUES ('ms:image:7', 'IMAGE', 'content://m/7', 'Pictures/', 'dubai.jpg', 'image/jpeg', 10, 1, NULL, NULL, NULL, 10, 10, 5,
+        25.2, 55.3, 'DONE', NULL, 'eg2-440m', 'eg2-440m|mlkit-ko|c1', 1, 1)"""
+
+    @Test fun v2ToV3AddsAnEmptyPlaceColumnAndKeepsRows() {
+        helper.createDatabase("mig23", 2).apply { execSQL(itemV2); close() }
+        val db = helper.runMigrationsAndValidate("mig23", 3, true, MIGRATION_2_3)
+        db.query("SELECT displayName, latitude, place FROM items").use { c ->
+            assertEquals(1, c.count); c.moveToFirst()
+            assertEquals("dubai.jpg", c.getString(0)); assertEquals(25.2, c.getDouble(1), 0.0001)
+            assertTrue("existing rows get place = NULL until the backfill runs", c.isNull(2))
+        }
+    }
+
+    /** Fails when an entity changes without a migration: every exported schema must reach the latest version. */
+    @Test fun everyExportedSchemaMigratesToTheLatestVersion() {
+        for (from in 2 until AppDatabase.VERSION) {
+            val name = "chain$from"
+            helper.createDatabase(name, from).apply { execSQL(itemV2); close() }
+            helper.runMigrationsAndValidate(name, AppDatabase.VERSION, true, *ALL_MIGRATIONS).close()
+        }
+        helper.createDatabase("chain1", 1).close()
+        helper.runMigrationsAndValidate("chain1", AppDatabase.VERSION, true, *ALL_MIGRATIONS).close()
     }
 }

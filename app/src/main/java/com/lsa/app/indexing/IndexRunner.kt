@@ -1,6 +1,7 @@
 package com.lsa.app.indexing
 
 import com.lsa.app.data.db.ItemDao
+import com.lsa.app.indexing.places.PlaceFinder
 import com.lsa.app.data.db.ItemEntity
 import com.lsa.app.data.db.ItemKind
 import com.lsa.app.data.db.ItemState
@@ -78,6 +79,8 @@ class IndexRunner(
     private val dao: ItemDao,
     private val source: ItemSource,
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Turns GPS positions into searchable place names; null disables it. */
+    private val places: PlaceFinder? = null,
 ) {
     /**
      * @param kinds kinds that were looked at; rows of other kinds are left alone.
@@ -89,6 +92,7 @@ class IndexRunner(
         kinds: Set<ItemKind>,
         pipelineKey: (ItemKind) -> String,
     ): IndexPlan {
+        backfillPlaces()
         val entries = source.list(folders, kinds).filter { it.kind in kinds }
         val states = dao.states().filter { it.kind in kinds }.associateBy { it.sourceKey }
 
@@ -176,6 +180,12 @@ class IndexRunner(
         }
     }
 
+    /** Fills `place` for rows that have a position but no name yet (older rows, or places added after indexing). Needs no model. */
+    private suspend fun backfillPlaces() {
+        val finder = places ?: return
+        for (g in dao.itemsNeedingPlace()) dao.updatePlace(g.itemId, finder.find(g.lat, g.lon) ?: "")
+    }
+
     private fun newItem(e: SourceEntry, modelId: String, key: String) = ItemEntity(
         sourceKey = e.sourceKey, kind = e.kind, uri = e.uri.toString(), folderKey = e.folderKey,
         displayName = e.displayName, mimeType = e.mimeType, sizeBytes = e.sizeBytes, modifiedAt = e.modifiedAt,
@@ -186,7 +196,7 @@ class IndexRunner(
 
     private inner class DbSink(private val itemId: Long) : ItemSink {
         override suspend fun meta(title: String?, latitude: Double?, longitude: Double?, durationMs: Long?, pageCount: Int?) =
-            dao.updateMeta(itemId, title, latitude, longitude, durationMs, pageCount)
+            dao.updateMeta(itemId, title, latitude, longitude, durationMs, pageCount, place = if (latitude != null && longitude != null) places?.find(latitude, longitude) ?: "" else null)
 
         override suspend fun segments(segments: List<NewSegment>, progress: Long) {
             dao.insertSegments(

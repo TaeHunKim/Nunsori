@@ -64,3 +64,13 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         stmt.close()
     }
 }
+
+/** v3 adds searchable place names derived from the GPS position (filled by IndexRunner.sync for existing rows). */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `items` ADD COLUMN `place` TEXT")
+    }
+}
+
+/** Every migration, in order. Register new ones here only; the chain test in MigrationTest walks all exported schemas. */
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)

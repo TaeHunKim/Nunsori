@@ -21,7 +21,7 @@ An Android app that indexes the files on your phone with on-device multimodal em
 | Audio | Speech transcript (SenseVoice); audio clip embeddings (740M model) | Spoken words, sound, time |
 | Video | Scene clips (up to 8 frames each) + speech transcript | Visual content, speech, time |
 
-Also: hybrid ranking (semantic + exact keywords), share/open results, automatic indexing (manual, immediate, scheduled, idle), model memory control, English and Korean UI, dark mode.
+Also: hybrid ranking (meaning + exact words + photo place names such as "Dubai"), filters by file kind and date, share/open results, automatic indexing (manual, immediate, scheduled, idle), model memory control, English and Korean UI, dark mode.
 
 ## How it works
 

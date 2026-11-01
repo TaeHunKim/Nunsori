@@ -6,6 +6,8 @@
 - Additional models: MobileCLIP2-S0 (listed, not implemented), PP-OCRv5.
 - Real-device performance measurements (GPU/NPU paths, thermal behaviour).
 - Multiple embedding models at the same time.
+- Embed place names as text segments (`PLACE_TEXT`) for fuzzy place queries; skipped for now because name matching plus aliases covers the common cases.
+- Geotags for videos.
 
 ## Possible scaling work
 

@@ -37,6 +37,9 @@
     <string name="onboarding_confirm">Continue</string>
 
     <!-- Model memory -->
+    <string name="about_title">About</string>
+    <string name="about_version">Version %1$s (database v%2$d)</string>
+    <string name="about_places_credit">Place names: GeoNames (CC BY 4.0).</string>
     <string name="residency_title">Model memory</string>
     <string name="residency_desc">How long the AI models stay loaded in memory after use.</string>
     <string name="residency_idle">Unload after 2 minutes idle</string>
@@ -118,10 +121,26 @@
     </plurals>
     <string name="select_all">Select all</string>
 
-    <string name="search_hint">Search your photos…</string>
-    <string name="search_idle">Describe what you are looking for, or type text that appears in an image.</string>
+    <string name="search_hint">Search your files…</string>
+    <string name="search_idle">Describe what you are looking for, or type words, a place or a file name.</string>
     <string name="search_no_results">No results.</string>
     <string name="search_model_missing">Embedding model not installed — showing keyword matches only.</string>
+    <string name="filter_documents">Documents</string>
+    <string name="filter_images">Images</string>
+    <string name="filter_audio">Audio</string>
+    <string name="filter_video">Video</string>
+    <string name="date_all">Any date</string>
+    <string name="date_today">Today</string>
+    <string name="date_7d">Last 7 days</string>
+    <string name="date_30d">Last 30 days</string>
+    <string name="date_year">This year</string>
+    <string name="date_custom">Pick dates…</string>
+    <string name="badge_place">Place</string>
+    <string name="badge_name">Name</string>
+    <plurals name="search_reindexing">
+        <item quantity="one">Re-indexing: %d file is not searchable yet.</item>
+        <item quantity="other">Re-indexing: %d files are not searchable yet.</item>
+    </plurals>
     <string name="badge_image">Image</string>
     <string name="badge_ocr">Text</string>
     <string name="badge_audio">Audio</string>

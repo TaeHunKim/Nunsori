@@ -19,6 +19,12 @@ It uses the components below. Versions come from [`gradle/libs.versions.toml`](g
 | jsoup | 1.23.2 | MIT |
 | ML Kit Text Recognition (Korean) | 16.0.1 | [ML Kit Terms of Service](https://developers.google.com/ml-kit/terms) (proprietary; fetched through Gradle, not redistributed in this repository) |
 
+## Data bundled in the app
+
+| Data | License |
+|---|---|
+| Place names for photo locations: `app/src/main/assets/places.tsv.gz`, built by `scripts/make-places.py` from [GeoNames](https://www.geonames.org) `cities15000`, alternate names and country info (about 34,000 cities, English and Korean names) | CC BY 4.0, attribution shown in Settings > About |
+
 ## Models
 
 No model is stored in this repository. The app downloads them at the user's request (Settings), except Silero VAD, which

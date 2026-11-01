@@ -8,7 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.room.Room
 import com.lsa.app.data.db.AppDatabase
-import com.lsa.app.data.db.MIGRATION_1_2
+import com.lsa.app.data.db.ALL_MIGRATIONS
 import com.lsa.app.data.media.CompositeSource
 import com.lsa.app.data.media.FileSource
 import com.lsa.app.data.media.MediaStoreRepository
@@ -24,6 +24,7 @@ import com.lsa.app.models.ModelState
 import com.lsa.app.indexing.AutoIndexScheduler
 import com.lsa.app.indexing.docs.ThumbStore
 import com.lsa.app.indexing.IndexRunner
+import com.lsa.app.indexing.places.PlaceFinder
 import com.lsa.app.ml.ModelResidency
 import com.lsa.app.models.ModelManager
 import com.lsa.app.search.SearchEngine
@@ -32,7 +33,9 @@ class AppContainer(val context: Context) {
     /** Lives as long as the process; used for background housekeeping (model unloading, schedule updates). */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    val db: AppDatabase by lazy { Room.databaseBuilder(context, AppDatabase::class.java, "lsa.db").addMigrations(MIGRATION_1_2).build() }
+    val db: AppDatabase by lazy { Room.databaseBuilder(context, AppDatabase::class.java, "lsa.db").addMigrations(*ALL_MIGRATIONS)
+            // The index is derived data: after a downgrade (older build installed over a newer one) rebuilding beats crashing.
+            .fallbackToDestructiveMigrationOnDowngrade(true).build() }
     val settings = SettingsStore(context)
     val modelManager = ModelManager(context, settings)
     val mediaRepo = MediaStoreRepository(context).also { repo -> appScope.launch { settings.skipMusic.collect { repo.skipMusic = it } } }
@@ -45,7 +48,8 @@ class AppContainer(val context: Context) {
             FileSource(Environment.getExternalStorageDirectory()) { Environment.isExternalStorageManager() },
         ),
     )
-    val indexRunner by lazy { IndexRunner(db.itemDao(), source) }
+    val places by lazy { PlaceFinder.fromAssets(context) }
+    val indexRunner by lazy { IndexRunner(db.itemDao(), source, places = places) }
     val indexing by lazy { IndexingController(context, db.itemDao(), indexRunner, settings, modelManager) }
     val autoIndex = AutoIndexScheduler(
         context, settings, appScope,
@@ -68,6 +72,7 @@ class LsaApplication : Application() {
         container = AppContainer(this)
         Notifications.ensureChannels(this)
         container.autoIndex.start()
+        container.appScope.launch { AppUpgrade.run(container.settings, container.db.itemDao(), BuildConfig.VERSION_CODE) }
     }
 
     @Deprecated("Deprecated in Java")

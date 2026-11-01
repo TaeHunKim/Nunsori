@@ -37,6 +37,9 @@
     <string name="onboarding_confirm">계속</string>
 
     <!-- Model memory -->
+    <string name="about_title">정보</string>
+    <string name="about_version">버전 %1$s (데이터베이스 v%2$d)</string>
+    <string name="about_places_credit">장소 이름: GeoNames (CC BY 4.0).</string>
     <string name="residency_title">모델 메모리</string>
     <string name="residency_desc">AI 모델을 사용한 뒤 메모리에 얼마나 올려 둘지 정합니다.</string>
     <string name="residency_idle">2분간 안 쓰면 해제</string>
@@ -115,10 +118,25 @@
     </plurals>
     <string name="select_all">전체 선택</string>
 
-    <string name="search_hint">사진 검색…</string>
-    <string name="search_idle">찾고 싶은 장면을 설명하거나, 이미지 속 글자를 입력해 보세요.</string>
+    <string name="search_hint">파일 검색…</string>
+    <string name="search_idle">찾고 싶은 내용을 설명하거나, 단어·장소·파일 이름을 입력해 보세요.</string>
     <string name="search_no_results">검색 결과가 없습니다.</string>
     <string name="search_model_missing">임베딩 모델이 설치되어 있지 않아 키워드 일치 결과만 표시합니다.</string>
+    <string name="filter_documents">문서</string>
+    <string name="filter_images">이미지</string>
+    <string name="filter_audio">오디오</string>
+    <string name="filter_video">동영상</string>
+    <string name="date_all">전체 기간</string>
+    <string name="date_today">오늘</string>
+    <string name="date_7d">최근 7일</string>
+    <string name="date_30d">최근 30일</string>
+    <string name="date_year">올해</string>
+    <string name="date_custom">기간 선택…</string>
+    <string name="badge_place">장소</string>
+    <string name="badge_name">이름</string>
+    <plurals name="search_reindexing">
+        <item quantity="other">재색인 중: %d개 파일은 아직 검색되지 않습니다.</item>
+    </plurals>
     <string name="badge_image">이미지</string>
     <string name="badge_ocr">텍스트</string>
     <string name="badge_audio">오디오</string>

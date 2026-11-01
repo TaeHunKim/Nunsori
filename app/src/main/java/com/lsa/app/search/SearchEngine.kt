@@ -2,6 +2,7 @@ package com.lsa.app.search
 
 import android.util.Log
 import com.lsa.app.data.db.ItemDao
+import com.lsa.app.data.db.ItemKind
 import com.lsa.app.data.db.SegmentType
 import com.lsa.app.data.db.SignalGroup
 import com.lsa.app.data.db.VectorRow
@@ -24,7 +25,16 @@ data class SearchHit(
     val keywordMatches: Int,
     val exactKeyword: Boolean,
     val snippet: String?,
+    /** Which metadata matched the query (place, file name or title), if any. */
+    val metaMatch: MetaMatch? = null,
 )
+
+enum class MetaMatch { PLACE, NAME }
+
+/** Hard filters applied before scoring. Empty [kinds] means all kinds; dates are epoch milliseconds (taken date, else modified date). */
+data class SearchFilter(val kinds: Set<ItemKind> = emptySet(), val fromMs: Long? = null, val toMs: Long? = null) {
+    val active: Boolean get() = kinds.isNotEmpty() || fromMs != null || toMs != null
+}
 
 data class SearchResult(val hits: List<SearchHit>, val semanticAvailable: Boolean)
 
@@ -60,15 +70,27 @@ class SearchEngine(
         var exact = false
         var snippet: String? = null
         var kwRef: SegmentRef? = null
+        var metaScore = 0f
+        var metaExact = false
+        var metaField: MetaMatch? = null
         /** Best matching video clip, to narrow down where in a video a transcript hit happened. */
         var clipRef: SegmentRef? = null
         var clipScore = 0f
     }
 
-    suspend fun search(query: String, limit: Int = 50): SearchResult {
+    suspend fun search(query: String, filter: SearchFilter = SearchFilter(), limit: Int = 50): SearchResult {
         val q = query.trim()
-        if (q.isEmpty()) return SearchResult(emptyList(), true)
+        val kinds = filter.kinds.ifEmpty { ItemKind.entries.toSet() }.toList()
+        if (q.isEmpty()) {
+            // Filters without a query: browse, newest first.
+            if (!filter.active) return SearchResult(emptyList(), true)
+            val ids = dao.browseItemIds(kinds, filter.fromMs ?: Long.MIN_VALUE, filter.toMs ?: Long.MAX_VALUE, BROWSE_LIMIT)
+            return SearchResult(ids.map { SearchHit(it, 0f, null, null, null, null, 0, false, null) }, true)
+        }
         loadCache(settings.embeddingModelId.first())
+        // Filter before scoring so the score distributions (see Fusion) are those of the filtered set.
+        val allowed: Set<Long>? =
+            if (filter.active) dao.allowedItemIds(kinds, filter.fromMs ?: Long.MIN_VALUE, filter.toMs ?: Long.MAX_VALUE).toHashSet() else null
 
         val qVec = queryEmbedder(q)
         val acc = HashMap<Long, Acc>()
@@ -78,6 +100,7 @@ class SearchEngine(
             val sims = SignalGroup.entries.map { HashMap<Long, Float>() }
             val byId = HashMap<Long, VectorRow>(vectors.size)
             for (v in vectors) {
+                if (allowed != null && v.itemId !in allowed) continue
                 sims[v.type.group.ordinal][v.segId] = Quant.dot(qVec, v.embedding)
                 byId[v.segId] = v
             }
@@ -108,6 +131,7 @@ class SearchEngine(
             for (t in tokens) {
                 for (row in dao.textCandidates("%" + escapeLike(t) + "%", KEYWORD_CANDIDATES)) {
                     if (!seen.add(row.segId)) continue
+                    if (allowed != null && row.itemId !in allowed) continue
                     val m = KeywordMatcher.match(row.text, tokens, q) ?: continue
                     val score = if (m.exact) 1f else 0.5f + 0.5f * (m.count.toFloat() / tokens.size)
                     val a = accOf(row.itemId)
@@ -122,9 +146,30 @@ class SearchEngine(
             }
         }
 
+        if (tokens.isNotEmpty()) {
+            val seenItems = HashSet<Long>()
+            for (t in tokens) {
+                for (row in dao.metaCandidates("%" + escapeLike(t) + "%", META_CANDIDATES)) {
+                    if (!seenItems.add(row.itemId)) continue
+                    if (allowed != null && row.itemId !in allowed) continue
+                    val place = row.place?.takeIf { it.isNotBlank() }?.let { KeywordMatcher.match(it, tokens, q) }
+                    val name = KeywordMatcher.match(listOfNotNull(row.displayName, row.title).joinToString(" "), tokens, q)
+                    val placeScore = place?.let { if (it.exact) 1f else 0.5f + 0.5f * (it.count.toFloat() / tokens.size) } ?: 0f
+                    val nameScore = name?.let { if (it.exact) 1f else 0.5f + 0.5f * (it.count.toFloat() / tokens.size) } ?: 0f
+                    val a = accOf(row.itemId)
+                    a.metaScore = maxOf(placeScore, nameScore)
+                    a.metaField = if (placeScore >= nameScore) MetaMatch.PLACE else MetaMatch.NAME
+                    a.metaExact = (if (placeScore >= nameScore) place else name)?.exact == true
+                }
+            }
+        }
+
         val hits = acc.values.map { a ->
-            var score = W_KEYWORD * a.kwScore
+            var score = W_KEYWORD * a.kwScore + W_META * a.metaScore
             for (g in SignalGroup.entries) score += g.weight * a.groupScore[g.ordinal]
+            // Several kinds of evidence agreeing (meaning + place, meaning + words, ...) beat one strong signal alone.
+            val signals = SignalGroup.entries.count { a.groupScore[it.ordinal] > 0f } + (if (a.kwScore > 0f) 1 else 0) + (if (a.metaScore > 0f) 1 else 0)
+            if (signals > 1) score += AGREEMENT_BONUS * (signals - 1)
             SearchHit(
                 itemId = a.itemId,
                 score = score,
@@ -134,8 +179,9 @@ class SearchEngine(
                 textSim = a.groupSim[SignalGroup.TEXT.ordinal],
                 audioSim = a.groupSim[SignalGroup.AUDIO.ordinal],
                 keywordMatches = a.kwMatches,
-                exactKeyword = a.exact,
+                exactKeyword = a.exact || a.metaExact,
                 snippet = a.snippet,
+                metaMatch = if (a.metaScore > 0f) a.metaField else null,
             )
         }.filter { it.score > 0f }
             .let { all ->
@@ -181,5 +227,10 @@ class SearchEngine(
         const val W_TEXT = 0.8f
         const val W_AUDIO = 0.8f
         const val W_KEYWORD = 1.2f
+        const val W_META = 1.0f
+        /** Added once per additional kind of signal (visual, text, audio, keyword, metadata) that matched an item. */
+        const val AGREEMENT_BONUS = 0.15f
+        const val META_CANDIDATES = 2000
+        const val BROWSE_LIMIT = 100
     }
 }

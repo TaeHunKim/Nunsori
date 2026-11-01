@@ -17,6 +17,9 @@
 - 영어판 README를 고치면 `README.ko.md`도 맞춘다. 문서에 적은 상수·경로는 코드와 일치하는지 확인한다.
 - 문서만 바꾼 변경은 코드 테스트를 다시 돌릴 필요 없지만 링크는 확인한다. 상세 설명은 `docs/`에 두고 이 파일에는 요약과 링크만 둔다.
 
+## 스키마·버전 규칙
+`@Entity`를 바꾸면 같은 커밋에서 `AppDatabase.VERSION` 증가 + `Migrations.kt`의 Migration 추가(`ALL_MIGRATIONS`에 등록) + `app/schemas` JSON 커밋 + `MigrationTest` 보강. 업그레이드 경로에 destructive 폴백 금지. 설정·파일 레이아웃 변경은 `AppUpgrade`, 파생 데이터 변경은 `PipelineKeys`. 앱 버전은 `app/build.gradle.kts`의 `appVersionName` 한 곳에서 올린다. 자세히: `docs/development.md`.
+
 ## 환경
 - JDK: Android Studio 내장 JBR (`scripts/env.sh`가 JAVA_HOME/ANDROID_HOME/PATH 설정). 셸에서 adb 등이 안 잡히면 `source scripts/env.sh`.
 - SDK: `~/Library/Android/sdk` (API 36 + 37.0 platform, NDK 28.2, CMake 3.31.6). AVD: `lsa_api36` (RAM 8GB, data 32GB).

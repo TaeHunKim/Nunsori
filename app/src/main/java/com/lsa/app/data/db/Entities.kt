@@ -67,6 +67,8 @@ data class ItemEntity(
     /** Resume position while [ItemStatus.IN_PROGRESS] (page index, milliseconds, ...). */
     val progress: Long,
     val indexedAt: Long,
+    /** Searchable place names (city and country in English and Korean) derived from [latitude]/[longitude]; null when unknown. */
+    val place: String? = null,
 )
 
 /** One searchable unit of an item: a chunk of text, a page, an audio window, a video clip, ... */
@@ -151,5 +153,9 @@ data class TextRow(
     val page: Int?,
     val text: String,
 )
+
+data class MetaRow(val itemId: Long, val displayName: String, val title: String?, val place: String?)
+
+data class GeoPoint(val itemId: Long, val lat: Double, val lon: Double)
 
 data class SegText(val segId: Long, val text: String)

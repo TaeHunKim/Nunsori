@@ -12,7 +12,9 @@ import com.lsa.app.data.db.SegmentEntity
 import com.lsa.app.data.db.SegmentType
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.ml.embedding.Quant
+import com.lsa.app.search.MetaMatch
 import com.lsa.app.search.SearchEngine
+import com.lsa.app.search.SearchFilter
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -42,13 +44,13 @@ class SearchEngineTest {
 
     private fun v(vararg x: Float) = Quant.encode(com.lsa.app.ml.embedding.VectorMath.normalize(x))
 
-    private suspend fun add(name: String, kind: ItemKind, vararg segs: SegmentEntity): Long {
+    private suspend fun add(name: String, kind: ItemKind, vararg segs: SegmentEntity, place: String? = null, dateTaken: Long? = null): Long {
         val id = db.itemDao().insertItem(
             ItemEntity(
                 sourceKey = "k:$name", kind = kind, uri = "content://$name", folderKey = "F/", displayName = name, mimeType = null,
-                sizeBytes = 1, modifiedAt = 1, title = null, durationMs = null, pageCount = null, width = 0, height = 0, dateTaken = null,
+                sizeBytes = 1, modifiedAt = 1, title = null, durationMs = null, pageCount = null, width = 0, height = 0, dateTaken = dateTaken,
                 latitude = null, longitude = null, status = ItemStatus.DONE, error = null, embeddingModelId = model, pipelineKey = "p",
-                progress = 0, indexedAt = 1,
+                progress = 0, indexedAt = 1, place = place,
             ),
         )
         db.itemDao().insertSegments(segs.map { it.copy(itemId = id) })
@@ -149,5 +151,59 @@ class SearchEngineTest {
         val hit = engine.search("pizza").hits.first { it.itemId == video }
         assertEquals("the pizza clip, not the start of the 8.5 s transcript chunk", 6_000L, hit.best!!.startMs)
         assertEquals(SegmentType.VIDEO_CLIP, hit.best!!.type)
+    }
+
+    // ---- metadata, filters, agreement
+
+    @Test fun aPlaceQueryFindsPhotosByTheirLocationAlone() = runBlocking {
+        val dubai = add("IMG_1.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.1f, 1f, 0f, 0f)), place = "Dubai 두바이 United Arab Emirates 아랍에미리트 연합")
+        add("IMG_2.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.1f, 1f, 0.2f, 0f)), place = "Seoul 서울특별시 South Korea 대한민국")
+        noise(5)
+        val hit = engine.search("dubai").hits.first()
+        assertEquals(dubai, hit.itemId); assertEquals(MetaMatch.PLACE, hit.metaMatch); assertTrue(hit.exactKeyword)
+        assertEquals("Korean names match as substrings", dubai, engine.search("두바이").hits.first().itemId)
+        assertEquals(1, engine.search("두바이").hits.size)
+    }
+
+    @Test fun placePlusMeaningOutranksPlaceAlone() = runBlocking {
+        val both = add("a.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(1f, 0.1f, 0f, 0f)), place = "Dubai")
+        val placeOnly = add("b.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.1f, 1f, 0f, 0f)), place = "Dubai")
+        noise(5)
+        val hits = engine.search("dubai").hits
+        assertEquals(listOf(both, placeOnly), hits.map { it.itemId }.take(2))
+        assertNotNull(hits.first().visualSim)
+    }
+
+    @Test fun fileNamesAreMetadataToo() = runBlocking {
+        val id = add("quarterly_budget.xlsx", ItemKind.DOC, seg(SegmentType.TEXT_CHUNK, 0, v(0f, 1f, 0f, 0f), text = "numbers"))
+        noise(3)
+        val hit = engine.search("budget").hits.first { it.itemId == id }
+        assertEquals(MetaMatch.NAME, hit.metaMatch)
+    }
+
+    @Test fun kindFilterRestrictsResultsBeforeScoring() = runBlocking {
+        val doc = add("plan.docx", ItemKind.DOC, seg(SegmentType.TEXT_CHUNK, 0, null, text = "launch plan"))
+        val img = add("slide.jpg", ItemKind.IMAGE, seg(SegmentType.OCR_TEXT, 0, null, text = "launch plan"))
+        assertEquals(setOf(doc, img), engine.search("launch").hits.map { it.itemId }.toSet())
+        assertEquals(listOf(img), engine.search("launch", SearchFilter(kinds = setOf(ItemKind.IMAGE))).hits.map { it.itemId })
+        assertEquals(listOf(doc), engine.search("launch", SearchFilter(kinds = setOf(ItemKind.TEXT, ItemKind.DOC))).hits.map { it.itemId })
+    }
+
+    @Test fun dateFilterUsesTakenDateThenModifiedDate() = runBlocking {
+        val old = add("old.jpg", ItemKind.IMAGE, seg(SegmentType.OCR_TEXT, 0, null, text = "receipt"), dateTaken = 1_000L)
+        val recent = add("new.jpg", ItemKind.IMAGE, seg(SegmentType.OCR_TEXT, 0, null, text = "receipt"), dateTaken = 5_000L)
+        val noDate = add("nodate.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, null, text = "receipt")) // modifiedAt = 1
+        fun ids(f: SearchFilter) = runBlocking { engine.search("receipt", f).hits.map { it.itemId }.toSet() }
+        assertEquals(setOf(recent), ids(SearchFilter(fromMs = 2_000L)))
+        assertEquals(setOf(old, recent), ids(SearchFilter(fromMs = 1_000L, toMs = 5_000L)))
+        assertEquals("boundaries are inclusive; the file without a taken date falls back to modifiedAt", setOf(noDate), ids(SearchFilter(toMs = 1L)))
+    }
+
+    @Test fun filtersWithoutAQueryBrowseNewestFirst() = runBlocking {
+        val a = add("a.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(1f, 0f, 0f, 0f)), dateTaken = 100L)
+        val b = add("b.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0f, 1f, 0f, 0f)), dateTaken = 300L)
+        add("c.mp3", ItemKind.AUDIO, seg(SegmentType.AUDIO_CLIP, 0, v(0f, 0f, 1f, 0f)), dateTaken = 200L)
+        assertEquals(listOf(b, a), engine.search("", SearchFilter(kinds = setOf(ItemKind.IMAGE))).hits.map { it.itemId })
+        assertTrue("no query and no filter returns nothing", engine.search("").hits.isEmpty())
     }
 }

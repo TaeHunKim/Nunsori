@@ -45,9 +45,20 @@ interface ItemDao {
     @Query(
         """UPDATE items SET title = COALESCE(:title, title), latitude = COALESCE(:lat, latitude),
            longitude = COALESCE(:lon, longitude), durationMs = COALESCE(:durationMs, durationMs),
-           pageCount = COALESCE(:pageCount, pageCount) WHERE itemId = :id""",
+           pageCount = COALESCE(:pageCount, pageCount), place = COALESCE(:place, place) WHERE itemId = :id""",
     )
-    suspend fun updateMeta(id: Long, title: String?, lat: Double?, lon: Double?, durationMs: Long?, pageCount: Int?)
+    suspend fun updateMeta(id: Long, title: String?, lat: Double?, lon: Double?, durationMs: Long?, pageCount: Int?, place: String?)
+
+    /** Items with a GPS position whose place name was never looked up (place IS NULL; "" means looked up, nothing near). */
+    @Query("SELECT itemId, latitude AS lat, longitude AS lon FROM items WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND place IS NULL")
+    suspend fun itemsNeedingPlace(): List<GeoPoint>
+
+    /** Forget all place names so the next sync looks them up again (after the places data changed). */
+    @Query("UPDATE items SET place = NULL")
+    suspend fun resetPlaces()
+
+    @Query("UPDATE items SET place = :place WHERE itemId = :id")
+    suspend fun updatePlace(id: Long, place: String)
 
     @Query("UPDATE items SET status = :status, error = :error, indexedAt = :at WHERE itemId = :id")
     suspend fun setStatus(id: Long, status: ItemStatus, error: String?, at: Long)
@@ -114,6 +125,27 @@ interface ItemDao {
     )
     suspend fun textCandidates(pattern: String, limit: Int): List<TextRow>
 
+    /** Ids of finished items of [kinds] whose date (taken, else modified) lies in [from]..[to]. */
+    @Query(
+        """SELECT itemId FROM items WHERE status = 'DONE' AND kind IN (:kinds)
+           AND COALESCE(dateTaken, modifiedAt) BETWEEN :from AND :to""",
+    )
+    suspend fun allowedItemIds(kinds: List<ItemKind>, from: Long, to: Long): List<Long>
+
+    /** Newest first; used when only filters are set and there is no query. */
+    @Query(
+        """SELECT itemId FROM items WHERE status = 'DONE' AND kind IN (:kinds)
+           AND COALESCE(dateTaken, modifiedAt) BETWEEN :from AND :to ORDER BY COALESCE(dateTaken, modifiedAt) DESC LIMIT :limit""",
+    )
+    suspend fun browseItemIds(kinds: List<ItemKind>, from: Long, to: Long, limit: Int): List<Long>
+
+    /** Items whose metadata (place, file name, title) contains [pattern]; the caller ranks them. */
+    @Query(
+        """SELECT itemId, displayName, title, place FROM items WHERE status = 'DONE'
+           AND (place LIKE :pattern ESCAPE '\' OR displayName LIKE :pattern ESCAPE '\' OR title LIKE :pattern ESCAPE '\') LIMIT :limit""",
+    )
+    suspend fun metaCandidates(pattern: String, limit: Int): List<MetaRow>
+
     /** Replaces (or creates) an item and its segments atomically. */
     @Transaction
     suspend fun replaceItem(item: ItemEntity, segments: List<SegmentEntity>): Long {
@@ -142,9 +174,14 @@ interface ItemDao {
 
 @Database(
     entities = [ItemEntity::class, SegmentEntity::class, IndexedFolderEntity::class],
-    version = 2,
+    version = AppDatabase.VERSION,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
+
+    companion object {
+        /** Bump together with a new migration in Migrations.kt (see docs/development.md). */
+        const val VERSION = 3
+    }
 }

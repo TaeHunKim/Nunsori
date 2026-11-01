@@ -22,6 +22,8 @@ The app contacts the network only to download models you ask for:
 
 Search queries and file contents never leave the device. `INTERNET` is used for nothing else.
 
+Place names for photo locations come from a small dataset bundled in the app (GeoNames, offline); coordinates are never sent anywhere.
+
 ## Permissions (`AndroidManifest.xml`)
 
 | Permission | Why |
@@ -31,6 +33,10 @@ Search queries and file contents never leave the device. `INTERNET` is used for 
 | `MANAGE_EXTERNAL_STORAGE` (All files access) | Read text files and documents, which MediaStore does not list reliably; optional, only needed for those kinds |
 | `INTERNET` | Model download |
 | `POST_NOTIFICATIONS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` | Progress notification and long indexing runs |
+
+## Backup
+
+Android Auto Backup is disabled, so the index, thumbnails and settings are not copied to Google Drive or restored on a new phone.
 
 ## Deleting your data
 
