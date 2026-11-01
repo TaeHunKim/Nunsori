@@ -27,6 +27,8 @@ class SettingsStore(private val context: Context) {
     private val kOnboarding = booleanPreferencesKey("onboarding_done")
     private val kLastVersion = intPreferencesKey("last_version_code")
     private val kAsr = stringPreferencesKey("asr_model_id")
+    private val kChat = stringPreferencesKey("chat_model_id")
+    private val kChatContext = intPreferencesKey("chat_context_tokens")
     private val kSkipMusic = booleanPreferencesKey("skip_music")
     private val kVideoDetail = stringPreferencesKey("video_detail")
     private val kVideoSpeech = booleanPreferencesKey("video_transcribe")
@@ -34,6 +36,9 @@ class SettingsStore(private val context: Context) {
 
     val embeddingModelId: Flow<String> = context.dataStore.data.map { it[kEmbedding] ?: DEFAULT_EMBEDDING }
     val ocrModelId: Flow<String> = context.dataStore.data.map { it[kOcr] ?: DEFAULT_OCR }
+    val chatModelId: Flow<String> = context.dataStore.data.map { it[kChat] ?: DEFAULT_CHAT }
+    /** Total context window (prompt + answer) given to the chat model. */
+    val chatContextTokens: Flow<Int> = context.dataStore.data.map { it[kChatContext] ?: DEFAULT_CHAT_CONTEXT }
     val asrModelId: Flow<String> = context.dataStore.data.map { it[kAsr] ?: DEFAULT_ASR }
     val skipMusic: Flow<Boolean> = context.dataStore.data.map { it[kSkipMusic] ?: true }
     val videoDetail: Flow<VideoDetail> = context.dataStore.data.map { parseEnum(it[kVideoDetail], VideoDetail.MEDIUM) }
@@ -55,6 +60,8 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setEmbeddingModelId(id: String) { context.dataStore.edit { it[kEmbedding] = id } }
     suspend fun setOcrModelId(id: String) { context.dataStore.edit { it[kOcr] = id } }
+    suspend fun setChatModelId(id: String) { context.dataStore.edit { it[kChat] = id } }
+    suspend fun setChatContextTokens(n: Int) { context.dataStore.edit { it[kChatContext] = n } }
     suspend fun setAsrModelId(id: String) { context.dataStore.edit { it[kAsr] = id } }
     suspend fun setSkipMusic(v: Boolean) { context.dataStore.edit { it[kSkipMusic] = v } }
     suspend fun setVideoDetail(d: VideoDetail) { context.dataStore.edit { it[kVideoDetail] = d.name } }
@@ -86,6 +93,8 @@ class SettingsStore(private val context: Context) {
         const val DEFAULT_EMBEDDING = "eg2-440m"
         const val DEFAULT_OCR = "mlkit-ko"
         const val DEFAULT_ASR = "asr-sensevoice"
+        const val DEFAULT_CHAT = "chat-gemma4-e2b"
+        const val DEFAULT_CHAT_CONTEXT = 4096
         const val DEFAULT_SCHEDULE_MINUTES = 3 * 60
 
         inline fun <reified E : Enum<E>> parseEnum(raw: String?, default: E): E =

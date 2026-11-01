@@ -72,5 +72,21 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+/** v4 adds chat sessions and their messages. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `chat_sessions` (`sessionId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, " +
+                "`enabledTools` TEXT NOT NULL, `autoSearch` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `chat_messages` (`msgId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, " +
+                "`role` TEXT NOT NULL, `text` TEXT NOT NULL, `toolName` TEXT, `toolArgs` TEXT, `attachments` TEXT, `createdAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`sessionId`) REFERENCES `chat_sessions`(`sessionId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_chat_messages_sessionId` ON `chat_messages` (`sessionId`)")
+    }
+}
+
 /** Every migration, in order. Register new ones here only; the chain test in MigrationTest walks all exported schemas. */
-val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)

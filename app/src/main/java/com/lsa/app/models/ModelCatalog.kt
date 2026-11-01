@@ -3,7 +3,7 @@ package com.lsa.app.models
 import androidx.annotation.StringRes
 import com.lsa.app.R
 
-enum class ModelKind { EMBEDDING, OCR, ASR }
+enum class ModelKind { EMBEDDING, OCR, ASR, LLM }
 
 sealed interface ModelSource {
     /** Downloaded by the user from Hugging Face into app storage. */
@@ -31,6 +31,8 @@ data class ModelSpec(
     val source: ModelSource,
     /** Embedding models only: can embed audio clips (needs the audio encoder). */
     val audio: Boolean = false,
+    /** Chat models only: accepts images as input. */
+    val vision: Boolean = false,
 )
 
 object ModelCatalog {
@@ -62,6 +64,31 @@ object ModelCatalog {
             descriptionRes = R.string.model_mobileclip2_desc,
             sizeBytes = null, license = "Apple ASCL",
             source = ModelSource.Planned,
+        ),
+        ModelSpec(
+            id = "chat-gemma4-e2b", kind = ModelKind.LLM,
+            displayName = "Gemma 4 E2B (chat, images)",
+            descriptionRes = R.string.model_chat_gemma4_e2b_desc,
+            sizeBytes = 2_588_147_712L, license = "Apache-2.0",
+            source = ModelSource.HuggingFace("litert-community/gemma-4-E2B-it-litert-lm", "gemma-4-E2B-it.litertlm"),
+            vision = true,
+        ),
+        ModelSpec(
+            id = "chat-gemma4-e4b", kind = ModelKind.LLM,
+            displayName = "Gemma 4 E4B (chat, images)",
+            descriptionRes = R.string.model_chat_gemma4_e4b_desc,
+            sizeBytes = 3_659_530_240L, license = "Apache-2.0",
+            source = ModelSource.HuggingFace("litert-community/gemma-4-E4B-it-litert-lm", "gemma-4-E4B-it.litertlm"),
+            vision = true,
+        ),
+        ModelSpec(
+            id = "chat-qwen25-1.5b", kind = ModelKind.LLM,
+            displayName = "Qwen2.5 1.5B (chat, text only)",
+            descriptionRes = R.string.model_chat_qwen_desc,
+            sizeBytes = 1_597_922_856L, license = "Apache-2.0",
+            source = ModelSource.HuggingFace(
+                "litert-community/Qwen2.5-1.5B-Instruct", "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
+            ),
         ),
         ModelSpec(
             id = "mlkit-ko", kind = ModelKind.OCR,

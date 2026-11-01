@@ -2,7 +2,8 @@
 
 ## Next
 
-- **Local LLM RAG:** answer questions from retrieved segments with an on-device LLM.
+- **Web tools for chat:** web search and fetching a page for the chat model. Deferred on purpose: the app only uses the network to download models today, so this needs its own opt-in setting, a disclosure of what leaves the device, and a search API choice.
+- Chat: attach arbitrary files that are not indexed (text extraction on the spot), NPU/GPU choice, summaries for long chats instead of dropping old messages.
 - Additional models: MobileCLIP2-S0 (listed, not implemented), PP-OCRv5.
 - Real-device performance measurements (GPU/NPU paths, thermal behaviour).
 - Multiple embedding models at the same time.

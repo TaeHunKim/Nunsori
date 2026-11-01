@@ -6,6 +6,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -35,6 +36,8 @@ import androidx.navigation.compose.rememberNavController
 import com.lsa.app.R
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.lsa.app.ui.chat.ChatListScreen
+import com.lsa.app.ui.chat.ChatScreen
 import com.lsa.app.ui.index.IndexScreen
 import com.lsa.app.ui.onboarding.OnboardingScreen
 import com.lsa.app.ui.search.SearchScreen
@@ -44,6 +47,7 @@ import kotlinx.coroutines.launch
 enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVector) {
     Index("index", R.string.nav_index, Icons.Outlined.PhotoLibrary),
     Search("search", R.string.nav_search, Icons.Outlined.Search),
+    Chat("chat", R.string.nav_chat, Icons.Outlined.ChatBubbleOutline),
     Settings("settings", R.string.nav_settings, Icons.Outlined.Settings),
 }
 
@@ -65,7 +69,8 @@ private fun MainScaffold() {
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val entry by nav.currentBackStackEntryAsState()
-    val current = Dest.entries.firstOrNull { it.route == entry?.destination?.route } ?: Dest.Index
+    val route = entry?.destination?.route.orEmpty()
+    val current = Dest.entries.firstOrNull { route == it.route || route.startsWith(it.route + "/") } ?: Dest.Index
 
     fun go(d: Dest) {
         nav.navigate(d.route) {
@@ -110,7 +115,13 @@ private fun MainScaffold() {
         ) { padding ->
             NavHost(nav, startDestination = Dest.Index.route, modifier = Modifier.padding(padding)) {
                 composable(Dest.Index.route) { IndexScreen(onOpenSettings = { go(Dest.Settings) }) }
-                composable(Dest.Search.route) { SearchScreen(onOpenSettings = { go(Dest.Settings) }) }
+                composable(Dest.Search.route) {
+                    SearchScreen(onOpenSettings = { go(Dest.Settings) }, onOpenChat = { id -> nav.navigate("chat/$id") })
+                }
+                composable(Dest.Chat.route) { ChatListScreen(onOpen = { id -> nav.navigate("chat/$id") }) }
+                composable("chat/{id}", arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.LongType })) { e ->
+                    ChatScreen(e.arguments?.getLong("id") ?: 0L, onOpenSettings = { go(Dest.Settings) })
+                }
                 composable(Dest.Settings.route) { SettingsScreen() }
             }
         }

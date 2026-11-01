@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -73,7 +75,7 @@ import com.lsa.app.ui.common.WarningCard
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(onOpenSettings: () -> Unit) {
+fun SearchScreen(onOpenSettings: () -> Unit, onOpenChat: (Long) -> Unit = {}) {
     val container = rememberContainer()
     val vm: SearchViewModel = viewModel(factory = viewModelFactory { initializer { SearchViewModel(container) } })
     val state by vm.state.collectAsStateWithLifecycle()
@@ -81,6 +83,8 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
     var selected by remember { mutableStateOf(setOf<Long>()) }
     val ctx = LocalContext.current
     val selecting = selected.isNotEmpty()
+    var askChat by remember { mutableStateOf(false) }
+    val chatScope = androidx.compose.runtime.rememberCoroutineScope()
     // New results invalidate the selection.
     LaunchedEffect(state) { selected = emptySet() }
     BackHandler(enabled = selecting) { selected = emptySet() }
@@ -117,12 +121,10 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
                         TextButton(onClick = { selected = s.hits.map { it.hit.itemId }.toSet() }) {
                             Text(stringResource(R.string.select_all))
                         }
-                        androidx.compose.material3.Button(onClick = {
+                        TextButton(onClick = { askChat = true }) { Text(stringResource(R.string.chat_ask)) }
+                        IconButton(onClick = {
                             shareImages(ctx, s.hits.filter { it.hit.itemId in selected }.map { it.summary.uri.toUri() })
-                        }) {
-                            Icon(Icons.Filled.Share, null)
-                            Text(stringResource(R.string.action_share), Modifier.padding(start = 8.dp))
-                        }
+                        }) { Icon(Icons.Filled.Share, stringResource(R.string.action_share)) }
                     }
                 }
                 if (!s.semanticAvailable) {
@@ -177,6 +179,28 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+    if (askChat) {
+        val sessions by container.db.chatDao().observeSessions().collectAsStateWithLifecycle(emptyList())
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { askChat = false }) {
+            Column(Modifier.padding(bottom = 24.dp)) {
+                Text(stringResource(R.string.chat_ask_choose), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(16.dp))
+                fun go(sessionId: Long) {
+                    container.chat.queueAttachments(sessionId, (state as? SearchUi.Done)?.hits?.map { it.hit.itemId }?.filter { it in selected }.orEmpty())
+                    askChat = false; selected = emptySet(); onOpenChat(sessionId)
+                }
+                Text(
+                    stringResource(R.string.chat_new), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth().clickable { chatScope.launch { go(container.chat.newSession()) } }.padding(16.dp),
+                )
+                sessions.forEach { s ->
+                    Text(
+                        s.title.ifEmpty { stringResource(R.string.chat_untitled) }, style = MaterialTheme.typography.bodyLarge, maxLines = 1,
+                        modifier = Modifier.fillMaxWidth().clickable { go(s.sessionId) }.padding(16.dp),
+                    )
                 }
             }
         }

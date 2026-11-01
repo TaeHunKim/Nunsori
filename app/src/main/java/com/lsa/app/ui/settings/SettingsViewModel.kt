@@ -63,6 +63,10 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_OCR)
     val asrModelId = c.settings.asrModelId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_ASR)
     val skipMusic = c.settings.skipMusic.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val chatModelId = c.settings.chatModelId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_CHAT)
+    val chatContextTokens = c.settings.chatContextTokens.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_CHAT_CONTEXT)
+    fun selectChat(id: String) = viewModelScope.launch { c.residency.closeChat(); c.settings.setChatModelId(id) }
+    fun setChatContext(tokens: Int) = viewModelScope.launch { c.residency.closeChat(); c.settings.setChatContextTokens(tokens) }
     fun selectAsr(id: String) = viewModelScope.launch { c.settings.setAsrModelId(id) }
     fun setSkipMusic(v: Boolean) = viewModelScope.launch { c.settings.setSkipMusic(v) }
     val videoDetail = c.settings.videoDetail.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lsa.app.indexing.video.VideoDetail.MEDIUM)

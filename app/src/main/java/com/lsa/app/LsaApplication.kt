@@ -60,6 +60,7 @@ class AppContainer(val context: Context) {
             modelManager.states.map { st -> st.filterValues { it is ModelState.Installed }.keys },
         ) { folders, model, kinds, installed -> listOf(folders, model, kinds, installed) },
     )
+    val chat by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), residency, search, settings, appScope) }
     val search by lazy { SearchEngine(db.itemDao(), { q -> residency.embedder()?.use { it.value.embedQuery(q) } }, settings) }
 }
 

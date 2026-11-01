@@ -7,6 +7,8 @@ import com.lsa.app.indexing.ResidencyPolicy
 import com.lsa.app.indexing.audio.SherpaSpeech
 import com.lsa.app.indexing.audio.SpeechTools
 import com.lsa.app.ml.embedding.Embedder
+import com.lsa.app.ml.llm.ChatModel
+import com.lsa.app.ml.llm.LiteRtChatModel
 import com.lsa.app.ml.embedding.EmbeddingGemma2Embedder
 import com.lsa.app.ml.ocr.MlKitOcrEngine
 import com.lsa.app.ml.ocr.OcrEngine
@@ -98,6 +100,12 @@ class ModelResidency(
     private val embedderRes = LeasedResource<Embedder>("embedder", scope, policy)
     private val ocrRes = LeasedResource<OcrEngine>("ocr", scope, policy)
     private val speechRes = LeasedResource<SpeechTools>("speech", scope, policy)
+    private val chatRes = LeasedResource<ChatModel>("chat", scope, policy)
+
+    /** Test hook. */
+    var chatFactory: suspend (spec: com.lsa.app.models.ModelSpec, file: File, contextTokens: Int) -> ChatModel? = { spec, file, ctx ->
+        LiteRtChatModel.load(file, File(context.cacheDir, "litertlm"), spec.vision, ctx)
+    }
 
     /** Test hook. */
     var embedderFactory: suspend (modelId: String, file: File, cacheDir: File) -> Embedder? = { id, file, cache ->
@@ -126,6 +134,16 @@ class ModelResidency(
         return speechRes.acquire(spec?.id ?: "none") { SherpaSpeech(context, spec?.let(manager::dir)) }!!
     }
 
-    suspend fun trim() { embedderRes.trim(); ocrRes.trim(); speechRes.trim() }
-    suspend fun closeAll() { embedderRes.closeNow(); ocrRes.closeNow(); speechRes.closeNow() }
+    /** Null when the selected chat model is not installed. Loading takes a while and uses a lot of memory. */
+    suspend fun chat(): Lease<ChatModel>? {
+        val spec = ModelCatalog.byId(settings.chatModelId.first()) ?: return null
+        if (spec.kind != com.lsa.app.models.ModelKind.LLM || spec.source !is ModelSource.HuggingFace || !manager.isReady(spec)) return null
+        val file = manager.file(spec) ?: return null
+        val ctx = settings.chatContextTokens.first()
+        return chatRes.acquire("${spec.id}|$ctx") { chatFactory(spec, file, ctx) }
+    }
+
+    suspend fun closeChat() = chatRes.closeNow()
+    suspend fun trim() { embedderRes.trim(); ocrRes.trim(); speechRes.trim(); chatRes.trim() }
+    suspend fun closeAll() { embedderRes.closeNow(); ocrRes.closeNow(); speechRes.closeNow(); chatRes.closeNow() }
 }

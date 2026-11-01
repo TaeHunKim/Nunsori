@@ -30,9 +30,13 @@ flowchart TD
     X --> TH[ThumbStore: thumbnails]
     SE --> DB
     SE --> EMB
+    CHAT[ChatController] --> SE
+    CHAT --> LLM[LiteRtChatModel: LiteRT-LM LLM]
+    CHAT --> DB
     RES[ModelResidency] -.leases.-> EMB
     RES -.leases.-> OCR
     RES -.leases.-> ASR
+    RES -.leases.-> LLM
 ```
 
 ## 3. Package map
@@ -48,7 +52,8 @@ flowchart TD
 | `indexing/places` | `PlaceFinder`: offline GPS to place name (GeoNames cities, English and Korean) |
 | `indexing/audio` | `AudioExtractor`, `AudioDecoder`, `Pcm` (window planning), `SpeechTools` |
 | `indexing/video` | `VideoExtractor`, `VideoClips` |
-| `ml`, `ml/embedding`, `ml/ocr` | `ModelResidency`, `Embedder` and `EmbeddingGemma2Embedder`, `OcrEngine` and `MlKitOcrEngine` |
+| `ml`, `ml/embedding`, `ml/ocr`, `ml/llm` | `ModelResidency`, `Embedder` and `EmbeddingGemma2Embedder`, `OcrEngine` and `MlKitOcrEngine`, `ChatModel` and `LiteRtChatModel` |
+| `chat` | `ChatController` (turns, context, attachments), `ChatTools` (`search_index`, `read_file`), `ContextBudget`: [chat.md](chat.md) |
 | `models` | `ModelCatalog`, `ModelManager`, `ModelDownloader` (resumable), `ModelDownloadWorker`, `ArchiveExtractor` |
 | `search` | `SearchEngine`, `Fusion`, `KeywordMatcher` |
 | `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`), screens (`index`, `search`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
@@ -66,6 +71,8 @@ Defined in `data/db/Entities.kt`.
 
 **`indexed_folders`**: `relativePath`, `enabled`, `recursive`.
 
+**`chat_sessions`** (`title`, `enabledTools`, `autoSearch`, timestamps) and **`chat_messages`** (`sessionId` with cascade delete, `role` USER/ASSISTANT/TOOL, `text`, `toolName`, `toolArgs`, `attachments`, `createdAt`), added in v4.
+
 | `SegmentType` | Produced by | Signal group |
 |---|---|---|
 | `IMAGE` | images | VISUAL |
@@ -79,7 +86,7 @@ Defined in `data/db/Entities.kt`.
 
 **Vector format.** int8, stored as `[scale: float32][int8 × dim]` (`Quant`), 768 dims. Dot products are done in memory over all vectors.
 
-**Migrations.** The schema is at **v3** (`AppDatabase.VERSION`; v3 added `items.place`). `Migrations.kt` holds `MIGRATION_1_2`, `MIGRATION_2_3` and the ordered `ALL_MIGRATIONS` list that `LsaApplication` registers. There is no destructive fallback on upgrade; only a downgrade (older build over a newer one) rebuilds the index, because it is derived data. Derived data that can be recomputed without a schema change is handled by `pipelineKey` instead. Policy: [development.md](development.md#schema-and-version-changes).
+**Migrations.** The schema is at **v4** (`AppDatabase.VERSION`; v3 added `items.place`, v4 the chat tables). `Migrations.kt` holds `MIGRATION_1_2`, `MIGRATION_2_3`, `MIGRATION_3_4` and the ordered `ALL_MIGRATIONS` list that `LsaApplication` registers. There is no destructive fallback on upgrade; only a downgrade (older build over a newer one) rebuilds the index, because it is derived data. Derived data that can be recomputed without a schema change is handled by `pipelineKey` instead. Policy: [development.md](development.md#schema-and-version-changes).
 
 **App upgrades.** `AppUpgrade.run` (called from `LsaApplication`) compares the stored `last_version_code` with `BuildConfig.VERSION_CODE` and runs per-release steps for settings or file-layout changes. Auto Backup is disabled (`allowBackup="false"`): the index is derived and a restored database would not match missing thumbnails and models.
 

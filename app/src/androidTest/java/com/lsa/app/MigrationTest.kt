@@ -8,6 +8,7 @@ import com.lsa.app.data.db.AppDatabase
 import com.lsa.app.data.db.ALL_MIGRATIONS
 import com.lsa.app.data.db.MIGRATION_1_2
 import com.lsa.app.data.db.MIGRATION_2_3
+import com.lsa.app.data.db.MIGRATION_3_4
 import com.lsa.app.ml.embedding.Quant
 import com.lsa.app.ml.embedding.VectorMath
 import org.junit.Assert.assertArrayEquals
@@ -92,5 +93,16 @@ class MigrationTest {
         }
         helper.createDatabase("chain1", 1).close()
         helper.runMigrationsAndValidate("chain1", AppDatabase.VERSION, true, *ALL_MIGRATIONS).close()
+    }
+
+    @Test fun v3ToV4AddsChatTablesThatCascadeOnDelete() {
+        helper.createDatabase("mig34", 3).apply { execSQL(itemV2); close() }
+        val db = helper.runMigrationsAndValidate("mig34", 4, true, MIGRATION_3_4)
+        db.query("SELECT COUNT(*) FROM items").use { c -> c.moveToFirst(); assertEquals("existing data is kept", 1, c.getInt(0)) }
+        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL("INSERT INTO chat_sessions (title, enabledTools, autoSearch, createdAt, updatedAt) VALUES ('t', 'search_index', 0, 1, 1)")
+        db.execSQL("INSERT INTO chat_messages (sessionId, role, text, createdAt) VALUES (1, 'USER', 'hi', 1)")
+        db.execSQL("DELETE FROM chat_sessions WHERE sessionId = 1")
+        db.query("SELECT COUNT(*) FROM chat_messages").use { c -> c.moveToFirst(); assertEquals("messages go with their session", 0, c.getInt(0)) }
     }
 }

@@ -7,6 +7,9 @@ Catalog: `models/ModelCatalog.kt`. Models are never committed or bundled (except
 | `eg2-440m` | Embedding: text + image | 387,710,976 B | Hugging Face `litert-community/embeddinggemma-2-text-vision-440m-litert-lm` | Apache-2.0 |
 | `eg2-740m` | Embedding: text + image + **audio** | ~485 MB | Hugging Face `litert-community/embeddinggemma-2-740m-litert-lm` | Apache-2.0 |
 | `mobileclip2-s0` | Planned, not implemented | n/a | n/a | Apple ASCL |
+| `chat-gemma4-e2b` | Chat (text + images), default | 2,588,147,712 B | Hugging Face `litert-community/gemma-4-E2B-it-litert-lm` (`gemma-4-E2B-it.litertlm`) | Apache-2.0 (model card), not gated |
+| `chat-gemma4-e4b` | Chat (text + images), larger | 3,659,530,240 B | Hugging Face `litert-community/gemma-4-E4B-it-litert-lm` (`gemma-4-E4B-it.litertlm`) | Apache-2.0, not gated |
+| `chat-qwen25-1.5b` | Chat (text only), smaller | 1,597,922,856 B | Hugging Face `litert-community/Qwen2.5-1.5B-Instruct` (`..._multi-prefill-seq_q8_ekv4096.litertlm`) | Apache-2.0, not gated |
 | `mlkit-ko` | OCR (Korean + Latin), bundled via Gradle | n/a | Google ML Kit | ML Kit Terms |
 | `asr-sensevoice` | Speech recognition (ko, en, zh, ja, yue) | 163,002,883 B | GitHub `k2-fsa/sherpa-onnx` release `asr-models` (tar.bz2, unpacked by `ArchiveExtractor`) | FunASR Model License |
 | Silero VAD | Voice activity detection | 0.6 MB | same release; fetched by `scripts/fetch-sherpa-onnx.sh`, bundled in the APK, not committed | MIT |
@@ -19,6 +22,10 @@ Downloads are resumable (`ModelDownloader`, OkHttp, `.part` files) and run in `M
 - `InputData.Image` with several images returns **one vector**; it is close to the mean of per-frame vectors (cosine 0.90, order independent). At most 8 images per clip; `visionTokensPerImage=70`.
 - sherpa-onnx (SenseVoice int8 + Silero VAD) runs at about 2% of real time on the emulator; Korean and English recognition is good.
 - The emulator uses CPU. Real devices try GPU first and fall back to CPU. No real-device benchmarks yet ([roadmap](roadmap.md)).
+
+## Chat models
+
+Used by the Chat screen ([chat.md](chat.md)); `ModelKind.LLM` in the catalog, loaded by `LiteRtChatModel` (LiteRT-LM `Engine`, GPU first on real devices, CPU on the emulator) and kept in memory by `ModelResidency.chat()` like the other models. Gemma 4 E2B and E4B accept images (`ModelSpec.vision`); Qwen2.5 does not. The context window (2K/4K/8K, default 4K) is passed to the engine as `maxNumTokens`; changing it or the model reloads the model. File names, sizes and licenses were read from the Hugging Face API; re-check them before a release.
 
 ## Adding a model
 

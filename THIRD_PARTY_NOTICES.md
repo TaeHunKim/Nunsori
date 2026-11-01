@@ -34,6 +34,8 @@ is fetched at build time and bundled in the APK. Each model keeps its own licens
 |---|---|---|---|
 | EmbeddingGemma 2 text+vision 440M | 388 MB | Hugging Face `litert-community/embeddinggemma-2-text-vision-440m-litert-lm` | Apache-2.0 (model card) |
 | EmbeddingGemma 2 740M (+audio) | ~485 MB | Hugging Face `litert-community/embeddinggemma-2-740m-litert-lm` | Apache-2.0 (model card) |
+| Gemma 4 E2B / E4B (chat) | 2.6 GB / 3.7 GB | Hugging Face `litert-community/gemma-4-E2B-it-litert-lm`, `gemma-4-E4B-it-litert-lm` | Apache-2.0 (model card) |
+| Qwen2.5 1.5B Instruct (chat) | 1.6 GB | Hugging Face `litert-community/Qwen2.5-1.5B-Instruct` | Apache-2.0 (model card) |
 | SenseVoice small, int8 (via sherpa-onnx) | 163 MB archive | GitHub `k2-fsa/sherpa-onnx` release `asr-models` | FunASR Model License |
 | Silero VAD | 0.6 MB | GitHub `k2-fsa/sherpa-onnx` release `asr-models` | MIT |
 | ML Kit Korean text recognition | n/a | Google (Gradle dependency) | ML Kit Terms |

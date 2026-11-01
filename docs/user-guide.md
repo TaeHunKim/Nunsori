@@ -28,6 +28,19 @@ Photos with GPS data are found by place name. Results that match both the meanin
 
 Tips: describe content in natural language for photos and scenes; use distinctive words for names, codes and numbers; Korean and English both work.
 
+## Chat
+
+![Chat](images/chat.png)
+
+Ask questions about your files. The model (Gemma 4 by default, downloaded in Settings) can search your index and read files by itself; each use appears as a small card you can open. Chats are kept in a list: rename or delete them from the menu on each row; the context sent to the model is limited, so very long chats forget their oldest messages (a note says so).
+
+- **Tools:** the chips above the conversation switch *Search files*, *Read files* and *Auto search* on or off for that chat.
+- **Attach:** the paperclip adds a photo (Gemma 4 can look at it). In Search, long-press results and choose **Ask in chat** to attach those files to a new or existing chat; they are sent with your next message.
+- **Stop** ends an answer early. The first answer after starting the app is slower because the model has to load.
+- Everything runs on your phone; chats are stored in the app's private storage and deleted with the chat.
+
+See [chat.md](chat.md) for how the context is built.
+
 ## Settings
 
 - **What to index:** Images, Text files, Documents, Audio, Video.
@@ -36,6 +49,7 @@ Tips: describe content in natural language for photos and scenes; use distinctiv
 
 ![Re-create the index?](images/model-switch.png)
 - **Speech recognition:** needed for transcripts of audio and video.
+- **Chat model:** download and select Gemma 4 E2B (default), E4B or Qwen2.5 1.5B, and choose the context size (2K, 4K, 8K).
 - **Automatic indexing:** Manual; Immediately (new files are picked up in the background); Scheduled (a time, optionally only while charging); When idle (charging and idle).
 - **Model memory:** keep loaded, unload after 2 minutes idle (default), or unload immediately. Lower memory use costs a reload on the next use.
 - Dark mode follows the system.

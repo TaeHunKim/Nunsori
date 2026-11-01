@@ -11,7 +11,7 @@ Setup: [getting-started.md](getting-started.md). Design: [architecture.md](archi
 | Level | Command | Notes |
 |---|---|---|
 | Unit | `./gradlew assembleDebug testDebugUnitTest` | Chunkers, fusion, keyword matching, DB logic |
-| Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. **It uninstalls the app at the end, deleting downloaded models.** Write tests that do not depend on the app's settings. Uses fake embedders and speech engines. |
+| Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. `ChatTest` runs the chat controller and tools against a fake `ChatModel`. **It uninstalls the app at the end, deleting downloaded models.** Write tests that do not depend on the app's settings. Uses fake embedders and speech engines. |
 | Real-model E2E | manual, emulator | Download the real model in the app, index fixtures, query. Drive the UI with mobile-mcp; `adb uiautomator` is blocked while mobile-mcp is attached, so `scripts/e2e-setup.sh` may not work. |
 
 ## Scripts

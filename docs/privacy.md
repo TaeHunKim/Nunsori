@@ -9,6 +9,7 @@ All in the app's private storage (removed on uninstall or "Clear data"):
 - Room database `lsa.db`: file names, paths, metadata (EXIF date and location of photos), extracted text (OCR, document text, transcripts) and embedding vectors.
 - Thumbnails (`ThumbStore`, 360 px) of images, document pages and text cards.
 - Downloaded models under `files/models/`.
+- Chat sessions and messages in the same database (`chat_sessions`, `chat_messages`) and photos attached to a chat under `files/chat/<session>/`; deleting a chat removes them. The chat model runs on the phone; no question or answer is sent anywhere.
 - Settings (DataStore), including the optional Hugging Face token.
 
 Your original files are only read, never modified.
@@ -17,7 +18,7 @@ Your original files are only read, never modified.
 
 The app contacts the network only to download models you ask for:
 
-- `https://huggingface.co/litert-community/...` (EmbeddingGemma 2; the token, if any, is sent only here)
+- `https://huggingface.co/litert-community/...` (EmbeddingGemma 2 and the chat models; the token, if any, is sent only here)
 - `https://github.com/k2-fsa/sherpa-onnx/releases/...` (SenseVoice)
 
 Search queries and file contents never leave the device. `INTERNET` is used for nothing else.

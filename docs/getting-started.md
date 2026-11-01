@@ -25,6 +25,7 @@ scripts/run.sh                     # installDebug + launch
 1. Go through the **first-run wizard**: choose the kinds of files and folders (grant the media permissions when asked; text files and documents also need **All files access**), download an embedding model (440M is the default; 740M adds audio embedding), and choose automatic indexing (Manual, Immediately, Scheduled, or When idle and charging). Everything can be changed later in Settings. Speech recognition for audio and video transcripts is a separate download in Settings.
 2. Go to **Index** and press **Start indexing**.
 3. Go to **Search** and type a query.
+4. To use **Chat**, download a chat model in Settings (Gemma 4 E2B is the default, 2.6 GB), then open Chat and ask about your files ([chat.md](chat.md)).
 
 ## Try it with test files
 

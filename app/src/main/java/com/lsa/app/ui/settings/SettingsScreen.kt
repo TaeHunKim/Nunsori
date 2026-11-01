@@ -104,6 +104,22 @@ fun SettingsScreen() {
         }
         HorizontalDivider()
 
+        // --- Chat
+        Section(R.string.settings_chat_models, R.string.settings_chat_desc)
+        val chatId by vm.chatModelId.collectAsStateWithLifecycle()
+        ModelCatalog.ofKind(ModelKind.LLM).forEach { spec ->
+            ModelCard(spec, states[spec.id], selected = spec.id == chatId, vm = vm, onSelect = { vm.selectChat(spec.id) })
+        }
+        val chatContext by vm.chatContextTokens.collectAsStateWithLifecycle()
+        Text(stringResource(R.string.chat_context_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.chat_context_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(2048, 4096, 8192).forEach { n ->
+                FilterChip(selected = chatContext == n, onClick = { vm.setChatContext(n) }, label = { Text("${n / 1024}K") })
+            }
+        }
+        HorizontalDivider()
+
         // --- Automatic indexing
         Section(R.string.auto_title, R.string.auto_desc)
         val autoMode by vm.autoMode.collectAsStateWithLifecycle()
