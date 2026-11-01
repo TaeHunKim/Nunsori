@@ -1,0 +1,36 @@
+# Build / IDE
+*.iml
+.gradle/
+.idea/
+/build/
+**/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+/local.properties
+.DS_Store
+
+# Models and databases (large, downloaded at runtime)
+*.gguf
+*.tflite
+*.onnx
+*.litertlm
+*.task
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.xnnpack_cache
+
+# Test fixtures: images are generated/downloaded, not committed (see scripts/fetch-photo-fixtures.sh, make-text-fixtures.py)
+/test-fixtures/images/*
+!/test-fixtures/images/.gitkeep
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.heic
+
+# Local Claude Code state
+.claude/settings.local.json

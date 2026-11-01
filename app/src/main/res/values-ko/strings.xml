@@ -1,0 +1,135 @@
+<resources>
+    <string name="app_name">로컬 검색</string>
+    <string name="open_menu">메뉴 열기</string>
+    <string name="nav_index">인덱스</string>
+    <string name="nav_search">검색</string>
+    <string name="nav_settings">설정</string>
+    <string name="go_settings">설정 열기</string>
+    <string name="action_cancel">취소</string>
+    <string name="action_pause">일시정지</string>
+    <string name="btn_save">저장</string>
+
+    <!-- Notifications -->
+    <string name="channel_indexing">인덱싱</string>
+    <string name="channel_download">모델 다운로드</string>
+    <string name="notif_indexing_title">이미지 인덱싱 중</string>
+    <string name="notif_indexing_preparing">준비 중…</string>
+    <string name="notif_download_title">%1$s 다운로드 중</string>
+
+    <string name="dialog_ok">확인</string>
+
+    <!-- Automatic indexing -->
+    <string name="auto_title">자동 인덱싱</string>
+    <string name="auto_desc">새로 찍거나 바뀌거나 삭제된 사진을 언제 반영할지 정합니다. Index 화면의 Start 버튼은 언제든 쓸 수 있습니다.</string>
+    <string name="auto_mode_idle">유휴 시</string>
+    <string name="auto_mode_idle_desc">충전 중이고 폰을 쓰지 않을 때 실행합니다. 폰이 뜨거워지면 멈춥니다. 배터리 부담이 가장 적습니다.</string>
+    <string name="auto_mode_immediate">바로</string>
+    <string name="auto_mode_immediate_desc">새로 찍거나 바뀌거나 삭제된 사진을 약 2분 안에 반영합니다. 배터리를 더 씁니다.</string>
+    <string name="auto_mode_scheduled">정해진 시간에</string>
+    <string name="auto_mode_scheduled_desc">변경 사항을 모아 하루에 한 번 인덱싱합니다.</string>
+    <string name="auto_mode_manual">수동으로만</string>
+    <string name="auto_mode_manual_desc">Start 버튼을 눌렀을 때만 인덱싱합니다.</string>
+    <string name="auto_schedule_time">실행 시각 %1$s</string>
+    <string name="auto_change_time">변경</string>
+    <string name="auto_charging_only">충전 중에만 실행</string>
+    <string name="onboarding_title">사진을 어떻게 인덱싱할까요?</string>
+    <string name="onboarding_hint">나중에 설정에서 바꿀 수 있어요.</string>
+    <string name="onboarding_confirm">계속</string>
+
+    <!-- Model memory -->
+    <string name="residency_title">모델 메모리</string>
+    <string name="residency_desc">AI 모델을 사용한 뒤 메모리에 얼마나 올려 둘지 정합니다.</string>
+    <string name="residency_idle">2분간 안 쓰면 해제</string>
+    <string name="residency_idle_desc">균형형입니다. 연달아 검색하면 빠르게 유지됩니다.</string>
+    <string name="residency_keep">항상 메모리에 유지</string>
+    <string name="residency_keep_desc">가장 빠르지만 앱 프로세스가 살아 있는 동안 메모리를 약 0.5GB 차지합니다.</string>
+    <string name="residency_immediate">사용 직후 해제</string>
+    <string name="residency_immediate_desc">메모리 사용이 가장 적지만 검색이나 인덱싱 때마다 모델을 다시 불러옵니다.</string>
+
+    <!-- Index -->
+    <string name="index_status_idle">인덱싱 준비됨</string>
+    <string name="index_status_running">인덱싱 중…</string>
+    <string name="index_status_paused">일시정지됨</string>
+    <string name="index_status_done">최신 상태</string>
+    <string name="index_progress">이미지 %1$d / %2$d장</string>
+    <plurals name="index_failed_count">
+        <item quantity="other">%d개 실패</item>
+    </plurals>
+    <string name="index_current">처리 중: %s</string>
+    <string name="btn_start">인덱싱 시작</string>
+    <string name="btn_resume">이어서 시작</string>
+    <string name="btn_pause">일시정지</string>
+    <string name="index_empty">아직 인덱싱된 이미지가 없습니다.</string>
+    <string name="warn_no_permission">사진 접근 권한이 필요합니다. 설정에서 허용해 주세요.</string>
+    <string name="warn_no_folders">설정에서 인덱싱할 폴더를 선택해 주세요.</string>
+    <string name="warn_no_model">먼저 설정에서 임베딩 모델을 다운로드해 주세요.</string>
+    <plurals name="warn_stale">
+        <item quantity="other">%d개 이미지가 다른 모델로 인덱싱되어 있습니다. 인덱싱을 시작하면 다시 처리합니다.</item>
+    </plurals>
+    <string name="err_model_missing">선택한 임베딩 모델이 설치되어 있지 않습니다.</string>
+    <string name="err_no_folders">선택된 폴더가 없습니다.</string>
+    <string name="err_load_failed">임베딩 모델을 불러오지 못했습니다.</string>
+
+    <!-- Detail -->
+    <string name="action_share">공유</string>
+    <string name="action_open_with">다른 앱에서 열기</string>
+    <string name="no_app_found">처리할 수 있는 앱이 없습니다.</string>
+    <string name="detail_path">폴더</string>
+    <string name="detail_dimensions">해상도</string>
+    <string name="detail_size">크기</string>
+    <string name="detail_taken">촬영 시각</string>
+    <string name="detail_location">위치</string>
+    <string name="detail_indexed">인덱싱 시각</string>
+    <string name="detail_model">모델</string>
+    <string name="detail_error">오류</string>
+    <string name="detail_ocr_text">인식된 텍스트</string>
+    <string name="detail_no_text">인식된 텍스트가 없습니다.</string>
+
+    <!-- Search -->
+    <plurals name="selection_count">
+        <item quantity="other">%d개 선택됨</item>
+    </plurals>
+    <string name="select_all">전체 선택</string>
+
+    <string name="search_hint">사진 검색…</string>
+    <string name="search_idle">찾고 싶은 장면을 설명하거나, 이미지 속 글자를 입력해 보세요.</string>
+    <string name="search_no_results">검색 결과가 없습니다.</string>
+    <string name="search_model_missing">임베딩 모델이 설치되어 있지 않아 키워드 일치 결과만 표시합니다.</string>
+    <string name="badge_image">이미지</string>
+    <string name="badge_ocr">텍스트</string>
+    <string name="badge_keyword">키워드</string>
+
+    <!-- Settings -->
+    <string name="settings_folders">인덱싱할 폴더</string>
+    <string name="settings_folders_desc">이미지가 들어 있는 폴더를 하나 이상 선택하세요.</string>
+    <string name="perm_grant">사진 접근 권한 허용</string>
+    <string name="folders_none">이미지 폴더를 찾지 못했습니다.</string>
+    <plurals name="image_count">
+        <item quantity="other">이미지 %d장</item>
+    </plurals>
+    <string name="settings_embedding_models">임베딩 모델</string>
+    <string name="settings_embedding_desc">모델은 필요할 때 직접 다운로드합니다. 모델을 바꾸면 다시 인덱싱해야 합니다.</string>
+    <string name="settings_ocr_models">OCR 모델</string>
+    <string name="model_download">다운로드</string>
+    <string name="model_retry">다시 시도</string>
+    <string name="model_delete">삭제</string>
+    <string name="model_installed">설치됨</string>
+    <string name="model_bundled">앱에 내장</string>
+    <string name="model_coming_soon">곧 지원 예정</string>
+    <string name="model_downloading">다운로드 중… %1$d%%</string>
+    <string name="model_err_auth">접근이 거부되었습니다. 아래에 Hugging Face 토큰을 입력하고 huggingface.co에서 모델 라이선스에 동의해 주세요.</string>
+    <string name="model_err_not_found">Hugging Face에서 모델 파일을 찾을 수 없습니다.</string>
+    <string name="model_err_network">네트워크 오류입니다. 다시 시도하면 이어서 받습니다.</string>
+    <string name="model_err_http">다운로드에 실패했습니다.</string>
+    <string name="model_eg2_440m_desc">텍스트와 이미지를 함께 다루는 멀티모달 임베딩(768차원). 기본 추천 모델입니다.</string>
+    <string name="model_eg2_740m_desc">음성까지 지원하는 더 큰 멀티모달 모델입니다.</string>
+    <string name="model_mobileclip2_desc">영어 전용의 아주 작은 이미지–텍스트 모델입니다.</string>
+    <string name="model_mlkit_desc">한국어와 라틴 문자를 인식하는 Google ML Kit 텍스트 인식. 오프라인으로 동작합니다.</string>
+    <string name="model_ppocr_desc">한국어용 PaddleOCR 모바일 모델입니다.</string>
+    <string name="settings_token">Hugging Face 토큰</string>
+    <string name="settings_token_desc">선택 사항입니다. 접근이 제한된 모델이나 요청 제한을 피할 때만 필요합니다.</string>
+    <string name="settings_language">언어</string>
+    <string name="lang_system">시스템</string>
+    <string name="lang_en">English</string>
+    <string name="lang_ko">한국어</string>
+</resources>

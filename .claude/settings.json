@@ -1,0 +1,18 @@
+{
+  "env": {
+    "JAVA_HOME": "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+    "ANDROID_HOME": "/Users/rapaellk/Library/Android/sdk"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew:*)",
+      "Bash(adb:*)",
+      "Bash(emulator:*)",
+      "Bash(avdmanager:*)",
+      "Bash(sdkmanager --list:*)",
+      "Bash(scripts/*)",
+      "Bash(./scripts/*)"
+    ]
+  },
+  "enabledMcpjsonServers": ["mobile-mcp"]
+}
