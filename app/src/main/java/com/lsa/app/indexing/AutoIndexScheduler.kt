@@ -117,7 +117,7 @@ class AutoIndexScheduler(
         .setInputData(autoData(IndexingWorker.DETAIL_TRIGGER))
         .setConstraints(
             Constraints.Builder()
-                .addContentUriTrigger(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true)
+                .addContentUriTrigger(MediaStore.Files.getContentUri("external"), true)
                 .setTriggerContentUpdateDelay(Duration.ofSeconds(TRIGGER_UPDATE_DELAY_S))
                 .setTriggerContentMaxDelay(Duration.ofMinutes(TRIGGER_MAX_DELAY_MIN))
                 .setRequiresBatteryNotLow(true)

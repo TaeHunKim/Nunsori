@@ -55,10 +55,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.lsa.app.R
-import com.lsa.app.data.db.IndexStatus
+import com.lsa.app.data.db.ItemStatus
 import com.lsa.app.rememberContainer
-import com.lsa.app.ui.common.ImageDetailSheet
-import com.lsa.app.ui.common.Thumb
+import com.lsa.app.ui.common.ItemDetailSheet
+import com.lsa.app.ui.common.ItemThumb
+import com.lsa.app.ui.common.locationLabel
 import com.lsa.app.ui.common.WarningCard
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
@@ -101,11 +102,11 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
                             pluralStringResource(R.plurals.selection_count, selected.size, selected.size),
                             style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = { selected = s.hits.map { it.hit.mediaId }.toSet() }) {
+                        TextButton(onClick = { selected = s.hits.map { it.hit.itemId }.toSet() }) {
                             Text(stringResource(R.string.select_all))
                         }
                         androidx.compose.material3.Button(onClick = {
-                            shareImages(ctx, s.hits.filter { it.hit.mediaId in selected }.map { it.summary.uri.toUri() })
+                            shareImages(ctx, s.hits.filter { it.hit.itemId in selected }.map { it.summary.uri.toUri() })
                         }) {
                             Icon(Icons.Filled.Share, null)
                             Text(stringResource(R.string.action_share), Modifier.padding(start = 8.dp))
@@ -122,8 +123,8 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
-                    items(s.hits, key = { it.hit.mediaId }) { r ->
-                        val id = r.hit.mediaId
+                    items(s.hits, key = { it.hit.itemId }) { r ->
+                        val id = r.hit.itemId
                         val isSel = id in selected
                         fun toggle() { selected = if (isSel) selected - id else selected + id }
                         Card(
@@ -134,7 +135,7 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
                             border = if (isSel) BorderStroke(3.dp, MaterialTheme.colorScheme.primary) else null,
                         ) {
                             Box {
-                                Thumb(r.summary.uri, r.summary.status == IndexStatus.FAILED, Modifier.fillMaxWidth().aspectRatio(1f))
+                                ItemThumb(r.summary.kind, r.summary.uri, r.thumbPath, r.summary.displayName, r.summary.status == ItemStatus.FAILED, Modifier.fillMaxWidth().aspectRatio(1f))
                                 if (isSel) {
                                     Icon(
                                         Icons.Filled.CheckCircle, null, tint = MaterialTheme.colorScheme.primary,
@@ -144,11 +145,16 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
                             }
                             Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    r.hit.imageSim?.let { Badge(stringResource(R.string.badge_image), "%.2f".format(it)) }
-                                    r.hit.ocrSim?.let { Badge(stringResource(R.string.badge_ocr), "%.2f".format(it)) }
+                                    r.hit.visualSim?.let { Badge(stringResource(R.string.badge_image), "%.2f".format(it)) }
+                                    r.hit.textSim?.let { Badge(stringResource(R.string.badge_ocr), "%.2f".format(it)) }
+                                    r.hit.audioSim?.let { Badge(stringResource(R.string.badge_audio), "%.2f".format(it)) }
                                     if (r.hit.keywordMatches > 0) Badge(stringResource(R.string.badge_keyword), null)
                                 }
-                                r.hit.snippet?.let {
+                                Text(
+                                    listOfNotNull(r.summary.displayName, locationLabel(r.hit.best?.page, r.hit.best?.startMs)).joinToString(" · "),
+                                    style = MaterialTheme.typography.labelSmall, maxLines = 1,
+                                )
+                                r.snippet?.let {
                                     Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 3, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
@@ -158,7 +164,7 @@ fun SearchScreen(onOpenSettings: () -> Unit) {
             }
         }
     }
-    detailId?.let { ImageDetailSheet(it) { detailId = null } }
+    detailId?.let { ItemDetailSheet(it) { detailId = null } }
 }
 
 @Composable

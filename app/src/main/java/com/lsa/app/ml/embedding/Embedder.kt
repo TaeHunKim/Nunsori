@@ -8,8 +8,17 @@ interface Embedder : AutoCloseable {
     suspend fun embedImage(jpeg: ByteArray): FloatArray
 
     /** Text to be indexed (e.g. OCR text). Prefix handling is internal. */
-    suspend fun embedDocument(text: String): FloatArray
+    suspend fun embedDocument(text: String, title: String? = null): FloatArray
 
     /** User search query. Prefix handling is internal. */
     suspend fun embedQuery(text: String): FloatArray
+
+    /** Whether [embedAudio] is available (EmbeddingGemma 2 740M only). */
+    val supportsAudio: Boolean get() = false
+
+    /** [wav] is a complete WAV file (16 kHz, mono, 16-bit). */
+    suspend fun embedAudio(wav: ByteArray): FloatArray = throw UnsupportedOperationException("audio")
+
+    /** Several frames of one clip -> one vector. */
+    suspend fun embedImages(jpegs: List<ByteArray>): FloatArray = throw UnsupportedOperationException("images")
 }

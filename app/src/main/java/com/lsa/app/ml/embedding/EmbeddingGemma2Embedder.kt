@@ -19,19 +19,30 @@ class EmbeddingGemma2Embedder private constructor(
 ) : Embedder {
     private val mutex = Mutex()
     private val options = EmbeddingOptions(normalize = true)
+    /** Several frames in one input must fit the model's 1024-token limit: 70 vision tokens per frame. */
+    private val clipOptions = EmbeddingOptions(normalize = true, visionTokensPerImage = 70)
 
     override suspend fun embedImage(jpeg: ByteArray): FloatArray =
         compute(InputData.Image(jpeg))
 
-    override suspend fun embedDocument(text: String): FloatArray =
-        compute(InputData.Text(DOC_PREFIX + text))
+    override suspend fun embedDocument(text: String, title: String?): FloatArray =
+        compute(InputData.Text("title: ${title?.trim()?.takeIf { it.isNotEmpty() } ?: "none"} | text: $text"))
 
     override suspend fun embedQuery(text: String): FloatArray =
         compute(InputData.Text(QUERY_PREFIX + text))
 
-    private suspend fun compute(input: InputData): FloatArray = mutex.withLock {
+    override val supportsAudio: Boolean get() = modelId == "eg2-740m"
+
+    override suspend fun embedAudio(wav: ByteArray): FloatArray = compute(InputData.Audio(wav))
+
+    override suspend fun embedImages(jpegs: List<ByteArray>): FloatArray =
+        computeAll(jpegs.map { InputData.Image(it) }, clipOptions)
+
+    private suspend fun compute(input: InputData): FloatArray = computeAll(listOf(input))
+
+    private suspend fun computeAll(inputs: List<InputData>, opts: EmbeddingOptions = options): FloatArray = mutex.withLock {
         withContext(Dispatchers.Default) {
-            VectorMath.normalize(engine.computeEmbedding(listOf(input), options).embedding)
+            VectorMath.normalize(engine.computeEmbedding(inputs, opts).embedding)
         }
     }
 
@@ -40,7 +51,6 @@ class EmbeddingGemma2Embedder private constructor(
     companion object {
         private const val TAG = "LSA.EG2"
         const val QUERY_PREFIX = "task: search result | query: "
-        const val DOC_PREFIX = "title: none | text: "
 
         private val isEmulator: Boolean
             get() = Build.FINGERPRINT.contains("generic") || Build.HARDWARE.contains("ranchu") ||
@@ -60,6 +70,8 @@ class EmbeddingGemma2Embedder private constructor(
                             modelPath = modelFile.absolutePath,
                             backend = backend,
                             visionBackend = backend,
+                            // Only the 740M build has an audio encoder.
+                            audioBackend = if (modelId == "eg2-740m") backend else null,
                             cacheDir = cacheDir.absolutePath,
                         ),
                     )

@@ -1,10 +1,15 @@
 package com.lsa.app.indexing
 
-import com.lsa.app.data.db.ImageDao
-import com.lsa.app.data.db.ImageEntity
-import com.lsa.app.data.db.IndexStatus
-import com.lsa.app.data.media.MediaImage
-import com.lsa.app.data.media.MediaSource
+import com.lsa.app.data.db.ItemDao
+import com.lsa.app.data.db.ItemEntity
+import com.lsa.app.data.db.ItemKind
+import com.lsa.app.data.db.ItemState
+import com.lsa.app.data.db.ItemStatus
+import com.lsa.app.data.db.SegmentEntity
+import com.lsa.app.data.db.SegmentType
+import com.lsa.app.data.media.FolderSpec
+import com.lsa.app.data.media.ItemSource
+import com.lsa.app.data.media.SourceEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -22,84 +27,177 @@ data class IndexProgress(
 
 enum class IndexError { MODEL_MISSING, NO_FOLDERS, LOAD_FAILED }
 
-/** Everything needed to index one file; backed by the loaded embedding + OCR models. */
-interface IndexSession {
-    val embeddingModelId: String
-    suspend fun index(item: MediaImage): ImageEntity
-    fun failed(item: MediaImage, t: Throwable): ImageEntity
+/** A segment as produced by an extractor, before it is bound to an item row. */
+@Suppress("ArrayInDataClass")
+data class NewSegment(
+    val type: SegmentType,
+    val ordinal: Int,
+    val startMs: Long? = null,
+    val endMs: Long? = null,
+    val page: Int? = null,
+    val text: String? = null,
+    val embedding: ByteArray? = null,
+    val thumbPath: String? = null,
+)
+
+/** Where an extractor writes its output. Everything passed in is committed immediately. */
+interface ItemSink {
+    suspend fun meta(
+        title: String? = null, latitude: Double? = null, longitude: Double? = null,
+        durationMs: Long? = null, pageCount: Int? = null,
+    )
+
+    /** Persists [segments] and records [progress] so an interrupted run can continue from there. */
+    suspend fun segments(segments: List<NewSegment>, progress: Long)
 }
 
-/** Result of [IndexRunner.sync]: what is already indexed and what still has to be processed. */
-data class IndexPlan(val total: Int, val done: Int, val todo: List<MediaImage>)
+/** Thrown by an extractor to mark a file as deliberately not indexed (unsupported, protected, ...). */
+class SkipItem(val reason: String) : Exception(reason)
+
+/** Turns one file into segments using the loaded models. */
+interface IndexSession {
+    val embeddingModelId: String
+
+    /** [resume] is the `progress` stored by an interrupted run of the same pipeline (0 = start over). */
+    suspend fun process(entry: SourceEntry, resume: Long, sink: ItemSink)
+}
+
+/** A file that still has to be processed, plus what is already stored for it. */
+data class TodoItem(val entry: SourceEntry, val existing: ItemState?)
+
+data class IndexPlan(val total: Int, val done: Int, val todo: List<TodoItem>)
 
 /**
  * Incremental, resumable indexing.
  *
  * [sync] needs no model: it removes rows for files that disappeared, records moves/renames and works out what has to
- * be (re)indexed. [process] does the expensive part and commits file by file, so cancelling loses at most one file.
+ * be (re)processed. [process] does the expensive part; every batch an extractor emits is committed immediately, so
+ * cancelling loses at most the batch in flight.
  */
 class IndexRunner(
-    private val dao: ImageDao,
-    private val media: MediaSource,
+    private val dao: ItemDao,
+    private val source: ItemSource,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
-    suspend fun sync(folders: List<String>, embeddingModelId: String): IndexPlan {
-        val items = media.listImages(folders)
-        val states = dao.states().associateBy { it.mediaId }
+    /**
+     * @param kinds kinds that were looked at; rows of other kinds are left alone.
+     * @param embeddingModelId stored with new rows.
+     * @param pipelineKey what a finished item of that kind must have been produced with.
+     */
+    suspend fun sync(
+        folders: List<FolderSpec>,
+        kinds: Set<ItemKind>,
+        pipelineKey: (ItemKind) -> String,
+    ): IndexPlan {
+        val entries = source.list(folders, kinds).filter { it.kind in kinds }
+        val states = dao.states().filter { it.kind in kinds }.associateBy { it.sourceKey }
 
         // An empty listing while rows exist usually means lost permission / unmounted storage, not "all deleted".
-        if (items.isEmpty() && states.isNotEmpty()) return IndexPlan(0, 0, emptyList())
+        if (entries.isEmpty() && states.isNotEmpty()) return IndexPlan(0, 0, emptyList())
 
-        val present = items.mapTo(HashSet()) { it.mediaId }
-        states.keys.filter { it !in present }.chunked(500).forEach { dao.deleteByIds(it) }
+        val present = entries.mapTo(HashSet()) { it.sourceKey }
+        states.values.filter { it.sourceKey !in present }.map { it.itemId }.chunked(500).forEach { dao.deleteItems(it) }
 
-        val todo = ArrayList<MediaImage>()
-        for (item in items) {
-            val s = states[item.mediaId]
-            val unchanged = s != null && s.dateModified == item.dateModified &&
-                s.embeddingModelId == embeddingModelId && s.status == IndexStatus.DONE
+        val todo = ArrayList<TodoItem>()
+        for (e in entries) {
+            val s = states[e.sourceKey]
+            val unchanged = s != null && s.modifiedAt == e.modifiedAt && s.sizeBytes == e.sizeBytes &&
+                s.pipelineKey == pipelineKey(e.kind) && s.status != ItemStatus.IN_PROGRESS &&
+                s.status != ItemStatus.FAILED
             when {
-                s == null || !unchanged -> todo += item
-                s.relativePath != item.relativePath || s.displayName != item.displayName ->
-                    dao.updateLocation(item.mediaId, item.relativePath, item.displayName)
+                s == null || !unchanged -> todo += TodoItem(e, s)
+                s.folderKey != e.folderKey || s.displayName != e.displayName ->
+                    dao.updateLocation(s.itemId, e.folderKey, e.displayName)
             }
         }
-        todo.sortByDescending { it.dateTaken ?: (it.dateModified * 1000) }
-        return IndexPlan(total = items.size, done = items.size - todo.size, todo = todo)
+        todo.sortByDescending { it.entry.dateTaken ?: it.entry.modifiedAt }
+        return IndexPlan(total = entries.size, done = entries.size - todo.size, todo = todo)
     }
 
-    /**
-     * [gate] is checked before every file; returning false stops early (thermal throttling, user pause).
-     */
+    /** [gate] is checked before every file; returning false stops early (thermal throttling, user pause). */
     suspend fun process(
         plan: IndexPlan,
         session: IndexSession,
+        pipelineKey: (ItemKind) -> String,
         gate: suspend () -> Boolean = { true },
         onProgress: suspend (IndexProgress) -> Unit,
     ): IndexProgress {
         var progress = IndexProgress(total = plan.total, done = plan.done)
         onProgress(progress)
-        for (item in plan.todo) {
+        for (todo in plan.todo) {
             currentCoroutineContext().ensureActive()
             if (!gate()) {
                 progress = progress.copy(current = null, stoppedEarly = true)
                 onProgress(progress)
                 return progress
             }
-            progress = progress.copy(current = item.displayName)
+            val entry = todo.entry
+            progress = progress.copy(current = entry.displayName)
             onProgress(progress)
-            try {
-                dao.upsert(session.index(item))
-                progress = progress.copy(done = progress.done + 1)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                dao.upsert(session.failed(item, e))
-                progress = progress.copy(failed = progress.failed + 1)
-            }
+            val ok = processOne(todo, session, pipelineKey(entry.kind))
+            progress = if (ok) progress.copy(done = progress.done + 1) else progress.copy(failed = progress.failed + 1)
             onProgress(progress)
         }
         progress = progress.copy(current = null, finished = true)
         onProgress(progress)
         return progress
+    }
+
+    private suspend fun processOne(todo: TodoItem, session: IndexSession, key: String): Boolean {
+        val e = todo.entry
+        val old = todo.existing
+        // Only an interrupted run of the very same file + pipeline that already committed something can resume.
+        val resumable = old != null && old.status == ItemStatus.IN_PROGRESS && old.pipelineKey == key &&
+            old.modifiedAt == e.modifiedAt && old.sizeBytes == e.sizeBytes && old.progress > 0
+        val itemId: Long
+        val resume: Long
+        if (resumable) {
+            itemId = old!!.itemId; resume = old.progress
+        } else {
+            old?.let { dao.deleteItems(listOf(it.itemId)) }
+            itemId = dao.insertItem(newItem(e, session.embeddingModelId, key))
+            resume = 0
+        }
+        val sink = DbSink(itemId)
+        return try {
+            session.process(e, resume, sink)
+            dao.setStatus(itemId, ItemStatus.DONE, null, clock())
+            true
+        } catch (c: CancellationException) {
+            throw c // stays IN_PROGRESS; whatever was committed is kept for the next run
+        } catch (s: SkipItem) {
+            dao.deleteSegmentsOf(itemId)
+            dao.setStatus(itemId, ItemStatus.SKIPPED, s.reason, clock())
+            true
+        } catch (t: Exception) {
+            dao.deleteSegmentsOf(itemId)
+            dao.setStatus(itemId, ItemStatus.FAILED, t.message ?: t.javaClass.simpleName, clock())
+            false
+        }
+    }
+
+    private fun newItem(e: SourceEntry, modelId: String, key: String) = ItemEntity(
+        sourceKey = e.sourceKey, kind = e.kind, uri = e.uri.toString(), folderKey = e.folderKey,
+        displayName = e.displayName, mimeType = e.mimeType, sizeBytes = e.sizeBytes, modifiedAt = e.modifiedAt,
+        title = null, durationMs = e.durationMs, pageCount = null, width = e.width, height = e.height,
+        dateTaken = e.dateTaken, latitude = null, longitude = null, status = ItemStatus.IN_PROGRESS, error = null,
+        embeddingModelId = modelId, pipelineKey = key, progress = 0, indexedAt = clock(),
+    )
+
+    private inner class DbSink(private val itemId: Long) : ItemSink {
+        override suspend fun meta(title: String?, latitude: Double?, longitude: Double?, durationMs: Long?, pageCount: Int?) =
+            dao.updateMeta(itemId, title, latitude, longitude, durationMs, pageCount)
+
+        override suspend fun segments(segments: List<NewSegment>, progress: Long) {
+            dao.insertSegments(
+                segments.map {
+                    SegmentEntity(
+                        itemId = itemId, type = it.type, ordinal = it.ordinal, startMs = it.startMs, endMs = it.endMs,
+                        page = it.page, text = it.text, embedding = it.embedding, thumbPath = it.thumbPath,
+                    )
+                },
+            )
+            dao.updateProgress(itemId, progress)
+        }
     }
 }

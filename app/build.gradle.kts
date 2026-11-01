@@ -17,9 +17,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
+    defaultConfig { ndk { abiFilters += listOf("arm64-v8a") } }
     androidResources { generateLocaleConfig = true }
     packaging { jniLibs { useLegacyPackaging = true } }
     testOptions { unitTests.isReturnDefaultValues = true }
+    // Room migration tests read the exported schemas.
+    sourceSets.getByName("androidTest").assets.directories.add("$projectDir/schemas")
 }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
@@ -40,14 +43,24 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.commonmark)
+    implementation(libs.commonmark.tables)
+    implementation(libs.jsoup)
+    implementation(libs.pdfbox.android)
+    implementation(libs.commons.compress)
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.litertlm.android)
     implementation(libs.mlkit.text.recognition.korean)
+    // Not on Maven Central: scripts/fetch-sherpa-onnx.sh downloads it into app/libs (git-ignored).
+    implementation(files("libs/sherpa-onnx-2.0.1.aar"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
+    // Room reads its schema bundle with kotlinx.serialization; an older runtime pulled in transitively breaks migration tests.
+    implementation(libs.kotlinx.serialization.core)
 
     testImplementation(libs.junit)
+    testImplementation("net.sf.kxml:kxml2:2.3.0") // XmlPullParser implementation for JVM unit tests
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
 

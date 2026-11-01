@@ -2,74 +2,154 @@ package com.lsa.app.data.db
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-object IndexStatus {
-    const val DONE = "DONE"
-    const val FAILED = "FAILED"
+enum class ItemKind { IMAGE, TEXT, DOC, AUDIO, VIDEO }
+
+enum class ItemStatus {
+    /** Queued or interrupted; [ItemEntity.progress] says where to resume. */
+    IN_PROGRESS,
+    DONE,
+    FAILED,
+    /** Deliberately not indexed (unsupported, protected, too large). */
+    SKIPPED,
 }
 
-@Entity(tableName = "images")
-data class ImageEntity(
-    @PrimaryKey val mediaId: Long,
+/** What a [SegmentEntity] holds; decides how it is searched and displayed. */
+enum class SegmentType {
+    IMAGE, OCR_TEXT, TEXT_CHUNK, PAGE_IMAGE, CARD_IMAGE, TRANSCRIPT, AUDIO_CLIP, VIDEO_CLIP;
+
+    /** Signal group used when scoring search results. */
+    val group: SignalGroup
+        get() = when (this) {
+            IMAGE, PAGE_IMAGE, CARD_IMAGE, VIDEO_CLIP -> SignalGroup.VISUAL
+            AUDIO_CLIP -> SignalGroup.AUDIO
+            OCR_TEXT, TEXT_CHUNK, TRANSCRIPT -> SignalGroup.TEXT
+        }
+}
+
+enum class SignalGroup { VISUAL, TEXT, AUDIO }
+
+/** One indexed file. */
+@Entity(
+    tableName = "items",
+    indices = [Index(value = ["sourceKey"], unique = true), Index("kind"), Index("folderKey")],
+)
+data class ItemEntity(
+    @PrimaryKey(autoGenerate = true) val itemId: Long = 0,
+    /** Stable identity of the file: `ms:image:123` for MediaStore, `fs:<absolute path>` for plain files. */
+    val sourceKey: String,
+    val kind: ItemKind,
     val uri: String,
-    val relativePath: String,
+    /** Volume-relative folder, same namespace as MediaStore RELATIVE_PATH (e.g. `Pictures/fixtures/`). */
+    val folderKey: String,
     val displayName: String,
     val mimeType: String?,
     val sizeBytes: Long,
+    /** Milliseconds; used for change detection together with [sizeBytes]. */
+    val modifiedAt: Long,
+    val title: String?,
+    val durationMs: Long?,
+    val pageCount: Int?,
     val width: Int,
     val height: Int,
     val dateTaken: Long?,
-    /** MediaStore DATE_MODIFIED (seconds). Used for change detection. */
-    val dateModified: Long,
     val latitude: Double?,
     val longitude: Double?,
-    val ocrText: String?,
-    val ocrModelId: String?,
-    @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val imageEmb: ByteArray?,
-    @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val ocrEmb: ByteArray?,
-    val embeddingModelId: String,
-    val embeddingDim: Int,
-    val indexedAt: Long,
-    val status: String,
+    val status: ItemStatus,
     val error: String?,
+    /** Embedding model the vectors belong to; search only uses vectors of the selected model. */
+    val embeddingModelId: String,
+    /** Everything that affects this kind's output (models, chunker version, ...). A change means reprocess. */
+    val pipelineKey: String,
+    /** Resume position while [ItemStatus.IN_PROGRESS] (page index, milliseconds, ...). */
+    val progress: Long,
+    val indexedAt: Long,
+)
+
+/** One searchable unit of an item: a chunk of text, a page, an audio window, a video clip, ... */
+@Entity(
+    tableName = "segments",
+    foreignKeys = [ForeignKey(ItemEntity::class, parentColumns = ["itemId"], childColumns = ["itemId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("itemId"), Index("type")],
+)
+data class SegmentEntity(
+    @PrimaryKey(autoGenerate = true) val segId: Long = 0,
+    val itemId: Long,
+    val type: SegmentType,
+    val ordinal: Int,
+    val startMs: Long?,
+    val endMs: Long?,
+    val page: Int?,
+    val text: String?,
+    /** int8-quantised vector, see [com.lsa.app.ml.embedding.Quant]. */
+    @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val embedding: ByteArray?,
+    /** Preview image file (relative to the app's thumbs directory) for non-image items. */
+    val thumbPath: String?,
 )
 
 @Entity(tableName = "indexed_folders")
 data class IndexedFolderEntity(
     @PrimaryKey val relativePath: String,
     val enabled: Boolean = true,
+    @ColumnInfo(defaultValue = "1") val recursive: Boolean = true,
 )
 
-/** Lightweight projection (no BLOBs) for lists. */
-data class ImageSummary(
-    val mediaId: Long,
+/** Lightweight projection for lists (no vectors, no text). */
+data class ItemSummary(
+    val itemId: Long,
+    val kind: ItemKind,
     val uri: String,
     val displayName: String,
-    val relativePath: String,
-    val dateTaken: Long?,
+    val folderKey: String,
+    val title: String?,
     val sizeBytes: Long,
     val width: Int,
     val height: Int,
-    val ocrText: String?,
+    val durationMs: Long?,
+    val pageCount: Int?,
+    val status: ItemStatus,
     val indexedAt: Long,
-    val status: String,
+    val thumbPath: String?,
 )
 
-data class IndexState(
-    val mediaId: Long,
-    val dateModified: Long,
-    val embeddingModelId: String,
-    val status: String,
-    val relativePath: String,
+/** What sync needs to decide whether a file must be (re)processed. */
+data class ItemState(
+    val itemId: Long,
+    val sourceKey: String,
+    val kind: ItemKind,
+    val modifiedAt: Long,
+    val sizeBytes: Long,
+    val status: ItemStatus,
+    val pipelineKey: String,
+    val progress: Long,
+    val folderKey: String,
     val displayName: String,
 )
 
+/** A vector plus where it came from, for the in-memory search cache. */
 @Suppress("ArrayInDataClass")
 data class VectorRow(
-    val mediaId: Long,
-    val imageEmb: ByteArray?,
-    val ocrEmb: ByteArray?,
+    val segId: Long,
+    val itemId: Long,
+    val type: SegmentType,
+    val startMs: Long?,
+    val endMs: Long?,
+    val page: Int?,
+    val embedding: ByteArray,
 )
 
-data class OcrRow(val mediaId: Long, val ocrText: String?)
+/** Text of a segment, for keyword matching. */
+data class TextRow(
+    val segId: Long,
+    val itemId: Long,
+    val type: SegmentType,
+    val startMs: Long?,
+    val endMs: Long?,
+    val page: Int?,
+    val text: String,
+)
+
+data class SegText(val segId: Long, val text: String)

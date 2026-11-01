@@ -2,11 +2,15 @@ package com.lsa.app
 
 import android.app.Application
 import android.content.Context
+import android.os.Environment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.room.Room
 import com.lsa.app.data.db.AppDatabase
+import com.lsa.app.data.db.MIGRATION_1_2
+import com.lsa.app.data.media.CompositeSource
+import com.lsa.app.data.media.FileSource
 import com.lsa.app.data.media.MediaStoreRepository
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.IndexingController
@@ -18,6 +22,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.lsa.app.models.ModelState
 import com.lsa.app.indexing.AutoIndexScheduler
+import com.lsa.app.indexing.docs.ThumbStore
 import com.lsa.app.indexing.IndexRunner
 import com.lsa.app.ml.ModelResidency
 import com.lsa.app.models.ModelManager
@@ -27,22 +32,31 @@ class AppContainer(val context: Context) {
     /** Lives as long as the process; used for background housekeeping (model unloading, schedule updates). */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    val db: AppDatabase by lazy { Room.databaseBuilder(context, AppDatabase::class.java, "lsa.db").build() }
+    val db: AppDatabase by lazy { Room.databaseBuilder(context, AppDatabase::class.java, "lsa.db").addMigrations(MIGRATION_1_2).build() }
     val settings = SettingsStore(context)
     val modelManager = ModelManager(context, settings)
-    val mediaRepo = MediaStoreRepository(context)
+    val mediaRepo = MediaStoreRepository(context).also { repo -> appScope.launch { settings.skipMusic.collect { repo.skipMusic = it } } }
+    val thumbs = ThumbStore(context)
     val residency = ModelResidency(context, modelManager, settings, appScope)
-    val indexRunner by lazy { IndexRunner(db.imageDao(), mediaRepo) }
-    val indexing by lazy { IndexingController(context, db.imageDao(), indexRunner, settings) }
+    private val source = CompositeSource(
+        listOf(
+            mediaRepo,
+            // Plain files (documents, text) need "all files access"; without it this source simply lists nothing.
+            FileSource(Environment.getExternalStorageDirectory()) { Environment.isExternalStorageManager() },
+        ),
+    )
+    val indexRunner by lazy { IndexRunner(db.itemDao(), source) }
+    val indexing by lazy { IndexingController(context, db.itemDao(), indexRunner, settings, modelManager) }
     val autoIndex = AutoIndexScheduler(
         context, settings, appScope,
         catchUpSignals = combine(
-            db.imageDao().observeFolders().map { f -> f.filter { it.enabled }.map { it.relativePath }.toSet() },
+            db.itemDao().observeFolders().map { f -> f.filter { it.enabled }.map { it.relativePath }.toSet() },
             settings.embeddingModelId,
+            settings.enabledKinds,
             modelManager.states.map { st -> st.filterValues { it is ModelState.Installed }.keys },
-        ) { folders, model, installed -> Triple(folders, model, installed) },
+        ) { folders, model, kinds, installed -> listOf(folders, model, kinds, installed) },
     )
-    val search by lazy { SearchEngine(db.imageDao(), residency, settings) }
+    val search by lazy { SearchEngine(db.itemDao(), { q -> residency.embedder()?.use { it.value.embedQuery(q) } }, settings) }
 }
 
 class LsaApplication : Application() {

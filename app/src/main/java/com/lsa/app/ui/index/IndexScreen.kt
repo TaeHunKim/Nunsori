@@ -43,13 +43,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.lsa.app.R
-import com.lsa.app.data.db.IndexStatus
+import com.lsa.app.data.db.ItemStatus
 import com.lsa.app.indexing.IndexError
 import com.lsa.app.rememberContainer
-import com.lsa.app.ui.common.ImageDetailSheet
-import com.lsa.app.ui.common.Thumb
+import com.lsa.app.ui.common.ItemDetailSheet
+import com.lsa.app.ui.common.ItemThumb
 import com.lsa.app.ui.common.WarningCard
 import com.lsa.app.ui.onboarding.OnboardingDialog
+
+/** Photos via the media permission, or any file via "all files access". */
+fun hasAnyStorageAccess(ctx: android.content.Context): Boolean =
+    hasPhotoPermission(ctx) || android.os.Environment.isExternalStorageManager()
 
 fun hasPhotoPermission(ctx: android.content.Context): Boolean {
     val p = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
@@ -78,7 +82,7 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
         ) notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) else vm.start()
     }
 
-    val permitted = hasPhotoPermission(ctx)
+    val permitted = hasAnyStorageAccess(ctx)
     val warning: String? = when {
         !permitted -> stringResource(R.string.warn_no_permission)
         folderCount == 0 -> stringResource(R.string.warn_no_folders)
@@ -124,15 +128,15 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
                 )
             }
         }
-        items(summaries, key = { it.mediaId }) { s ->
-            Thumb(
-                s.uri, s.status == IndexStatus.FAILED,
-                Modifier.aspectRatio(1f).clickable { detailId = s.mediaId },
+        items(summaries, key = { it.itemId }) { s ->
+            ItemThumb(
+                s.kind, s.uri, s.thumbPath, s.displayName, s.status == ItemStatus.FAILED,
+                Modifier.aspectRatio(1f).clickable { detailId = s.itemId },
             )
         }
     }
     if (!onboardingDone) OnboardingDialog(vm::completeOnboarding)
-    detailId?.let { ImageDetailSheet(it) { detailId = null } }
+    detailId?.let { ItemDetailSheet(it) { detailId = null } }
 }
 
 @Composable

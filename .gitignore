@@ -26,11 +26,17 @@
 # Test fixtures: images are generated/downloaded, not committed (see scripts/fetch-photo-fixtures.sh, make-text-fixtures.py)
 /test-fixtures/images/*
 !/test-fixtures/images/.gitkeep
+/test-fixtures/docs/*
+/test-fixtures/media/*
 *.jpg
 *.jpeg
 *.png
 *.webp
 *.heic
+
+# Third-party binaries fetched by scripts (see scripts/fetch-sherpa-onnx.sh)
+/app/libs/*.aar
+/app/src/main/assets/*.onnx
 
 # Local Claude Code state
 .claude/settings.local.json

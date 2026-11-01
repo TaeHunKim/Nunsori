@@ -9,6 +9,8 @@ import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.lsa.app.data.prefs.SettingsStore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,9 +42,13 @@ class ModelManager(
         else -> null
     }
 
-    fun isReady(spec: ModelSpec): Boolean = when (spec.source) {
+    /** Folder holding the unpacked files of an archive model. */
+    fun dir(spec: ModelSpec): File = File(modelsDir, spec.id)
+
+    fun isReady(spec: ModelSpec): Boolean = when (val s = spec.source) {
         is ModelSource.Bundled -> true
         is ModelSource.HuggingFace -> file(spec)?.exists() == true
+        is ModelSource.Archive -> s.files.values.all { File(dir(spec), it).exists() }
         is ModelSource.Planned -> false
     }
 
@@ -63,7 +69,7 @@ class ModelManager(
 
     fun startDownload(id: String) {
         val spec = ModelCatalog.byId(id) ?: return
-        if (spec.source !is ModelSource.HuggingFace || isReady(spec)) return
+        if (spec.source !is ModelSource.HuggingFace && spec.source !is ModelSource.Archive || isReady(spec)) return
         set(id, ModelState.Downloading(0, spec.sizeBytes ?: 0))
         val req = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
             .setInputData(workDataOf(ModelDownloadWorker.KEY_MODEL_ID to id))
@@ -85,19 +91,28 @@ class ModelManager(
             f.delete()
             File(f.path + ".part").delete()
         }
+        if (spec.source is ModelSource.Archive) dir(spec).deleteRecursively()
         set(id, ModelState.NotInstalled)
     }
 
     /** Called from [ModelDownloadWorker]. */
     suspend fun runDownload(spec: ModelSpec, onProgress: (Long, Long) -> Unit) {
-        val src = spec.source as? ModelSource.HuggingFace ?: return
-        val target = file(spec) ?: return
-        val token = settings.hfToken.first()
+        val (url, target, token) = when (val src = spec.source) {
+            is ModelSource.HuggingFace -> Triple(src.url, file(spec) ?: return, settings.hfToken.first())
+            // the token belongs to Hugging Face only
+            is ModelSource.Archive -> Triple(src.url, File(dir(spec), ARCHIVE_NAME), "")
+            else -> return
+        }
         set(spec.id, ModelState.Downloading(0, spec.sizeBytes ?: 0))
         try {
-            downloader.download(src.url, target, token) { d, t ->
+            downloader.download(url, target, token) { d, t ->
                 set(spec.id, ModelState.Downloading(d, t))
                 onProgress(d, t)
+            }
+            (spec.source as? ModelSource.Archive)?.let { src ->
+                // unpacking takes a while: keep showing a full progress bar instead of "installed"
+                withContext(Dispatchers.IO) { ArchiveExtractor.extract(target, dir(spec), src.files) }
+                target.delete()
             }
             set(spec.id, ModelState.Installed)
         } catch (e: CancellationException) {
@@ -113,4 +128,6 @@ class ModelManager(
     }
 
     private fun workName(id: String) = "model-download-$id"
+
+    private companion object { const val ARCHIVE_NAME = "download.tar.bz2" }
 }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.ResidencyPolicy
+import com.lsa.app.indexing.audio.SherpaSpeech
+import com.lsa.app.indexing.audio.SpeechTools
 import com.lsa.app.ml.embedding.Embedder
 import com.lsa.app.ml.embedding.EmbeddingGemma2Embedder
 import com.lsa.app.ml.ocr.MlKitOcrEngine
@@ -95,6 +97,7 @@ class ModelResidency(
     private val policy: suspend () -> ResidencyPolicy = { settings.residency.first() }
     private val embedderRes = LeasedResource<Embedder>("embedder", scope, policy)
     private val ocrRes = LeasedResource<OcrEngine>("ocr", scope, policy)
+    private val speechRes = LeasedResource<SpeechTools>("speech", scope, policy)
 
     /** Test hook. */
     var embedderFactory: suspend (modelId: String, file: File, cacheDir: File) -> Embedder? = { id, file, cache ->
@@ -117,6 +120,12 @@ class ModelResidency(
     suspend fun ocr(modelId: String): Lease<OcrEngine> =
         ocrRes.acquire(modelId) { MlKitOcrEngine() }!!
 
-    suspend fun trim() { embedderRes.trim(); ocrRes.trim() }
-    suspend fun closeAll() { embedderRes.closeNow(); ocrRes.closeNow() }
+    /** Voice activity detection always works; recognition only when the selected ASR model is installed. */
+    suspend fun speech(): Lease<SpeechTools> {
+        val spec = ModelCatalog.byId(settings.asrModelId.first())?.takeIf { it.source is ModelSource.Archive && manager.isReady(it) }
+        return speechRes.acquire(spec?.id ?: "none") { SherpaSpeech(context, spec?.let(manager::dir)) }!!
+    }
+
+    suspend fun trim() { embedderRes.trim(); ocrRes.trim(); speechRes.trim() }
+    suspend fun closeAll() { embedderRes.closeNow(); ocrRes.closeNow(); speechRes.closeNow() }
 }

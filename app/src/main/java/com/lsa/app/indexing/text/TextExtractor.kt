@@ -1,0 +1,51 @@
+package com.lsa.app.indexing.text
+
+import com.lsa.app.data.db.SegmentType
+import com.lsa.app.data.media.SourceEntry
+import com.lsa.app.indexing.ItemSink
+import com.lsa.app.indexing.NewSegment
+import com.lsa.app.indexing.SkipItem
+import com.lsa.app.ml.embedding.Embedder
+import com.lsa.app.ml.embedding.Quant
+import java.io.File
+
+/** txt / md / html / xml / csv / subtitles ...: decode, chunk with overlap, embed every chunk. */
+class TextExtractor(private val embedder: Embedder) {
+    suspend fun extract(entry: SourceEntry, resume: Long, sink: ItemSink) {
+        val file = File(entry.uri.path ?: throw SkipItem("no path"))
+        if (!file.exists()) throw SkipItem("file is gone")
+        val bytes = file.inputStream().use { it.readNBytes(MAX_BYTES) }
+        val text = TextDecoder.decode(bytes) ?: throw SkipItem("binary file")
+        val doc = TextRouting.chunk(file.extension, text, entry.displayName)
+        if (doc.chunks.isEmpty()) throw SkipItem("empty")
+        sink.meta(title = doc.title)
+
+        val batch = ArrayList<NewSegment>(BATCH)
+        for ((i, c) in doc.chunks.withIndex().drop(resume.toInt()).take(MAX_CHUNKS)) {
+            batch += NewSegment(
+                SegmentType.TEXT_CHUNK, i, startMs = c.startMs, endMs = c.endMs, text = c.text,
+                embedding = Quant.encode(embedSafely(c.text, c.title ?: doc.title)),
+            )
+            if (batch.size >= BATCH) { sink.segments(batch.toList(), progress = (i + 1).toLong()); batch.clear() }
+        }
+        if (batch.isNotEmpty()) sink.segments(batch.toList(), progress = (batch.last().ordinal + 1).toLong())
+    }
+
+    /** The model has a hard token limit; if a chunk is still too long, retry with a shorter prefix of it. */
+    private suspend fun embedSafely(text: String, title: String?): FloatArray {
+        var t = text
+        repeat(4) {
+            try { return embedder.embedDocument(t, title) } catch (e: Exception) {
+                if (e.message?.contains("exceeds", ignoreCase = true) != true) throw e
+                t = t.take((t.length * 0.6).toInt()).trimEnd()
+            }
+        }
+        return embedder.embedDocument(t, title)
+    }
+
+    companion object {
+        const val MAX_BYTES = 25 * 1024 * 1024
+        const val MAX_CHUNKS = 20_000
+        const val BATCH = 8
+    }
+}

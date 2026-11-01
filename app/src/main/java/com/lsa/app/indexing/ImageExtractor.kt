@@ -7,11 +7,10 @@ import android.net.Uri
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
-import com.lsa.app.data.db.ImageEntity
-import com.lsa.app.data.db.IndexStatus
-import com.lsa.app.data.media.MediaImage
+import com.lsa.app.data.db.SegmentType
+import com.lsa.app.data.media.SourceEntry
 import com.lsa.app.ml.embedding.Embedder
-import com.lsa.app.ml.embedding.VectorMath
+import com.lsa.app.ml.embedding.Quant
 import com.lsa.app.ml.ocr.OcrEngine
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
@@ -45,44 +44,28 @@ object BitmapLoader {
     }
 }
 
-class ImageIndexer(
+/** Image = pixels (embedded as a picture) + the text printed on it (OCR, embedded as text). */
+class ImageExtractor(
     private val context: Context,
     private val embedder: Embedder,
     private val ocr: OcrEngine,
-    private val clock: () -> Long = System::currentTimeMillis,
-) : IndexSession {
-    override val embeddingModelId: String get() = embedder.modelId
-
-    override suspend fun index(m: MediaImage): ImageEntity {
-        val bmp = BitmapLoader.decode(context, m.uri, OCR_MAX_SIDE)
+) {
+    suspend fun extract(entry: SourceEntry, sink: ItemSink) {
+        val bmp = BitmapLoader.decode(context, entry.uri, OCR_MAX_SIDE)
         try {
             val text = ocr.recognize(bmp).trim().take(MAX_OCR_CHARS)
             val imageVec = embedder.embedImage(BitmapLoader.toJpeg(bmp, EMBED_MAX_SIDE))
             val ocrVec = if (text.isNotBlank()) embedder.embedDocument(text) else null
-            val loc = readLocation(m.uri)
-            return base(m).copy(
-                latitude = loc?.first, longitude = loc?.second,
-                ocrText = text, ocrModelId = ocr.modelId,
-                imageEmb = VectorMath.toBytes(imageVec), ocrEmb = ocrVec?.let(VectorMath::toBytes),
-                embeddingDim = imageVec.size,
-                status = IndexStatus.DONE, error = null,
-            )
+            val loc = readLocation(entry.uri)
+            sink.meta(latitude = loc?.first, longitude = loc?.second)
+            val segs = ArrayList<NewSegment>(2)
+            segs += NewSegment(SegmentType.IMAGE, 0, embedding = Quant.encode(imageVec))
+            if (ocrVec != null) segs += NewSegment(SegmentType.OCR_TEXT, 1, text = text, embedding = Quant.encode(ocrVec))
+            sink.segments(segs, progress = 1)
         } finally {
             bmp.recycle()
         }
     }
-
-    override fun failed(m: MediaImage, t: Throwable): ImageEntity =
-        base(m).copy(status = IndexStatus.FAILED, error = t.message ?: t.javaClass.simpleName)
-
-    private fun base(m: MediaImage) = ImageEntity(
-        mediaId = m.mediaId, uri = m.uri.toString(), relativePath = m.relativePath,
-        displayName = m.displayName, mimeType = m.mimeType, sizeBytes = m.sizeBytes,
-        width = m.width, height = m.height, dateTaken = m.dateTaken, dateModified = m.dateModified,
-        latitude = null, longitude = null, ocrText = null, ocrModelId = null,
-        imageEmb = null, ocrEmb = null, embeddingModelId = embedder.modelId, embeddingDim = 0,
-        indexedAt = clock(), status = IndexStatus.FAILED, error = null,
-    )
 
     private fun readLocation(uri: Uri): Pair<Double, Double>? = try {
         val granted = ContextCompat.checkSelfPermission(

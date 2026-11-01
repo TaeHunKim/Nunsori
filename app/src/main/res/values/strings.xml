@@ -51,7 +51,7 @@
     <string name="index_status_running">Indexing…</string>
     <string name="index_status_paused">Paused</string>
     <string name="index_status_done">Up to date</string>
-    <string name="index_progress">%1$d / %2$d images</string>
+    <string name="index_progress">%1$d / %2$d files</string>
     <plurals name="index_failed_count">
         <item quantity="one">%d failed</item>
         <item quantity="other">%d failed</item>
@@ -65,8 +65,8 @@
     <string name="warn_no_folders">Choose the folders to index in Settings.</string>
     <string name="warn_no_model">Download an embedding model in Settings first.</string>
     <plurals name="warn_stale">
-        <item quantity="one">%d image was indexed with a different model. Start indexing to re-index it.</item>
-        <item quantity="other">%d images were indexed with a different model. Start indexing to re-index them.</item>
+        <item quantity="one">%d file was indexed with a different model. Start indexing to re-index it.</item>
+        <item quantity="other">%d files were indexed with a different model. Start indexing to re-index them.</item>
     </plurals>
     <string name="err_model_missing">The selected embedding model is not installed.</string>
     <string name="err_no_folders">No folders selected.</string>
@@ -84,8 +84,32 @@
     <string name="detail_indexed">Indexed</string>
     <string name="detail_model">Model</string>
     <string name="detail_error">Error</string>
+    <string name="detail_content">Content</string>
     <string name="detail_ocr_text">Recognized text</string>
     <string name="detail_no_text">No text found.</string>
+
+    <!-- Content types & folders -->
+    <string name="kinds_title">What to index</string>
+    <string name="kinds_desc">Only the selected kinds of files are indexed. Documents and text files need “All files access”.</string>
+    <string name="kind_images">Images</string>
+    <string name="kind_text">Text files (txt, md, html, csv, …)</string>
+    <string name="kind_docs">Documents (PDF, Word, PowerPoint, Excel)</string>
+    <string name="kind_audio">Audio</string>
+    <string name="kind_video">Video</string>
+    <string name="kind_coming_soon">Coming soon</string>
+    <string name="perm_all_files">Reading documents and text files needs “All files access”.</string>
+    <string name="perm_all_files_grant">Grant access</string>
+    <string name="folder_none_selected">No folders selected yet.</string>
+    <string name="folder_add">Add folder</string>
+    <string name="folder_remove">Remove</string>
+    <string name="folder_include_sub">Include subfolders</string>
+    <string name="folder_picker_title">Choose a folder</string>
+    <string name="folder_picker_photos_only">Without “All files access” only folders that contain photos can be chosen.</string>
+    <string name="folder_select_this">Add this folder</string>
+    <string name="folder_up">Up</string>
+    <string name="folder_already_added">Added</string>
+    <string name="folder_empty">No subfolders.</string>
+    <string name="dialog_close">Close</string>
 
     <!-- Search -->
     <plurals name="selection_count">
@@ -100,11 +124,12 @@
     <string name="search_model_missing">Embedding model not installed — showing keyword matches only.</string>
     <string name="badge_image">Image</string>
     <string name="badge_ocr">Text</string>
+    <string name="badge_audio">Audio</string>
     <string name="badge_keyword">Keyword</string>
 
     <!-- Settings -->
     <string name="settings_folders">Folders to index</string>
-    <string name="settings_folders_desc">Choose one or more folders that contain images.</string>
+    <string name="settings_folders_desc">Choose the folders that contain the files to index.</string>
     <string name="perm_grant">Grant photo access</string>
     <string name="folders_none">No image folders found.</string>
     <plurals name="image_count">
@@ -130,6 +155,22 @@
     <string name="model_mobileclip2_desc">Very small English-only image–text model.</string>
     <string name="model_mlkit_desc">Google ML Kit text recognition for Korean and Latin scripts. Runs offline.</string>
     <string name="model_ppocr_desc">PaddleOCR mobile model for Korean text.</string>
+    <string name="storage_title">Storage</string>
+    <string name="storage_previews">Previews: %1$s</string>
+    <string name="storage_clear">Clear previews</string>
+    <string name="model_sensevoice_desc">Recognises Korean, English, Chinese and Japanese speech offline. Used for voice files and the audio of videos.</string>
+    <string name="model_moonshine_desc">Very small speech recognition model, one language per model.</string>
+    <string name="settings_asr_models">Speech recognition model</string>
+    <string name="settings_asr_desc">Turns speech into text so recordings can be found by what was said.</string>
+    <string name="audio_needs_740m">Audio embeddings need the EmbeddingGemma 2 740M model. Without it, audio is only searchable through speech recognition.</string>
+    <string name="skip_music">Skip music files</string>
+    <string name="skip_music_desc">Songs from your music library are not indexed; voice recordings are.</string>
+    <string name="video_detail_title">Video detail</string>
+    <string name="video_detail_low">Fast (a frame every 5 s)</string>
+    <string name="video_detail_medium">Balanced (a frame every 2 s)</string>
+    <string name="video_detail_high">Detailed (a frame every second)</string>
+    <string name="video_speech">Transcribe speech in videos</string>
+    <string name="video_speech_desc">Makes what is said in a video searchable. Needs a speech recognition model.</string>
     <string name="settings_token">Hugging Face token</string>
     <string name="settings_token_desc">Optional. Only needed for gated models or to avoid rate limits.</string>
     <string name="settings_language">Language</string>

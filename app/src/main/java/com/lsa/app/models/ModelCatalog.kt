@@ -3,13 +3,16 @@ package com.lsa.app.models
 import androidx.annotation.StringRes
 import com.lsa.app.R
 
-enum class ModelKind { EMBEDDING, OCR }
+enum class ModelKind { EMBEDDING, OCR, ASR }
 
 sealed interface ModelSource {
     /** Downloaded by the user from Hugging Face into app storage. */
     data class HuggingFace(val repo: String, val fileName: String) : ModelSource {
         val url: String get() = "https://huggingface.co/$repo/resolve/main/$fileName"
     }
+
+    /** One archive (tar.bz2) downloaded and unpacked; [files] maps an entry name suffix to the local file name. */
+    data class Archive(val url: String, val files: Map<String, String>) : ModelSource
 
     /** Shipped inside the APK (small). */
     data object Bundled : ModelSource
@@ -26,6 +29,8 @@ data class ModelSpec(
     val sizeBytes: Long?,
     val license: String,
     val source: ModelSource,
+    /** Embedding models only: can embed audio clips (needs the audio encoder). */
+    val audio: Boolean = false,
 )
 
 object ModelCatalog {
@@ -49,6 +54,7 @@ object ModelCatalog {
                 "litert-community/embeddinggemma-2-740m-litert-lm",
                 "embeddinggemma-2-740m.litertlm",
             ),
+            audio = true,
         ),
         ModelSpec(
             id = "mobileclip2-s0", kind = ModelKind.EMBEDDING,
@@ -63,6 +69,23 @@ object ModelCatalog {
             descriptionRes = R.string.model_mlkit_desc,
             sizeBytes = null, license = "ML Kit Terms",
             source = ModelSource.Bundled,
+        ),
+        ModelSpec(
+            id = "asr-sensevoice", kind = ModelKind.ASR,
+            displayName = "SenseVoice (Korean, English, Chinese, Japanese)",
+            descriptionRes = R.string.model_sensevoice_desc,
+            sizeBytes = 163_002_883L, license = "FunASR Model License",
+            source = ModelSource.Archive(
+                "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
+                mapOf("model.int8.onnx" to "model.int8.onnx", "tokens.txt" to "tokens.txt"),
+            ),
+        ),
+        ModelSpec(
+            id = "asr-moonshine", kind = ModelKind.ASR,
+            displayName = "Moonshine tiny (Korean / English)",
+            descriptionRes = R.string.model_moonshine_desc,
+            sizeBytes = null, license = "MIT",
+            source = ModelSource.Planned,
         ),
         ModelSpec(
             id = "ppocrv5-ko", kind = ModelKind.OCR,

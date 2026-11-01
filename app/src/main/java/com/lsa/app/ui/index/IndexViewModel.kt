@@ -12,15 +12,15 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.lsa.app.data.db.ImageSummary
+import com.lsa.app.data.db.ItemSummary
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class IndexViewModel(private val c: AppContainer) : ViewModel() {
-    private val dao = c.db.imageDao()
+    private val dao = c.db.itemDao()
     private fun <T> kotlinx.coroutines.flow.Flow<T>.state(initial: T): StateFlow<T> =
         stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initial)
 
-    val summaries: StateFlow<List<ImageSummary>> = dao.observeSummaries().state(emptyList())
+    val summaries: StateFlow<List<ItemSummary>> = dao.observeSummaries().state(emptyList())
     val progress = c.indexing.progress
     val running = c.indexing.running.state(false)
     val enabledFolderCount = dao.observeFolders().map { f -> f.count { it.enabled } }.state(0)

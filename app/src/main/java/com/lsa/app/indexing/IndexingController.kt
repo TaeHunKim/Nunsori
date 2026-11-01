@@ -6,24 +6,25 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import com.lsa.app.data.db.ImageDao
-import com.lsa.app.data.media.MediaStoreRepository
+import com.lsa.app.data.db.ItemDao
+import com.lsa.app.data.db.ItemKind
+import com.lsa.app.data.media.FolderSpec
 import com.lsa.app.data.prefs.SettingsStore
-import com.lsa.app.ui.index.hasPhotoPermission
+import com.lsa.app.ui.index.hasAnyStorageAccess
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 
 class IndexingController(
     private val context: Context,
-    private val dao: ImageDao,
+    private val dao: ItemDao,
     private val runner: IndexRunner,
     private val settings: SettingsStore,
+    private val models: com.lsa.app.models.ModelManager,
 ) {
     private val wm = WorkManager.getInstance(context)
 
@@ -48,8 +49,26 @@ class IndexingController(
     internal fun update(p: IndexProgress) { _progress.value = p }
     internal fun resetStop() { stopRequested = false }
 
+    /** Kinds that are indexed right now. */
+    suspend fun enabledKinds(): Set<ItemKind> = settings.enabledKinds.first().filterTo(HashSet()) { it in KindSupport.implemented }
+
+    /** What a finished item of each kind must have been produced with, given the current settings. */
+    suspend fun pipelineKeys(): (ItemKind) -> String {
+        val emb = settings.embeddingModelId.first()
+        val ocr = settings.ocrModelId.first()
+        val asrId = settings.asrModelId.first()
+        val asr = if (com.lsa.app.models.ModelCatalog.byId(asrId)?.let(models::isReady) == true) asrId else "none"
+        val detail = settings.videoDetail.first().name
+        val speech = settings.videoTranscribe.first()
+        return { PipelineKeys.of(it, emb, ocr, asr, detail, speech) }
+    }
+
+    suspend fun folderSpecs(): List<FolderSpec> =
+        dao.enabledFolderRows().map { FolderSpec(it.relativePath, it.recursive) }
+
     /** Manual start: runs immediately, no constraints. */
     fun start() {
+        android.util.Log.i("LSA.Index", "start() requested")
         _progress.value = _progress.value.copy(error = null, finished = false)
         stopRequested = false
         wm.enqueueUniqueWork(
@@ -73,11 +92,11 @@ class IndexingController(
      * there is nothing to look at.
      */
     suspend fun pruneNow() {
-        if (!hasPhotoPermission(context)) return
-        val folders = dao.enabledFolders()
+        if (!hasAnyStorageAccess(context)) return
+        val folders = folderSpecs()
         if (folders.isEmpty() || !runLock.tryLock()) return
         try {
-            runner.sync(folders, settings.embeddingModelId.first())
+            runner.sync(folders, enabledKinds(), pipelineKeys())
         } finally {
             runLock.unlock()
         }

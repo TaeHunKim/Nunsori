@@ -36,3 +36,39 @@ object VectorMath {
         return FloatArray(fb.remaining()).also { fb.get(it) }
     }
 }
+
+/**
+ * int8 storage for normalised embeddings: 4x smaller than float32 with ~1e-3 cosine error.
+ * Layout: `[scale: float32 LE][value: int8] * dim`, where `value * scale ~ original component`.
+ */
+object Quant {
+    private const val HEADER = 4
+
+    fun encode(v: FloatArray): ByteArray {
+        var maxAbs = 0f
+        for (x in v) { val a = kotlin.math.abs(x); if (a > maxAbs) maxAbs = a }
+        val scale = if (maxAbs == 0f) 1f else maxAbs / 127f
+        val out = ByteArray(HEADER + v.size)
+        java.nio.ByteBuffer.wrap(out).order(java.nio.ByteOrder.LITTLE_ENDIAN).putFloat(scale)
+        for (i in v.indices) out[HEADER + i] = Math.round(v[i] / scale).coerceIn(-127, 127).toByte()
+        return out
+    }
+
+    fun scale(blob: ByteArray): Float =
+        java.nio.ByteBuffer.wrap(blob, 0, HEADER).order(java.nio.ByteOrder.LITTLE_ENDIAN).float
+
+    fun dim(blob: ByteArray): Int = blob.size - HEADER
+
+    fun decode(blob: ByteArray): FloatArray {
+        val s = scale(blob)
+        return FloatArray(blob.size - HEADER) { blob[HEADER + it] * s }
+    }
+
+    /** Dot product of a float query with a stored vector. */
+    fun dot(query: FloatArray, blob: ByteArray): Float {
+        val n = minOf(query.size, blob.size - HEADER)
+        var s = 0f
+        for (i in 0 until n) s += query[i] * blob[HEADER + i]
+        return s * scale(blob)
+    }
+}

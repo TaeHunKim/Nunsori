@@ -51,7 +51,7 @@
     <string name="index_status_running">인덱싱 중…</string>
     <string name="index_status_paused">일시정지됨</string>
     <string name="index_status_done">최신 상태</string>
-    <string name="index_progress">이미지 %1$d / %2$d장</string>
+    <string name="index_progress">파일 %1$d / %2$d개</string>
     <plurals name="index_failed_count">
         <item quantity="other">%d개 실패</item>
     </plurals>
@@ -64,7 +64,7 @@
     <string name="warn_no_folders">설정에서 인덱싱할 폴더를 선택해 주세요.</string>
     <string name="warn_no_model">먼저 설정에서 임베딩 모델을 다운로드해 주세요.</string>
     <plurals name="warn_stale">
-        <item quantity="other">%d개 이미지가 다른 모델로 인덱싱되어 있습니다. 인덱싱을 시작하면 다시 처리합니다.</item>
+        <item quantity="other">%d개 파일이 다른 모델로 인덱싱되어 있습니다. 인덱싱을 시작하면 다시 처리합니다.</item>
     </plurals>
     <string name="err_model_missing">선택한 임베딩 모델이 설치되어 있지 않습니다.</string>
     <string name="err_no_folders">선택된 폴더가 없습니다.</string>
@@ -82,8 +82,32 @@
     <string name="detail_indexed">인덱싱 시각</string>
     <string name="detail_model">모델</string>
     <string name="detail_error">오류</string>
+    <string name="detail_content">내용</string>
     <string name="detail_ocr_text">인식된 텍스트</string>
     <string name="detail_no_text">인식된 텍스트가 없습니다.</string>
+
+    <!-- Content types & folders -->
+    <string name="kinds_title">인덱싱 대상</string>
+    <string name="kinds_desc">선택한 종류의 파일만 인덱싱합니다. 문서와 텍스트 파일은 “모든 파일 접근” 권한이 필요합니다.</string>
+    <string name="kind_images">이미지</string>
+    <string name="kind_text">텍스트 파일 (txt, md, html, csv …)</string>
+    <string name="kind_docs">문서 (PDF, Word, PowerPoint, Excel)</string>
+    <string name="kind_audio">음성</string>
+    <string name="kind_video">영상</string>
+    <string name="kind_coming_soon">곧 지원 예정</string>
+    <string name="perm_all_files">문서와 텍스트 파일을 읽으려면 “모든 파일 접근” 권한이 필요합니다.</string>
+    <string name="perm_all_files_grant">권한 허용</string>
+    <string name="folder_none_selected">아직 선택한 폴더가 없습니다.</string>
+    <string name="folder_add">폴더 추가</string>
+    <string name="folder_remove">제거</string>
+    <string name="folder_include_sub">하위 폴더 포함</string>
+    <string name="folder_picker_title">폴더 선택</string>
+    <string name="folder_picker_photos_only">“모든 파일 접근” 권한이 없으면 사진이 들어 있는 폴더만 고를 수 있습니다.</string>
+    <string name="folder_select_this">이 폴더 추가</string>
+    <string name="folder_up">위로</string>
+    <string name="folder_already_added">추가됨</string>
+    <string name="folder_empty">하위 폴더가 없습니다.</string>
+    <string name="dialog_close">닫기</string>
 
     <!-- Search -->
     <plurals name="selection_count">
@@ -97,11 +121,12 @@
     <string name="search_model_missing">임베딩 모델이 설치되어 있지 않아 키워드 일치 결과만 표시합니다.</string>
     <string name="badge_image">이미지</string>
     <string name="badge_ocr">텍스트</string>
+    <string name="badge_audio">오디오</string>
     <string name="badge_keyword">키워드</string>
 
     <!-- Settings -->
     <string name="settings_folders">인덱싱할 폴더</string>
-    <string name="settings_folders_desc">이미지가 들어 있는 폴더를 하나 이상 선택하세요.</string>
+    <string name="settings_folders_desc">인덱싱할 파일이 들어 있는 폴더를 선택하세요.</string>
     <string name="perm_grant">사진 접근 권한 허용</string>
     <string name="folders_none">이미지 폴더를 찾지 못했습니다.</string>
     <plurals name="image_count">
@@ -126,6 +151,22 @@
     <string name="model_mobileclip2_desc">영어 전용의 아주 작은 이미지–텍스트 모델입니다.</string>
     <string name="model_mlkit_desc">한국어와 라틴 문자를 인식하는 Google ML Kit 텍스트 인식. 오프라인으로 동작합니다.</string>
     <string name="model_ppocr_desc">한국어용 PaddleOCR 모바일 모델입니다.</string>
+    <string name="storage_title">저장 공간</string>
+    <string name="storage_previews">미리보기: %1$s</string>
+    <string name="storage_clear">미리보기 지우기</string>
+    <string name="model_sensevoice_desc">한국어, 영어, 중국어, 일본어 음성을 오프라인으로 인식합니다. 음성 파일과 영상의 소리에 사용합니다.</string>
+    <string name="model_moonshine_desc">아주 작은 음성 인식 모델입니다. 모델마다 한 가지 언어만 지원합니다.</string>
+    <string name="settings_asr_models">음성 인식 모델</string>
+    <string name="settings_asr_desc">말소리를 텍스트로 바꿔서 녹음 내용을 검색할 수 있게 합니다.</string>
+    <string name="audio_needs_740m">오디오 임베딩에는 EmbeddingGemma 2 740M 모델이 필요합니다. 없으면 음성 인식으로만 검색할 수 있습니다.</string>
+    <string name="skip_music">음악 파일 제외</string>
+    <string name="skip_music_desc">음악 보관함의 노래는 인덱싱하지 않고, 녹음한 음성은 인덱싱합니다.</string>
+    <string name="video_detail_title">영상 분석 정밀도</string>
+    <string name="video_detail_low">빠르게 (5초마다 한 장면)</string>
+    <string name="video_detail_medium">균형 (2초마다 한 장면)</string>
+    <string name="video_detail_high">자세히 (1초마다 한 장면)</string>
+    <string name="video_speech">영상 속 음성 인식</string>
+    <string name="video_speech_desc">영상에서 말한 내용도 검색할 수 있게 합니다. 음성 인식 모델이 필요합니다.</string>
     <string name="settings_token">Hugging Face 토큰</string>
     <string name="settings_token_desc">선택 사항입니다. 접근이 제한된 모델이나 요청 제한을 피할 때만 필요합니다.</string>
     <string name="settings_language">언어</string>
