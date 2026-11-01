@@ -10,7 +10,8 @@ It uses the components below. Versions come from [`gradle/libs.versions.toml`](g
 | AndroidX (Compose BoM, Material 3, Activity, Navigation, Lifecycle, Room, WorkManager, DataStore, AppCompat, ExifInterface) | see catalog (Compose BoM 2026.09.00, Room 2.8.5, WorkManager 2.12.0) | Apache-2.0 |
 | Kotlin, kotlinx.coroutines, kotlinx.serialization | 2.4.21 / 1.11.0 / 1.12.0 | Apache-2.0 |
 | OkHttp | 5.5.1 | Apache-2.0 |
-| Coil | 3.6.3 | Apache-2.0 |
+| Coil (incl. coil-svg) | 3.6.3 | Apache-2.0 |
+| AndroidSVG | 1.4 | Apache-2.0 |
 | LiteRT-LM (`litertlm-android`) | 0.19.0 | Apache-2.0 |
 | sherpa-onnx (AAR, downloaded by `scripts/fetch-sherpa-onnx.sh`, not committed) | 2.0.1 | Apache-2.0 |
 | pdfbox-android | 2.0.27.0 | Apache-2.0 |

@@ -77,6 +77,17 @@ class IndexingController(
         )
     }
 
+    /** Manual run that retries only the files that failed; the rest of the queue is left alone. */
+    fun retryFailed() {
+        _progress.value = _progress.value.copy(error = null, finished = false)
+        stopRequested = false
+        wm.enqueueUniqueWork(
+            NAME, ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequestBuilder<IndexingWorker>().addTag(TAG)
+                .setInputData(androidx.work.workDataOf(IndexingWorker.KEY_ONLY_FAILED to true)).build(),
+        )
+    }
+
     /** Stops a manual run and asks any running automatic run to stop after the current file. */
     fun pause() {
         stopRequested = true

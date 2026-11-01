@@ -135,7 +135,7 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
                             label = { Text(stringResource(R.string.index_filter_failed, failed)) },
                         )
                         if (failedOnly) {
-                            OutlinedButton(onClick = ::onStart, enabled = canStart && !running) {
+                            OutlinedButton(onClick = vm::retryFailed, enabled = canStart && !running) {
                                 Text(stringResource(R.string.index_retry_failed))
                             }
                         }

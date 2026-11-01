@@ -18,6 +18,7 @@ import kotlinx.coroutines.sync.withLock
  * daily schedule, idle) and are throttled when the device gets hot.
  */
 class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+    private val onlyFailed get() = inputData.getBoolean(KEY_ONLY_FAILED, false)
     private val auto get() = inputData.getString(KEY_SOURCE) == SOURCE_AUTO
 
     private fun info(p: IndexProgress): ForegroundInfo {
@@ -51,7 +52,12 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         if (!hasAnyStorageAccess(applicationContext)) return if (auto) Result.success() else Result.failure()
 
         val keys = ctl.pipelineKeys()
-        val plan = c.indexRunner.sync(folders, ctl.enabledKinds(), keys)
+        val full = c.indexRunner.sync(folders, ctl.enabledKinds(), keys)
+        // "Retry failed" touches only the failed files; paused work stays paused.
+        val plan = if (!onlyFailed) full else {
+            val failed = full.todo.filter { it.existing?.status == com.lsa.app.data.db.ItemStatus.FAILED }
+            com.lsa.app.indexing.IndexPlan(total = failed.size, done = 0, todo = failed)
+        }
         c.thumbs.cleanup(c.db.itemDao().thumbPaths().toSet()) // previews of deleted files
         Log.i(TAG, "sync: total=${plan.total} todo=${plan.todo.size} auto=$auto")
         if (plan.todo.isEmpty()) {
@@ -105,6 +111,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
     companion object {
         private const val TAG = "LSA.Index"
         private const val LOW_POWER_PAUSE_MS = 300L
+        const val KEY_ONLY_FAILED = "only_failed"
         const val KEY_SOURCE = "source"
         const val SOURCE_AUTO = "auto"
         const val KEY_SOURCE_DETAIL = "detail"

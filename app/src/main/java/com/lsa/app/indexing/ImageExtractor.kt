@@ -9,6 +9,8 @@ import kotlin.coroutines.cancellation.CancellationException
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
+import com.caverock.androidsvg.SVG
+import com.caverock.androidsvg.SVGParseException
 import com.lsa.app.data.db.SegmentType
 import com.lsa.app.data.media.SourceEntry
 import com.lsa.app.ml.embedding.Embedder
@@ -21,6 +23,15 @@ import kotlin.math.roundToInt
 object BitmapLoader {
     /** Decodes with EXIF orientation applied, downscaled so the long side is <= [maxSide]. */
     fun decode(context: Context, uri: Uri, maxSide: Int): Bitmap {
+        return try {
+            decodeRaster(context, uri, maxSide)
+        } catch (e: ImageDecoder.DecodeException) {
+            // SVG is not a raster format: the platform decoder rejects it ("Failed to create image decoder")
+            decodeSvg(context, uri, maxSide) ?: throw e
+        }
+    }
+
+    private fun decodeRaster(context: Context, uri: Uri, maxSide: Int): Bitmap {
         val src = ImageDecoder.createSource(context.contentResolver, uri)
         return ImageDecoder.decodeBitmap(src) { decoder, info, _ ->
             decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
@@ -31,6 +42,28 @@ object BitmapLoader {
                 decoder.setTargetSize((w * scale).roundToInt().coerceAtLeast(1), (h * scale).roundToInt().coerceAtLeast(1))
             }
         }
+    }
+
+    /** Renders an SVG on a white background, long side [maxSide]; null if the file is not a (valid) SVG. */
+    fun decodeSvg(context: Context, uri: Uri, maxSide: Int): Bitmap? = try {
+        val svg = context.contentResolver.openInputStream(uri)?.use { SVG.getFromInputStream(it) }
+        if (svg == null) null else {
+            // size from the document; fall back to the viewBox, then to a square
+            val box = svg.documentViewBox
+            val w0 = svg.documentWidth.takeIf { it > 0 } ?: box?.width()?.takeIf { it > 0 } ?: maxSide.toFloat()
+            val h0 = svg.documentHeight.takeIf { it > 0 } ?: box?.height()?.takeIf { it > 0 } ?: maxSide.toFloat()
+            val scale = maxSide / max(w0, h0)
+            val w = (w0 * scale).roundToInt().coerceIn(1, maxSide)
+            val h = (h0 * scale).roundToInt().coerceIn(1, maxSide)
+            svg.setDocumentWidth(w.toFloat()); svg.setDocumentHeight(h.toFloat())
+            Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also {
+                val canvas = android.graphics.Canvas(it)
+                canvas.drawColor(android.graphics.Color.WHITE)
+                svg.renderToCanvas(canvas)
+            }
+        }
+    } catch (e: SVGParseException) {
+        Log.w("LSA.Image", "not a valid SVG: $uri", e); null
     }
 
     fun toJpeg(bitmap: Bitmap, maxSide: Int, quality: Int = 90): ByteArray {

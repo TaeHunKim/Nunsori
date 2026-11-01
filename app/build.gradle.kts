@@ -54,6 +54,8 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
+    implementation(libs.androidsvg)
     implementation(libs.litertlm.android)
     implementation(libs.mlkit.text.recognition.korean)
     // Not on Maven Central: scripts/fetch-sherpa-onnx.sh downloads it into app/libs (git-ignored).

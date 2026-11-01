@@ -21,7 +21,7 @@ Values below are read from the code; the file is given so you can check them.
 
 ## Images (`ImageExtractor`)
 
-One `IMAGE` segment (embedding at max side 1024) and one `OCR_TEXT` segment (OCR at max side 1600, text capped at 6000 chars for storage and keyword search; only the first 1500 chars are embedded, and a failed text embedding keeps the image vector instead of failing the file). EXIF date and location are stored on the item.
+One `IMAGE` segment (embedding at max side 1024) and one `OCR_TEXT` segment (OCR at max side 1600, text capped at 6000 chars for storage and keyword search; only the first 1500 chars are embedded, and a failed text embedding keeps the image vector instead of failing the file). EXIF date and location are stored on the item. SVG files (which the platform `ImageDecoder` rejects) are rendered with AndroidSVG on a white background (`BitmapLoader.decodeSvg`); their thumbnails use Coil's SVG decoder.
 
 **Places.** The EXIF position is turned into searchable names by `PlaceFinder` (`indexing/places`, data `assets/places.bin`, regenerate with `scripts/make-places.py`): the nearest city within 100 km, plus the largest city of 500k+ people within 50 km, each with city and country in English and Korean plus country aliases and regions (e.g. `Dubai 두바이 United Arab Emirates 아랍에미리트 연합 Asia 아시아 UAE Emirates Middle East 중동`; abbreviations, continents and regions come from `ABBREVIATIONS`, `CONTINENTS`, `REGIONS` in `scripts/make-places.py`; ISO codes are avoided because "IN" or "ARE" are ordinary words), stored in `items.place` (`""` = looked up, nothing near). `IndexRunner.sync()` fills `place` for older rows that have a position but no name (`backfillPlaces`, no model needed); when the places data changes, an `AppUpgrade` step calls `ItemDao.resetPlaces()` so every row is looked up again. Videos are not geotagged yet.
 
@@ -31,7 +31,7 @@ The embedding model accepts 1024 tokens and LiteRT-LM exposes no tokenizer, so l
 
 ## Failed files
 
-An exception during extraction marks the item `FAILED` with the message in `items.error`. Every run (`sync`) puts failed items back in the queue; the Index screen lists them behind the "Failed" chip with a Retry button. Skipped items (`SKIPPED`) are unsupported or too large files and are not retried.
+An exception during extraction marks the item `FAILED` with the message in `items.error`. Every run (`sync`) puts failed items back in the queue; the Index screen lists them behind the "Failed" chip. **Retry failed** (`IndexingController.retryFailed`, worker flag `only_failed`) processes just those files and leaves other pending work paused. Skipped items (`SKIPPED`) are unsupported or too large files and are not retried.
 
 ## Low-power mode
 

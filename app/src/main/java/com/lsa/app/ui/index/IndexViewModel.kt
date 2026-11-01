@@ -33,8 +33,8 @@ class IndexViewModel(private val c: AppContainer) : ViewModel() {
     }.state(false)
     val staleCount = c.settings.embeddingModelId.flatMapLatest { dao.observeStaleCount(it) }.state(0)
 
-    /** Failed files are put back in the queue by every sync, so retrying is just another run. */
-    fun retryFailed() = c.indexing.start()
+    /** Runs only the failed files (a normal run also retries them, together with everything still pending). */
+    fun retryFailed() = c.indexing.retryFailed()
     fun start() = c.indexing.start()
     fun pause() = c.indexing.pause()
 }
