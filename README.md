@@ -21,7 +21,7 @@ An Android app that indexes the files on your phone with on-device multimodal em
 | Audio | Speech transcript (SenseVoice); audio clip embeddings (740M model) | Spoken words, sound, time |
 | Video | Scene clips (up to 8 frames each) + speech transcript | Visual content, speech, time |
 
-Also: a chat that answers from your files with an on-device Gemma 4 model (it searches the index and reads files itself, per-chat history, "Ask in chat" from search results), hybrid ranking (meaning + exact words + photo place names such as "Dubai"), filters by file kind and date, share/open results, automatic indexing (manual, immediate, scheduled, idle), model memory control, English and Korean UI, dark mode.
+Also: a chat that answers from your files with an on-device Gemma 4 model (it searches the index and reads files itself, per-chat history with pinning, Markdown answers, your own instructions, "Ask in chat" from search results), a failed-file list with retry, low-power indexing, an optional resource indicator (GPU/CPU, memory), hybrid ranking (meaning + exact words + photo place names such as "Dubai"), filters by file kind and date, share/open results, automatic indexing (manual, immediate, scheduled, idle), model memory control, English and Korean UI, dark mode.
 
 ## How it works
 

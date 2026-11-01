@@ -190,6 +190,6 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         /** Bump together with a new migration in Migrations.kt (see docs/development.md). */
-        const val VERSION = 4
+        const val VERSION = 5
     }
 }

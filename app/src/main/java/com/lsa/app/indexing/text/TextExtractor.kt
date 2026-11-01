@@ -24,24 +24,13 @@ class TextExtractor(private val embedder: Embedder) {
         for ((i, c) in doc.chunks.withIndex().drop(resume.toInt()).take(MAX_CHUNKS)) {
             batch += NewSegment(
                 SegmentType.TEXT_CHUNK, i, startMs = c.startMs, endMs = c.endMs, text = c.text,
-                embedding = Quant.encode(embedSafely(c.text, c.title ?: doc.title)),
+                embedding = Quant.encode(embedder.embedDocument(c.text, c.title ?: doc.title)),
             )
             if (batch.size >= BATCH) { sink.segments(batch.toList(), progress = (i + 1).toLong()); batch.clear() }
         }
         if (batch.isNotEmpty()) sink.segments(batch.toList(), progress = (batch.last().ordinal + 1).toLong())
     }
 
-    /** The model has a hard token limit; if a chunk is still too long, retry with a shorter prefix of it. */
-    private suspend fun embedSafely(text: String, title: String?): FloatArray {
-        var t = text
-        repeat(4) {
-            try { return embedder.embedDocument(t, title) } catch (e: Exception) {
-                if (e.message?.contains("exceeds", ignoreCase = true) != true) throw e
-                t = t.take((t.length * 0.6).toInt()).trimEnd()
-            }
-        }
-        return embedder.embedDocument(t, title)
-    }
 
     companion object {
         const val MAX_BYTES = 25 * 1024 * 1024

@@ -88,5 +88,12 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+/** v5 adds pinned chats. */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `chat_sessions` ADD COLUMN `pinned` INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 /** Every migration, in order. Register new ones here only; the chain test in MigrationTest walks all exported schemas. */
-val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)

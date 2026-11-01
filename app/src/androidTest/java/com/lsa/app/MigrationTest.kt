@@ -9,6 +9,7 @@ import com.lsa.app.data.db.ALL_MIGRATIONS
 import com.lsa.app.data.db.MIGRATION_1_2
 import com.lsa.app.data.db.MIGRATION_2_3
 import com.lsa.app.data.db.MIGRATION_3_4
+import com.lsa.app.data.db.MIGRATION_4_5
 import com.lsa.app.ml.embedding.Quant
 import com.lsa.app.ml.embedding.VectorMath
 import org.junit.Assert.assertArrayEquals
@@ -93,6 +94,15 @@ class MigrationTest {
         }
         helper.createDatabase("chain1", 1).close()
         helper.runMigrationsAndValidate("chain1", AppDatabase.VERSION, true, *ALL_MIGRATIONS).close()
+    }
+
+    @Test fun v4ToV5AddsPinnedDefaultingToFalse() {
+        helper.createDatabase("mig45", 4).apply {
+            execSQL("INSERT INTO chat_sessions (title, enabledTools, autoSearch, createdAt, updatedAt) VALUES ('t', 'search_index', 0, 1, 1)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate("mig45", 5, true, MIGRATION_4_5)
+        db.query("SELECT pinned FROM chat_sessions").use { c -> c.moveToFirst(); assertEquals(0, c.getInt(0)) }
     }
 
     @Test fun v3ToV4AddsChatTablesThatCascadeOnDelete() {

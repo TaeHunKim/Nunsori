@@ -110,6 +110,7 @@ class ChatController(
             lease.use { l ->
                 val model = l.value
                 val contextTokens = settings.chatContextTokens.first()
+                val custom = settings.chatCustomPrompt.first().trim()
 
                 // Everything the model needs besides the question: attached files, search results, photos.
                 val attachmentsJson = JSONArray()
@@ -142,14 +143,16 @@ class ChatController(
                 // History = stored user/assistant turns before this one, trimmed to the context budget.
                 val stored = chat.messages(sessionId).dropLast(1).filter { it.role != ChatRole.TOOL }
                     .map { ChatTurn(if (it.role == ChatRole.USER) TurnRole.USER else TurnRole.ASSISTANT, it.text) }
-                val budget = (contextTokens * ContextBudget.HISTORY_SHARE).toInt() - ContextBudget.estimateTokens(modelText) - SYSTEM_TOKENS
+                val budget = (contextTokens * ContextBudget.HISTORY_SHARE).toInt() - ContextBudget.estimateTokens(modelText) - SYSTEM_TOKENS -
+                    ContextBudget.estimateTokens(custom)
                 val history = ContextBudget.trim(stored, budget.coerceAtLeast(0))
 
                 val tools = enabledTools(session)
-                val key = "$sessionId|${tools.joinToString { it.name }}"
+                // the custom prompt is part of the key: a changed prompt starts a fresh conversation state
+                val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}"
                 _run.value = ChatRun(sessionId, ChatPhase.GENERATING, trimmed = history.dropped > 0)
                 var toolCalls = 0
-                model.reply(key, systemPrompt(), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
+                model.reply(key, systemPrompt(custom), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
                     when (e) {
                         is ChatEvent.Token -> {
                             answer.append(e.text)
@@ -230,12 +233,13 @@ class ChatController(
         }.onFailure { Log.w(TAG, "could not save the photo", it) }.getOrNull()
     }
 
-    private fun systemPrompt(): String {
+    private fun systemPrompt(custom: String): String {
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(clock()))
         return "You are the assistant of a private, on-device file search app. Today is $today. " +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
-            "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in."
+            "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +
+            (if (custom.isEmpty()) "" else "\n\nThe user's own instructions (follow them unless they conflict with the rules above):\n$custom")
     }
 
     companion object {

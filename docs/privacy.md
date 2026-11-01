@@ -10,7 +10,7 @@ All in the app's private storage (removed on uninstall or "Clear data"):
 - Thumbnails (`ThumbStore`, 360 px) of images, document pages and text cards.
 - Downloaded models under `files/models/`.
 - Chat sessions and messages in the same database (`chat_sessions`, `chat_messages`) and photos attached to a chat under `files/chat/<session>/`; deleting a chat removes them. The chat model runs on the phone; no question or answer is sent anywhere.
-- Settings (DataStore), including the optional Hugging Face token.
+- Settings (DataStore), including the optional Hugging Face token and your chat instructions (system prompt text; they are only given to the local chat model).
 
 Your original files are only read, never modified.
 

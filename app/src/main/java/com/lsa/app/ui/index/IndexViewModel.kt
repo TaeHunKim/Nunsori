@@ -21,6 +21,10 @@ class IndexViewModel(private val c: AppContainer) : ViewModel() {
         stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initial)
 
     val summaries: StateFlow<List<ItemSummary>> = dao.observeSummaries().state(emptyList())
+    /** Failed files, counted from the database (not just the current run). */
+    val failedCount = summaries.map { l -> l.count { it.status == com.lsa.app.data.db.ItemStatus.FAILED } }.state(0)
+    val lowPower = c.settings.indexLowPower.state(false)
+    fun setLowPower(on: Boolean) { viewModelScope.launch { c.settings.setIndexLowPower(on) } }
     val progress = c.indexing.progress
     val running = c.indexing.running.state(false)
     val enabledFolderCount = dao.observeFolders().map { f -> f.count { it.enabled } }.state(0)
@@ -29,8 +33,8 @@ class IndexViewModel(private val c: AppContainer) : ViewModel() {
     }.state(false)
     val staleCount = c.settings.embeddingModelId.flatMapLatest { dao.observeStaleCount(it) }.state(0)
 
-    /** Starts as `true` so existing users never see the dialog flash before DataStore loads. */
-
+    /** Failed files are put back in the queue by every sync, so retrying is just another run. */
+    fun retryFailed() = c.indexing.start()
     fun start() = c.indexing.start()
     fun pause() = c.indexing.pause()
 }

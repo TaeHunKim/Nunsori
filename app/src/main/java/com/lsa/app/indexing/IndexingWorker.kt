@@ -9,6 +9,7 @@ import com.lsa.app.LsaApplication
 import com.lsa.app.Notifications
 import com.lsa.app.R
 import com.lsa.app.ui.index.hasAnyStorageAccess
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.withLock
 
@@ -59,7 +60,9 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         }
         if (auto && ctl.isHot()) return Result.retry()
 
-        val embLease = try { c.residency.embedder() } catch (e: Exception) {
+        // Low-power mode is a manual-run option; automatic runs have their own battery rules.
+        val low = !auto && c.settings.indexLowPower.first()
+        val embLease = try { c.residency.embedder(low) } catch (e: Exception) {
             Log.w(TAG, "model load failed", e)
             if (!auto) ctl.update(IndexProgress(error = IndexError.LOAD_FAILED))
             return if (auto) Result.retry() else Result.failure()
@@ -71,11 +74,14 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         val ocrLease = c.residency.ocr(c.settings.ocrModelId.first())
         var lastNotify = 0L
         val result = try {
-            val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, c.residency::speech, java.io.File(applicationContext.cacheDir, "audio"),
+            val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, { c.residency.speech(low) }, java.io.File(applicationContext.cacheDir, "audio"),
                 VideoOptions(c.settings.videoDetail.first(), c.settings.videoTranscribe.first()))
             c.indexRunner.process(
                 plan, session, keys,
-                gate = { !ctl.stopRequested && !(auto && ctl.isHot()) },
+                gate = {
+                    if (low) delay(LOW_POWER_PAUSE_MS) // let the CPU cool down between files
+                    !ctl.stopRequested && !((auto || low) && ctl.isHot())
+                },
             ) { p ->
                 ctl.update(p)
                 val now = System.currentTimeMillis()
@@ -98,6 +104,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 
     companion object {
         private const val TAG = "LSA.Index"
+        private const val LOW_POWER_PAUSE_MS = 300L
         const val KEY_SOURCE = "source"
         const val SOURCE_AUTO = "auto"
         const val KEY_SOURCE_DETAIL = "detail"

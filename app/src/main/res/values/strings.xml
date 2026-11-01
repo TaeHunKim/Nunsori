@@ -12,7 +12,7 @@
     <!-- Notifications -->
     <string name="channel_indexing">Indexing</string>
     <string name="channel_download">Model downloads</string>
-    <string name="notif_indexing_title">Indexing images</string>
+    <string name="notif_indexing_title">Indexing files</string>
     <string name="notif_indexing_preparing">Preparing…</string>
     <string name="notif_download_title">Downloading %1$s</string>
 
@@ -20,11 +20,11 @@
 
     <!-- Automatic indexing -->
     <string name="auto_title">Automatic indexing</string>
-    <string name="auto_desc">Choose when new, changed and deleted photos are picked up. You can always tap Start on the Index screen.</string>
+    <string name="auto_desc">Choose when new, changed and deleted files are picked up. You can always tap Start on the Index screen.</string>
     <string name="auto_mode_idle">When idle</string>
     <string name="auto_mode_idle_desc">While charging and not in use. Pauses if the phone gets hot. Easiest on battery.</string>
     <string name="auto_mode_immediate">Right away</string>
-    <string name="auto_mode_immediate_desc">New, changed or deleted photos are picked up within about 2 minutes. Uses more battery.</string>
+    <string name="auto_mode_immediate_desc">New, changed or deleted files are picked up within about 2 minutes. Uses more battery.</string>
     <string name="auto_mode_scheduled">At a set time</string>
     <string name="auto_mode_scheduled_desc">Collects changes and indexes once a day.</string>
     <string name="auto_mode_manual">Manual only</string>
@@ -114,7 +114,7 @@
     <string name="btn_resume">Resume</string>
     <string name="btn_pause">Pause</string>
     <string name="index_empty">Nothing indexed yet.</string>
-    <string name="warn_no_permission">Photo access is required. Grant it in Settings.</string>
+    <string name="warn_no_permission">Storage access is required (photos and media, or all files). Grant it in Settings.</string>
     <string name="warn_no_folders">Choose the folders to index in Settings.</string>
     <string name="warn_no_model">Download an embedding model in Settings first.</string>
     <plurals name="warn_stale">
@@ -246,4 +246,25 @@
     <string name="lang_system">System</string>
     <string name="lang_en">English</string>
     <string name="lang_ko">한국어</string>
+    <string name="index_filter_failed">Failed (%d)</string>
+    <string name="index_retry_failed">Retry failed</string>
+    <string name="chat_pin">Pin to top</string>
+    <string name="chat_unpin">Unpin</string>
+    <string name="chat_pinned">Pinned</string>
+    <string name="chat_prompt_title">Your instructions</string>
+    <string name="chat_prompt_desc">Added to the chat\'s system prompt for every conversation, e.g. tone, language or how to cite files. Stays on this device.</string>
+    <string name="chat_prompt_hint">e.g. Answer briefly, in Korean</string>
+    <string name="folder_presets">Quick add</string>
+    <string name="folder_preset_camera">Camera</string>
+    <string name="folder_preset_screenshots">Screenshots</string>
+    <string name="folder_preset_downloads">Downloads</string>
+    <string name="folder_presets_media_only">Without "All files access", only photos, audio and video in these folders are indexed.</string>
+    <string name="onboarding_ocr_note">Text in images is read with the built-in on-device OCR (Google ML Kit); nothing to download.</string>
+    <string name="index_low_power">Low-power mode</string>
+    <string name="index_low_power_desc">For manual runs: slower, but uses the CPU only with fewer threads, pauses between files and stops if the phone gets hot.</string>
+    <string name="resource_unloaded">–</string>
+    <string name="resource_models">Embed %1$s · Chat %2$s</string>
+    <string name="resource_usage">RAM %1$d MB · CPU %2$d%%</string>
+    <string name="settings_resource_title">Resource indicator</string>
+    <string name="settings_resource_desc">Show the backend (GPU or CPU) of loaded models, app memory and CPU use in the top bar. GPU load itself cannot be read by apps.</string>
 </resources>

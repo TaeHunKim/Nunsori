@@ -70,6 +70,7 @@ private fun MainScaffold() {
     val scope = rememberCoroutineScope()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route.orEmpty()
+    val showResources by com.lsa.app.rememberContainer().settings.showResourceIndicator.collectAsStateWithLifecycle(false)
     val current = Dest.entries.firstOrNull { route == it.route || route.startsWith(it.route + "/") } ?: Dest.Index
 
     fun go(d: Dest) {
@@ -105,6 +106,7 @@ private fun MainScaffold() {
             topBar = {
                 TopAppBar(
                     title = { Text(stringResource(current.label)) },
+                    actions = { if (showResources) com.lsa.app.ui.common.ResourceIndicator() },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawer.open() } }) {
                             Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))

@@ -30,7 +30,7 @@ interface SpeechTools : AutoCloseable {
  * sherpa-onnx: Silero VAD (bundled, 0.6 MB) finds utterances, SenseVoice (downloaded) recognises them.
  * [asrDir] is null when no recognition model is installed; VAD still works then.
  */
-class SherpaSpeech(private val context: Context, asrDir: File?) : SpeechTools {
+class SherpaSpeech(private val context: Context, asrDir: File?, threads: Int = 2) : SpeechTools {
     private val recognizer: OfflineRecognizer? = asrDir?.let {
         OfflineRecognizer(
             null,
@@ -38,7 +38,7 @@ class SherpaSpeech(private val context: Context, asrDir: File?) : SpeechTools {
                 modelConfig = OfflineModelConfig(
                     senseVoice = OfflineSenseVoiceModelConfig(model = File(it, "model.int8.onnx").path, language = "auto", useInverseTextNormalization = true),
                     tokens = File(it, "tokens.txt").path,
-                    numThreads = 2,
+                    numThreads = threads,
                 ),
             ),
         )

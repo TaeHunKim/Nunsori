@@ -1,5 +1,6 @@
 package com.lsa.app.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -15,6 +16,8 @@ data class ChatSessionEntity(
     val autoSearch: Boolean,
     val createdAt: Long,
     val updatedAt: Long,
+    /** Pinned chats are listed first. */
+    @ColumnInfo(defaultValue = "0") val pinned: Boolean = false,
 )
 
 enum class ChatRole { USER, ASSISTANT, TOOL }

@@ -23,6 +23,10 @@ Downloads are resumable (`ModelDownloader`, OkHttp, `.part` files) and run in `M
 - sherpa-onnx (SenseVoice int8 + Silero VAD) runs at about 2% of real time on the emulator; Korean and English recognition is good.
 - The emulator uses CPU. Real devices try GPU first and fall back to CPU. No real-device benchmarks yet ([roadmap](roadmap.md)).
 
+## OCR and speech: built-in options
+
+Android has no platform OCR; ML Kit (bundled, offline) is the default and needs no download. The platform `SpeechRecognizer` was considered for speech: its on-device mode needs API 31+, feeding files needs API 33+, it is meant for the microphone at real-time speed, needs installed language packs, gives no timestamps and needs `RECORD_AUDIO`, so SenseVoice (a one-time 163 MB download offered in the first-run wizard) stays the speech engine.
+
 ## Chat models
 
 Used by the Chat screen ([chat.md](chat.md)); `ModelKind.LLM` in the catalog, loaded by `LiteRtChatModel` (LiteRT-LM `Engine`, GPU first on real devices, CPU on the emulator) and kept in memory by `ModelResidency.chat()` like the other models. Gemma 4 E2B and E4B accept images (`ModelSpec.vision`); Qwen2.5 does not. The context window (2K/4K/8K, default 4K) is passed to the engine as `maxNumTokens`; changing it or the model reloads the model. File names, sizes and licenses were read from the Hugging Face API; re-check them before a release.

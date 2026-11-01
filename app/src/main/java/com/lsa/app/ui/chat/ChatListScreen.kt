@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -41,7 +43,7 @@ import com.lsa.app.data.db.ChatSessionEntity
 import com.lsa.app.rememberContainer
 import kotlinx.coroutines.launch
 
-/** All chat sessions, newest first, with rename and delete. */
+/** All chat sessions, pinned first then newest, with pin, rename and delete. */
 @Composable
 fun ChatListScreen(onOpen: (Long) -> Unit) {
     val container = rememberContainer()
@@ -66,7 +68,12 @@ fun ChatListScreen(onOpen: (Long) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.title.ifEmpty { stringResource(R.string.chat_untitled) }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (s.pinned) {
+                                Icon(Icons.Filled.PushPin, stringResource(R.string.chat_pinned), Modifier.size(16.dp).padding(end = 4.dp), tint = MaterialTheme.colorScheme.primary)
+                            }
+                            Text(s.title.ifEmpty { stringResource(R.string.chat_untitled) }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                         Text(
                             android.text.format.DateUtils.getRelativeTimeSpanString(s.updatedAt).toString(),
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -75,6 +82,10 @@ fun ChatListScreen(onOpen: (Long) -> Unit) {
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.chat_menu)) }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(if (s.pinned) R.string.chat_unpin else R.string.chat_pin)) },
+                                onClick = { menu = false; scope.launch { dao.setPinned(s.sessionId, !s.pinned) } },
+                            )
                             DropdownMenuItem(text = { Text(stringResource(R.string.chat_rename)) }, onClick = { menu = false; renaming = s })
                             DropdownMenuItem(text = { Text(stringResource(R.string.chat_delete)) }, onClick = { menu = false; deleting = s })
                         }

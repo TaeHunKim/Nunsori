@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.util.Log
+import kotlin.coroutines.cancellation.CancellationException
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
@@ -56,7 +57,15 @@ class ImageExtractor(
         try {
             val text = ocr.recognize(bmp).trim().take(MAX_OCR_CHARS)
             val imageVec = embedder.embedImage(BitmapLoader.toJpeg(bmp, EMBED_MAX_SIDE))
-            val ocrVec = if (text.isNotBlank()) embedder.embedDocument(text) else null
+            // Only the head of the text is embedded (1024-token limit); all of it stays searchable by keyword.
+            val ocrVec = if (text.isBlank()) null else try {
+                embedder.embedDocument(text.take(OCR_EMBED_CHARS))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "OCR text of ${entry.uri} could not be embedded; keeping the image vector only", e)
+                null
+            }
             val loc = readLocation(entry.uri)
             sink.meta(latitude = loc?.first, longitude = loc?.second)
             val segs = ArrayList<NewSegment>(2)
@@ -86,5 +95,6 @@ class ImageExtractor(
         const val OCR_MAX_SIDE = 1600
         const val EMBED_MAX_SIDE = 1024
         const val MAX_OCR_CHARS = 6000
+        const val OCR_EMBED_CHARS = 1500
     }
 }

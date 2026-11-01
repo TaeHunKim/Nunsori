@@ -29,6 +29,9 @@ class SettingsStore(private val context: Context) {
     private val kAsr = stringPreferencesKey("asr_model_id")
     private val kChat = stringPreferencesKey("chat_model_id")
     private val kChatContext = intPreferencesKey("chat_context_tokens")
+    private val kChatPrompt = stringPreferencesKey("chat_custom_prompt")
+    private val kLowPower = booleanPreferencesKey("index_low_power")
+    private val kResourceUi = booleanPreferencesKey("show_resource_indicator")
     private val kSkipMusic = booleanPreferencesKey("skip_music")
     private val kVideoDetail = stringPreferencesKey("video_detail")
     private val kVideoSpeech = booleanPreferencesKey("video_transcribe")
@@ -39,6 +42,12 @@ class SettingsStore(private val context: Context) {
     val chatModelId: Flow<String> = context.dataStore.data.map { it[kChat] ?: DEFAULT_CHAT }
     /** Total context window (prompt + answer) given to the chat model. */
     val chatContextTokens: Flow<Int> = context.dataStore.data.map { it[kChatContext] ?: DEFAULT_CHAT_CONTEXT }
+    /** The user's own instructions, appended to the chat system prompt. */
+    val chatCustomPrompt: Flow<String> = context.dataStore.data.map { it[kChatPrompt] ?: "" }
+    /** Manual indexing in low-power mode: CPU only, fewer threads, pauses between files, stops when hot. */
+    val indexLowPower: Flow<Boolean> = context.dataStore.data.map { it[kLowPower] ?: false }
+    /** Top-bar indicator with backend, memory and CPU use. */
+    val showResourceIndicator: Flow<Boolean> = context.dataStore.data.map { it[kResourceUi] ?: false }
     val asrModelId: Flow<String> = context.dataStore.data.map { it[kAsr] ?: DEFAULT_ASR }
     val skipMusic: Flow<Boolean> = context.dataStore.data.map { it[kSkipMusic] ?: true }
     val videoDetail: Flow<VideoDetail> = context.dataStore.data.map { parseEnum(it[kVideoDetail], VideoDetail.MEDIUM) }
@@ -61,6 +70,9 @@ class SettingsStore(private val context: Context) {
     suspend fun setEmbeddingModelId(id: String) { context.dataStore.edit { it[kEmbedding] = id } }
     suspend fun setOcrModelId(id: String) { context.dataStore.edit { it[kOcr] = id } }
     suspend fun setChatModelId(id: String) { context.dataStore.edit { it[kChat] = id } }
+    suspend fun setChatCustomPrompt(s: String) { context.dataStore.edit { it[kChatPrompt] = s.trim().take(MAX_CUSTOM_PROMPT) } }
+    suspend fun setIndexLowPower(on: Boolean) { context.dataStore.edit { it[kLowPower] = on } }
+    suspend fun setShowResourceIndicator(on: Boolean) { context.dataStore.edit { it[kResourceUi] = on } }
     suspend fun setChatContextTokens(n: Int) { context.dataStore.edit { it[kChatContext] = n } }
     suspend fun setAsrModelId(id: String) { context.dataStore.edit { it[kAsr] = id } }
     suspend fun setSkipMusic(v: Boolean) { context.dataStore.edit { it[kSkipMusic] = v } }
@@ -90,6 +102,7 @@ class SettingsStore(private val context: Context) {
     suspend fun clearOnboardingForTest() { context.dataStore.edit { it.remove(kOnboarding) } }
 
     companion object {
+        const val MAX_CUSTOM_PROMPT = 2000
         const val DEFAULT_EMBEDDING = "eg2-440m"
         const val DEFAULT_OCR = "mlkit-ko"
         const val DEFAULT_ASR = "asr-sensevoice"

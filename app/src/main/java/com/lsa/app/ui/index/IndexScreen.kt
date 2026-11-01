@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -71,7 +73,11 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
     val folderCount by vm.enabledFolderCount.collectAsStateWithLifecycle()
     val modelReady by vm.modelReady.collectAsStateWithLifecycle()
     val stale by vm.staleCount.collectAsStateWithLifecycle()
+    val failed by vm.failedCount.collectAsStateWithLifecycle()
     var detailId by remember { mutableStateOf<Long?>(null) }
+    var failedOnly by remember { mutableStateOf(false) }
+    val shown = if (failedOnly) summaries.filter { it.status == ItemStatus.FAILED } else summaries
+    if (failedOnly && failed == 0) failedOnly = false
 
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.start() }
     fun onStart() {
@@ -114,9 +120,30 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
                     )
                 }
                 StatusCard(progress, running, canStart, onStart = ::onStart, onPause = vm::pause)
+                val lowPower by vm.lowPower.collectAsStateWithLifecycle()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.index_low_power), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.index_low_power_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    androidx.compose.material3.Switch(checked = lowPower, onCheckedChange = vm::setLowPower, enabled = !running)
+                }
+                if (failed > 0) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        FilterChip(
+                            selected = failedOnly, onClick = { failedOnly = !failedOnly },
+                            label = { Text(stringResource(R.string.index_filter_failed, failed)) },
+                        )
+                        if (failedOnly) {
+                            OutlinedButton(onClick = ::onStart, enabled = canStart && !running) {
+                                Text(stringResource(R.string.index_retry_failed))
+                            }
+                        }
+                    }
+                }
             }
         }
-        if (summaries.isEmpty()) {
+        if (shown.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     stringResource(R.string.index_empty),
@@ -126,7 +153,7 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
                 )
             }
         }
-        items(summaries, key = { it.itemId }) { s ->
+        items(shown, key = { it.itemId }) { s ->
             ItemThumb(
                 s.kind, s.uri, s.thumbPath, s.displayName, s.status == ItemStatus.FAILED,
                 Modifier.aspectRatio(1f).clickable { detailId = s.itemId },

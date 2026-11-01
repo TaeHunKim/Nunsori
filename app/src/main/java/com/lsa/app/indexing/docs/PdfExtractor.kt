@@ -61,7 +61,7 @@ class PdfExtractor(
                     TextChunker().chunk(pageText).forEachIndexed { k, c ->
                         segs += NewSegment(
                             SegmentType.TEXT_CHUNK, i * 1000 + k, page = i + 1, text = c.text,
-                            embedding = Quant.encode(embedSafely(c.text, title)),
+                            embedding = Quant.encode(embedder.embedDocument(c.text, title)),
                         )
                     }
                     val thumb = thumbs.save(entry.sourceKey, "p${i + 1}", bmp)
@@ -101,16 +101,6 @@ class PdfExtractor(
         }
     }
 
-    private suspend fun embedSafely(text: String, title: String?): FloatArray {
-        var t = text
-        repeat(4) {
-            try { return embedder.embedDocument(t, title) } catch (e: Exception) {
-                if (e.message?.contains("exceeds", ignoreCase = true) != true) throw e
-                t = t.take((t.length * 0.6).toInt()).trimEnd()
-            }
-        }
-        return embedder.embedDocument(t, title)
-    }
 
     companion object {
         const val MAX_PAGES = 500

@@ -179,7 +179,7 @@ private fun Bubble(text: String, mine: Boolean) {
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = if (mine) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        ) { androidx.compose.foundation.text.selection.SelectionContainer { Text(text, Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium) } }
+        ) { androidx.compose.foundation.text.selection.SelectionContainer { com.lsa.app.ui.common.Markdown(text, Modifier.padding(12.dp)) } }
     }
 }
 

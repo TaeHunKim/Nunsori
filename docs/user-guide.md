@@ -16,6 +16,9 @@ A three-step wizard appears on the first launch. Everything in it can be changed
 
 Shows progress ("n / total files"), the file being processed, **Start / Pause**, and a thumbnail grid of indexed files. Indexing continues in the background with a notification, and resumes after the app is killed.
 
+- **Failed files:** a "Failed (n)" chip filters the grid to files that could not be indexed (tap one to see the error); **Retry failed** starts a run that tries them again. Failed files are also retried by every normal run.
+- **Low-power mode:** for manual runs, a switch makes indexing slower but gentler: the CPU only (2 threads, no GPU), a short pause between files, and a stop when the phone gets hot.
+
 ## Search
 
 Type a description ("launch schedule and design approval"), exact words, a place ("Dubai", "두바이", "중동") or a file name. Each result card shows a thumbnail, the file name with the best location (`p.3` for a page, `mm:ss` for audio/video), a snippet, and badges for what matched: Image, Text, Audio, Keyword. Tap a result to open it in another app; share one or several from the result actions. Exact keyword matches come first. Ranking details: [search.md](search.md).
@@ -32,7 +35,7 @@ Tips: describe content in natural language for photos and scenes; use distinctiv
 
 ![Chat](images/chat.png)
 
-Ask questions about your files. The model (Gemma 4 by default, downloaded in Settings) can search your index and read files by itself; each use appears as a small card you can open. Chats are kept in a list: rename or delete them from the menu on each row; the context sent to the model is limited, so very long chats forget their oldest messages (a note says so).
+Ask questions about your files. The model (Gemma 4 by default, downloaded in Settings) can search your index and read files by itself; each use appears as a small card you can open. Chats are kept in a list: pin (pinned chats stay on top), rename or delete them from the menu on each row; answers are shown with Markdown formatting (lists, code, tables, links); the context sent to the model is limited, so very long chats forget their oldest messages (a note says so).
 
 - **Tools:** the chips above the conversation switch *Search files*, *Read files* and *Auto search* on or off for that chat.
 - **Attach:** the paperclip adds a photo (Gemma 4 can look at it). In Search, long-press results and choose **Ask in chat** to attach those files to a new or existing chat; they are sent with your next message.
@@ -44,7 +47,10 @@ See [chat.md](chat.md) for how the context is built.
 ## Settings
 
 - **What to index:** Images, Text files, Documents, Audio, Video.
-- **Folders:** add folders, choose whether to include subfolders.
+- **Folders:** quick-add chips for Camera, Screenshots and Downloads, or pick any folder; choose whether to include subfolders. (Without "All files access" only photos, audio and video in a folder are indexed.)
+- **Speech recognition and OCR:** the first-run wizard offers the SenseVoice download when Audio or Video is on. OCR is Google ML Kit, built in, nothing to download. Android has no OCR API of its own, and its speech recognizer is meant for the microphone, so it is not used for files.
+- **Chat instructions:** your own text added to the chat's system prompt for every conversation (up to 2,000 characters).
+- **Resource indicator:** a top-bar readout of the backend (GPU/CPU) of the loaded models, app memory and CPU use. GPU load itself cannot be read by apps.
 - **Embedding model:** download or delete 440M (text+image) or 740M (adds audio). Switching to another model asks for confirmation first, because every indexed file has to be embedded again; on "Re-create" the new model is applied and indexing starts. Until it finishes only the files already processed are searchable (Search shows a banner). Nothing is asked when nothing has been indexed yet.
 
 ![Re-create the index?](images/model-switch.png)

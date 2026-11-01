@@ -33,6 +33,9 @@ interface ChatModel : AutoCloseable {
     /** True when images can be passed in [ChatTurn.images]. */
     val supportsImages: Boolean
 
+    /** "GPU" or "CPU" once loaded; empty for fakes. */
+    val backend: String get() = ""
+
     /**
      * Answers [user]. [conversationKey] identifies the conversation (session + tool selection): while it stays the same
      * and [history] is what the model already knows, the model's own state is reused instead of re-reading [history].

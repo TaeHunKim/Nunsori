@@ -194,6 +194,28 @@ fun FoldersSection(vm: SettingsViewModel) {
                 TextButton(onClick = { vm.removeFolder(row) }) { Text(stringResource(R.string.folder_remove)) }
             }
         }
+        // One-tap presets for the usual places; the picker below still reaches any folder.
+        val have = folders.map { it.relativePath }.toSet()
+        val root = Environment.getExternalStorageDirectory()
+        val presets = FOLDER_PRESETS.filter { pr ->
+            pr.paths.any { it !in have } && (!allFiles || pr.paths.any { java.io.File(root, it).isDirectory })
+        }
+        if (presets.isNotEmpty()) {
+            Text(stringResource(R.string.folder_presets), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                presets.forEach { pr ->
+                    androidx.compose.material3.AssistChip(
+                        enabled = photoPermitted || allFiles,
+                        onClick = {
+                            pr.paths.filter { it !in have && (!allFiles || java.io.File(root, it).isDirectory) }
+                                .forEach { vm.addFolder(it, pr.recursive) }
+                        },
+                        label = { Text(stringResource(pr.label)) },
+                    )
+                }
+            }
+            if (!allFiles) Text(stringResource(R.string.folder_presets_media_only), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         OutlinedButton(onClick = { showPicker = true }, enabled = photoPermitted || allFiles) { Text(stringResource(R.string.folder_add)) }
         if (showPicker) {
             FolderPickerDialog(
@@ -225,4 +247,24 @@ fun EmbeddingModelsSection(vm: SettingsViewModel) {
                 dismissButton = { TextButton(onClick = vm::cancelSwitch) { Text(stringResource(R.string.action_cancel)) } },
             )
         }
+}
+
+/** Usual places on a phone, as MediaStore-style relative paths. */
+private class FolderPreset(val label: Int, val paths: List<String>, val recursive: Boolean)
+
+private val FOLDER_PRESETS = listOf(
+    FolderPreset(R.string.folder_preset_camera, listOf("DCIM/Camera/"), true),
+    FolderPreset(R.string.folder_preset_screenshots, listOf("Pictures/Screenshots/", "DCIM/Screenshots/"), true),
+    FolderPreset(R.string.folder_preset_downloads, listOf("Download/"), true),
+)
+
+/** Speech recognition model choice (audio and video transcripts); shared by Settings and the first-run wizard. */
+@Composable
+fun SpeechModelsSection(vm: SettingsViewModel) {
+    val states by vm.modelStates.collectAsStateWithLifecycle()
+    val asrId by vm.asrModelId.collectAsStateWithLifecycle()
+    Section(R.string.settings_asr_models, R.string.settings_asr_desc)
+    ModelCatalog.ofKind(ModelKind.ASR).forEach { spec ->
+        ModelCard(spec, states[spec.id], selected = spec.id == asrId, vm = vm, onSelect = { vm.selectAsr(spec.id) })
+    }
 }

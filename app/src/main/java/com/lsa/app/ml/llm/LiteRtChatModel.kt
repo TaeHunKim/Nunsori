@@ -27,6 +27,7 @@ class LiteRtChatModel private constructor(
     private val engine: Engine,
     override val supportsImages: Boolean,
     private val maxTokens: Int,
+    override val backend: String = "",
 ) : ChatModel {
     private val lock = Any()
     private var conversation: Conversation? = null
@@ -135,7 +136,7 @@ class LiteRtChatModel private constructor(
                     try {
                         engine.initialize()
                         Log.i(TAG, "loaded ${modelFile.name} on ${backend.name}")
-                        return@withContext LiteRtChatModel(engine, vision, maxTokens)
+                        return@withContext LiteRtChatModel(engine, vision, maxTokens, backend.name)
                     } catch (t: Throwable) {
                         Log.w(TAG, "init failed on ${backend.name}", t)
                         runCatching { engine.close() }

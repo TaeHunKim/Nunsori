@@ -16,6 +16,7 @@ import java.io.File
 class EmbeddingGemma2Embedder private constructor(
     override val modelId: String,
     private val engine: EmbeddingEngine,
+    override val backend: String = "",
 ) : Embedder {
     private val mutex = Mutex()
     private val options = EmbeddingOptions(normalize = true)
@@ -26,10 +27,12 @@ class EmbeddingGemma2Embedder private constructor(
         compute(InputData.Image(jpeg))
 
     override suspend fun embedDocument(text: String, title: String?): FloatArray =
-        compute(InputData.Text("title: ${title?.trim()?.takeIf { it.isNotEmpty() } ?: "none"} | text: $text"))
+        retryShorter(text) { t ->
+            compute(InputData.Text("title: ${title?.trim()?.takeIf { it.isNotEmpty() }?.take(MAX_TITLE_CHARS) ?: "none"} | text: $t"))
+        }
 
     override suspend fun embedQuery(text: String): FloatArray =
-        compute(InputData.Text(QUERY_PREFIX + text))
+        retryShorter(text.take(MAX_QUERY_CHARS)) { t -> compute(InputData.Text(QUERY_PREFIX + t)) }
 
     override val supportsAudio: Boolean get() = modelId == "eg2-740m"
 
@@ -51,17 +54,22 @@ class EmbeddingGemma2Embedder private constructor(
     companion object {
         private const val TAG = "LSA.EG2"
         const val QUERY_PREFIX = "task: search result | query: "
+        /** Low-power indexing: a couple of CPU threads instead of the GPU (slower, cooler, easier on the battery). */
+        const val LOW_POWER_THREADS = 2
+        private const val MAX_TITLE_CHARS = 200
+        private const val MAX_QUERY_CHARS = 1000
 
         private val isEmulator: Boolean
             get() = Build.FINGERPRINT.contains("generic") || Build.HARDWARE.contains("ranchu") ||
                 Build.HARDWARE.contains("goldfish")
 
-        /** Loads the model (can take ~10s; call off the main thread). Tries GPU on real devices, CPU otherwise. */
-        suspend fun load(modelId: String, modelFile: File, cacheDir: File): EmbeddingGemma2Embedder =
+        /** Loads the model (can take ~10s; call off the main thread). Tries GPU on real devices, CPU otherwise (or 2 CPU threads when [lowPower]). */
+        suspend fun load(modelId: String, modelFile: File, cacheDir: File, lowPower: Boolean = false): EmbeddingGemma2Embedder =
             withContext(Dispatchers.Default) {
                 cacheDir.mkdirs()
                 val backends: List<() -> Backend> =
-                    if (isEmulator) listOf({ Backend.CPU() }) else listOf({ Backend.GPU() }, { Backend.CPU() })
+                    if (lowPower) listOf({ Backend.CPU(threadCount = LOW_POWER_THREADS) })
+                    else if (isEmulator) listOf({ Backend.CPU() }) else listOf({ Backend.GPU() }, { Backend.CPU() })
                 var last: Throwable? = null
                 for (make in backends) {
                     val backend = make()
@@ -78,7 +86,7 @@ class EmbeddingGemma2Embedder private constructor(
                     try {
                         engine.initialize()
                         Log.i(TAG, "loaded $modelId on ${backend.name}")
-                        return@withContext EmbeddingGemma2Embedder(modelId, engine)
+                        return@withContext EmbeddingGemma2Embedder(modelId, engine, backend.name)
                     } catch (t: Throwable) {
                         Log.w(TAG, "init failed on ${backend.name}", t)
                         runCatching { engine.close() }

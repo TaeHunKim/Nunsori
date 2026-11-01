@@ -114,5 +114,9 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
 
     fun cancelSwitch() { _pendingSwitch.value = null }
     fun selectOcr(id: String) = viewModelScope.launch { c.settings.setOcrModelId(id) }
+    val showResourceIndicator = c.settings.showResourceIndicator.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    fun setShowResourceIndicator(on: Boolean) = viewModelScope.launch { c.settings.setShowResourceIndicator(on) }
+    val chatCustomPrompt = c.settings.chatCustomPrompt.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    fun saveChatPrompt(s: String) = viewModelScope.launch { c.settings.setChatCustomPrompt(s) }
     fun saveToken(token: String) = viewModelScope.launch { c.settings.setHfToken(token) }
 }

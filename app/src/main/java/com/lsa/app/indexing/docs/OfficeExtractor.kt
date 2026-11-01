@@ -40,7 +40,7 @@ class OfficeExtractor(private val embedder: Embedder, private val thumbs: ThumbS
             chunksOf(unit, unitTitle).take(MAX_CHUNKS_PER_UNIT).forEachIndexed { k, c ->
                 segs += NewSegment(
                     SegmentType.TEXT_CHUNK, i * 1000 + k, page = unit.page, text = c.text,
-                    embedding = Quant.encode(embedSafely(c.text, c.title ?: unitTitle)),
+                    embedding = Quant.encode(embedder.embedDocument(c.text, c.title ?: unitTitle)),
                 )
             }
             val card = TextCard.render(unitTitle, unit.text.take(1200), entry.displayName, doc.style)
@@ -61,16 +61,6 @@ class OfficeExtractor(private val embedder: Embedder, private val thumbs: ThumbS
         else -> TextChunker().chunk(unit.text, title)
     }
 
-    private suspend fun embedSafely(text: String, title: String?): FloatArray {
-        var t = text
-        repeat(4) {
-            try { return embedder.embedDocument(t, title) } catch (e: Exception) {
-                if (e.message?.contains("exceeds", ignoreCase = true) != true) throw e
-                t = t.take((t.length * 0.6).toInt()).trimEnd()
-            }
-        }
-        return embedder.embedDocument(t, title)
-    }
 
     companion object { const val MAX_CHUNKS_PER_UNIT = 300 }
 }

@@ -12,7 +12,7 @@
     <!-- Notifications -->
     <string name="channel_indexing">인덱싱</string>
     <string name="channel_download">모델 다운로드</string>
-    <string name="notif_indexing_title">이미지 인덱싱 중</string>
+    <string name="notif_indexing_title">파일 인덱싱 중</string>
     <string name="notif_indexing_preparing">준비 중…</string>
     <string name="notif_download_title">%1$s 다운로드 중</string>
 
@@ -20,11 +20,11 @@
 
     <!-- Automatic indexing -->
     <string name="auto_title">자동 인덱싱</string>
-    <string name="auto_desc">새로 찍거나 바뀌거나 삭제된 사진을 언제 반영할지 정합니다. Index 화면의 Start 버튼은 언제든 쓸 수 있습니다.</string>
+    <string name="auto_desc">새로 생기거나 바뀌거나 삭제된 파일을 언제 반영할지 정합니다. Index 화면의 Start 버튼은 언제든 쓸 수 있습니다.</string>
     <string name="auto_mode_idle">유휴 시</string>
     <string name="auto_mode_idle_desc">충전 중이고 폰을 쓰지 않을 때 실행합니다. 폰이 뜨거워지면 멈춥니다. 배터리 부담이 가장 적습니다.</string>
     <string name="auto_mode_immediate">바로</string>
-    <string name="auto_mode_immediate_desc">새로 찍거나 바뀌거나 삭제된 사진을 약 2분 안에 반영합니다. 배터리를 더 씁니다.</string>
+    <string name="auto_mode_immediate_desc">새로 생기거나 바뀌거나 삭제된 파일을 약 2분 안에 반영합니다. 배터리를 더 씁니다.</string>
     <string name="auto_mode_scheduled">정해진 시간에</string>
     <string name="auto_mode_scheduled_desc">변경 사항을 모아 하루에 한 번 인덱싱합니다.</string>
     <string name="auto_mode_manual">수동으로만</string>
@@ -111,8 +111,8 @@
     <string name="btn_start">인덱싱 시작</string>
     <string name="btn_resume">이어서 시작</string>
     <string name="btn_pause">일시정지</string>
-    <string name="index_empty">아직 인덱싱된 이미지가 없습니다.</string>
-    <string name="warn_no_permission">사진 접근 권한이 필요합니다. 설정에서 허용해 주세요.</string>
+    <string name="index_empty">아직 인덱싱된 파일이 없습니다.</string>
+    <string name="warn_no_permission">저장소 접근 권한(사진·미디어 또는 모든 파일)이 필요합니다. 설정에서 허용해 주세요.</string>
     <string name="warn_no_folders">설정에서 인덱싱할 폴더를 선택해 주세요.</string>
     <string name="warn_no_model">먼저 설정에서 임베딩 모델을 다운로드해 주세요.</string>
     <plurals name="warn_stale">
@@ -240,4 +240,25 @@
     <string name="lang_system">시스템</string>
     <string name="lang_en">English</string>
     <string name="lang_ko">한국어</string>
+    <string name="index_filter_failed">실패 (%d)</string>
+    <string name="index_retry_failed">실패한 파일 다시 시도</string>
+    <string name="chat_pin">맨 위에 고정</string>
+    <string name="chat_unpin">고정 해제</string>
+    <string name="chat_pinned">고정됨</string>
+    <string name="chat_prompt_title">내 지침</string>
+    <string name="chat_prompt_desc">모든 대화의 시스템 프롬프트에 추가됩니다. 말투, 언어, 파일 인용 방식 등을 적을 수 있습니다. 이 기기에만 저장됩니다.</string>
+    <string name="chat_prompt_hint">예: 간결하게, 한국어로 답해줘</string>
+    <string name="folder_presets">빠른 추가</string>
+    <string name="folder_preset_camera">카메라</string>
+    <string name="folder_preset_screenshots">스크린샷</string>
+    <string name="folder_preset_downloads">다운로드</string>
+    <string name="folder_presets_media_only">"모든 파일 접근"을 허용하지 않으면 이 폴더의 사진·음성·영상만 인덱싱됩니다.</string>
+    <string name="onboarding_ocr_note">이미지 속 글자는 내장 온디바이스 OCR(Google ML Kit)로 읽습니다. 따로 받을 것이 없습니다.</string>
+    <string name="index_low_power">저전력 모드</string>
+    <string name="index_low_power_desc">수동 인덱싱용: 느리지만 CPU만 적은 스레드로 쓰고, 파일 사이에 쉬며, 폰이 뜨거워지면 멈춥니다.</string>
+    <string name="resource_unloaded">–</string>
+    <string name="resource_models">임베딩 %1$s · 채팅 %2$s</string>
+    <string name="resource_usage">RAM %1$d MB · CPU %2$d%%</string>
+    <string name="settings_resource_title">리소스 표시</string>
+    <string name="settings_resource_desc">불러온 모델의 실행 장치(GPU/CPU), 앱 메모리, CPU 사용률을 상단 바에 표시합니다. GPU 사용률 자체는 앱에서 읽을 수 없습니다.</string>
 </resources>

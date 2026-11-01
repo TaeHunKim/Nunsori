@@ -97,11 +97,7 @@ fun SettingsScreen() {
         ModelCatalog.ofKind(ModelKind.OCR).forEach { spec ->
             ModelCard(spec, states[spec.id], selected = spec.id == ocrId, vm = vm, onSelect = { vm.selectOcr(spec.id) })
         }
-        Section(R.string.settings_asr_models, R.string.settings_asr_desc)
-        val asrId by vm.asrModelId.collectAsStateWithLifecycle()
-        ModelCatalog.ofKind(ModelKind.ASR).forEach { spec ->
-            ModelCard(spec, states[spec.id], selected = spec.id == asrId, vm = vm, onSelect = { vm.selectAsr(spec.id) })
-        }
+        SpeechModelsSection(vm)
         HorizontalDivider()
 
         // --- Chat
@@ -118,6 +114,17 @@ fun SettingsScreen() {
                 FilterChip(selected = chatContext == n, onClick = { vm.setChatContext(n) }, label = { Text("${n / 1024}K") })
             }
         }
+        val savedPrompt by vm.chatCustomPrompt.collectAsStateWithLifecycle()
+        var prompt by remember(savedPrompt) { mutableStateOf(savedPrompt) }
+        Text(stringResource(R.string.chat_prompt_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.chat_prompt_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedTextField(
+            value = prompt, onValueChange = { prompt = it.take(com.lsa.app.data.prefs.SettingsStore.MAX_CUSTOM_PROMPT) },
+            minLines = 3, maxLines = 8, modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.chat_prompt_hint)) },
+            supportingText = { Text("${prompt.length} / ${com.lsa.app.data.prefs.SettingsStore.MAX_CUSTOM_PROMPT}") },
+        )
+        OutlinedButton(onClick = { vm.saveChatPrompt(prompt) }, enabled = prompt.trim() != savedPrompt) { Text(stringResource(R.string.btn_save)) }
         HorizontalDivider()
 
         // --- Automatic indexing
@@ -159,6 +166,16 @@ fun SettingsScreen() {
         Section(R.string.about_title, null)
         Text(stringResource(R.string.about_version, com.lsa.app.BuildConfig.VERSION_NAME, com.lsa.app.data.db.AppDatabase.VERSION))
         Text(stringResource(R.string.about_places_credit), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        val showRes by vm.showResourceIndicator.collectAsStateWithLifecycle()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_resource_title), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.settings_resource_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            androidx.compose.material3.Switch(checked = showRes, onCheckedChange = vm::setShowResourceIndicator)
+        }
+        HorizontalDivider()
 
         // --- HF token
         Section(R.string.settings_token, R.string.settings_token_desc)
