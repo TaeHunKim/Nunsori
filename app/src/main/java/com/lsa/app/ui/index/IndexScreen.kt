@@ -49,7 +49,6 @@ import com.lsa.app.rememberContainer
 import com.lsa.app.ui.common.ItemDetailSheet
 import com.lsa.app.ui.common.ItemThumb
 import com.lsa.app.ui.common.WarningCard
-import com.lsa.app.ui.onboarding.OnboardingDialog
 
 /** Photos via the media permission, or any file via "all files access". */
 fun hasAnyStorageAccess(ctx: android.content.Context): Boolean =
@@ -72,7 +71,6 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
     val folderCount by vm.enabledFolderCount.collectAsStateWithLifecycle()
     val modelReady by vm.modelReady.collectAsStateWithLifecycle()
     val stale by vm.staleCount.collectAsStateWithLifecycle()
-    val onboardingDone by vm.onboardingDone.collectAsStateWithLifecycle()
     var detailId by remember { mutableStateOf<Long?>(null) }
 
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.start() }
@@ -135,7 +133,6 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
             )
         }
     }
-    if (!onboardingDone) OnboardingDialog(vm::completeOnboarding)
     detailId?.let { ItemDetailSheet(it) { detailId = null } }
 }
 

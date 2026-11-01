@@ -75,6 +75,10 @@ interface ItemDao {
     @Query("SELECT $SUMMARY_COLS FROM items i WHERE i.itemId IN (:ids)")
     suspend fun summaries(ids: List<Long>): List<ItemSummary>
 
+    /** Finished items; all of them are re-embedded when the embedding model changes. */
+    @Query("SELECT COUNT(*) FROM items WHERE status = 'DONE'")
+    suspend fun doneCount(): Int
+
     @Query("SELECT COUNT(*) FROM items WHERE status = 'DONE' AND embeddingModelId != :modelId")
     fun observeStaleCount(modelId: String): Flow<Int>
 

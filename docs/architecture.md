@@ -51,7 +51,7 @@ flowchart TD
 | `ml`, `ml/embedding`, `ml/ocr` | `ModelResidency`, `Embedder` and `EmbeddingGemma2Embedder`, `OcrEngine` and `MlKitOcrEngine` |
 | `models` | `ModelCatalog`, `ModelManager`, `ModelDownloader` (resumable), `ModelDownloadWorker`, `ArchiveExtractor` |
 | `search` | `SearchEngine`, `Fusion`, `KeywordMatcher` |
-| `ui` | `AppScaffold`, screens (`index`, `search`, `settings`, `onboarding`), `theme` |
+| `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`), screens (`index`, `search`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
 
 ## 4. Data model
 

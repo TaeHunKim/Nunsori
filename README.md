@@ -38,7 +38,7 @@ source scripts/env.sh && scripts/fetch-sherpa-onnx.sh
 ./gradlew assembleDebug && scripts/emu-start.sh && scripts/run.sh
 ```
 
-Then in the app: pick auto-indexing, choose folders and download a model in Settings, press Start indexing, search. Details: [getting-started](docs/getting-started.md).
+Then in the app: the first-run wizard asks what to index (kinds, folders), which model to download and when to index automatically; then press Start indexing and search. Details: [getting-started](docs/getting-started.md).
 
 ## Privacy
 

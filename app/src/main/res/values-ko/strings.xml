@@ -32,11 +32,23 @@
     <string name="auto_schedule_time">실행 시각 %1$s</string>
     <string name="auto_change_time">변경</string>
     <string name="auto_charging_only">충전 중에만 실행</string>
-    <string name="onboarding_title">사진을 어떻게 인덱싱할까요?</string>
-    <string name="onboarding_hint">나중에 설정에서 바꿀 수 있어요.</string>
-    <string name="onboarding_confirm">계속</string>
+    <string name="onboarding_title">파일을 언제 인덱싱할까요?</string>
+    <string name="onboarding_hint">이 설정은 나중에 설정 화면에서 모두 바꿀 수 있어요.</string>
+    <string name="onboarding_step">%1$d / %2$d 단계</string>
+    <string name="onboarding_files_title">무엇을 인덱싱할까요?</string>
+    <string name="onboarding_files_desc">검색할 파일 종류와 폴더를 고르세요. 모든 데이터는 폰 안에만 있습니다.</string>
+    <string name="onboarding_model_title">검색 모델을 고르세요</string>
+    <string name="onboarding_model_desc">모델은 한 번만 내려받고 폰에서 실행됩니다. 440M을 추천하며 740M은 오디오도 이해합니다. 건너뛰고 나중에 받아도 됩니다.</string>
+    <string name="onboarding_back">이전</string>
+    <string name="onboarding_next">다음</string>
+    <string name="onboarding_finish">완료</string>
 
     <!-- Model memory -->
+    <string name="model_switch_title">인덱스를 다시 만들까요?</string>
+    <plurals name="model_switch_body">
+        <item quantity="other">색인된 %1$d개 파일을 모두 %2$s(으)로 다시 임베딩해야 합니다. 끝날 때까지는 이미 처리된 파일만 검색되고, 시간이 오래 걸릴 수 있습니다. 계속할까요?</item>
+    </plurals>
+    <string name="model_switch_confirm">다시 만들기</string>
     <string name="about_title">정보</string>
     <string name="about_version">버전 %1$s (데이터베이스 v%2$d)</string>
     <string name="about_places_credit">장소 이름: GeoNames (CC BY 4.0).</string>

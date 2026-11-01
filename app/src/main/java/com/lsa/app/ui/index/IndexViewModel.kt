@@ -30,11 +30,6 @@ class IndexViewModel(private val c: AppContainer) : ViewModel() {
     val staleCount = c.settings.embeddingModelId.flatMapLatest { dao.observeStaleCount(it) }.state(0)
 
     /** Starts as `true` so existing users never see the dialog flash before DataStore loads. */
-    val onboardingDone = c.settings.onboardingDone.state(true)
-
-    fun completeOnboarding(mode: com.lsa.app.indexing.AutoIndexMode, minutes: Int, chargingOnly: Boolean) {
-        viewModelScope.launch { c.settings.completeOnboarding(mode, minutes, chargingOnly) }
-    }
 
     fun start() = c.indexing.start()
     fun pause() = c.indexing.pause()

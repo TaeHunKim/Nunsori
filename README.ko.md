@@ -38,7 +38,7 @@ source scripts/env.sh && scripts/fetch-sherpa-onnx.sh
 ./gradlew assembleDebug && scripts/emu-start.sh && scripts/run.sh
 ```
 
-앱에서: 자동 인덱싱 방식 선택, 설정에서 폴더 선택과 모델 다운로드, 인덱싱 시작, 검색. 자세한 내용은 [getting-started](docs/getting-started.md)(영어).
+앱에서: 첫 실행 마법사가 인덱싱할 대상(종류·폴더), 내려받을 모델, 자동 인덱싱 방식을 차례로 묻습니다. 이후 인덱싱 시작, 검색. 자세한 내용은 [getting-started](docs/getting-started.md)(영어).
 
 ## 프라이버시
 

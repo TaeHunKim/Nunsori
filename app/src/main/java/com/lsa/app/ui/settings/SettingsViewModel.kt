@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -87,7 +88,27 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
         c.residency.closeAll()
         c.modelManager.delete(id)
     }
-    fun selectEmbedding(id: String) = viewModelScope.launch { c.settings.setEmbeddingModelId(id) }
+    /** An embedding model switch waiting for the user's confirmation: every indexed file has to be embedded again. */
+    data class ModelSwitch(val modelId: String, val files: Int)
+    private val _pendingSwitch = MutableStateFlow<ModelSwitch?>(null)
+    val pendingSwitch: StateFlow<ModelSwitch?> = _pendingSwitch.asStateFlow()
+
+    /** Switches right away when nothing is indexed yet; otherwise asks first ([confirmSwitch] / [cancelSwitch]). */
+    fun selectEmbedding(id: String) = viewModelScope.launch {
+        if (id == c.settings.embeddingModelId.first()) return@launch
+        val files = dao.doneCount()
+        if (files == 0) c.settings.setEmbeddingModelId(id) else _pendingSwitch.value = ModelSwitch(id, files)
+    }
+
+    /** Applies the switch and starts re-indexing everything with the new model. */
+    fun confirmSwitch() = viewModelScope.launch {
+        val s = _pendingSwitch.value ?: return@launch
+        _pendingSwitch.value = null
+        c.settings.setEmbeddingModelId(s.modelId)
+        c.indexing.start()
+    }
+
+    fun cancelSwitch() { _pendingSwitch.value = null }
     fun selectOcr(id: String) = viewModelScope.launch { c.settings.setOcrModelId(id) }
     fun saveToken(token: String) = viewModelScope.launch { c.settings.setHfToken(token) }
 }

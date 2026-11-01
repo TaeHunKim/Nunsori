@@ -110,30 +110,3 @@ fun TimeDialog(initialMinutes: Int, onDismiss: () -> Unit, onConfirm: (Int) -> U
         text = { TimePicker(state) },
     )
 }
-
-/** First-run dialog: the user must pick how photos get indexed (no default is pre-selected). */
-@Composable
-fun OnboardingDialog(onConfirm: (AutoIndexMode, Int, Boolean) -> Unit) {
-    var mode by rememberSaveable { mutableStateOf<AutoIndexMode?>(null) }
-    var minutes by rememberSaveable { mutableIntStateOf(SettingsStore.DEFAULT_SCHEDULE_MINUTES) }
-    var chargingOnly by rememberSaveable { mutableStateOf(true) }
-    AlertDialog(
-        onDismissRequest = {},
-        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        title = { Text(stringResource(R.string.onboarding_title)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AutoIndexOptions(mode, minutes, chargingOnly, { mode = it }, { minutes = it }, { chargingOnly = it })
-                Text(
-                    stringResource(R.string.onboarding_hint),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(enabled = mode != null, onClick = { onConfirm(mode!!, minutes, chargingOnly) }) {
-                Text(stringResource(R.string.onboarding_confirm))
-            }
-        },
-    )
-}

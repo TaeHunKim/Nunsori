@@ -24,7 +24,7 @@ class NavigationTest {
 
     @Before fun skipOnboarding() {
         runBlocking { SettingsStore(ApplicationProvider.getApplicationContext()).completeOnboarding(AutoIndexMode.MANUAL, 180, true) }
-        rule.waitUntil(5_000) { rule.onAllNodesWithText("How should your photos be indexed?").fetchSemanticsNodes().isEmpty() }
+        rule.waitUntil(5_000) { rule.onAllNodesWithText("What should be indexed?").fetchSemanticsNodes().isEmpty() }
     }
 
     /** Drawer entries are clickable; the top-bar title with the same text is not. */
@@ -38,7 +38,7 @@ class NavigationTest {
         item("Search").assertIsDisplayed()
         item("Settings").assertIsDisplayed()
         item("Search").performClick()
-        rule.onNodeWithText("Search your photos…").assertIsDisplayed()
+        rule.onNodeWithText("Search your files…").assertIsDisplayed()
         openMenu()
         item("Settings").performClick()
         rule.onNodeWithText("Folders to index").assertIsDisplayed()

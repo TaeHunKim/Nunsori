@@ -26,7 +26,7 @@ Setup: [getting-started.md](getting-started.md). Design: [architecture.md](archi
 | `push-fixtures.sh` | `test-fixtures/images` to `/sdcard/Pictures/fixtures` and MediaStore scan |
 | `fetch-sherpa-onnx.sh` | sherpa-onnx AAR and Silero VAD |
 | `goto-search.sh`, `ui-search.sh`, `ui-tap.sh`, `search-result.sh`, `e2e-search.sh`, `e2e-setup.sh` | UI automation helpers for E2E |
-| `make-places.py` | Rebuild `app/src/main/assets/places.tsv.gz` from GeoNames (downloads about 210 MB to `build/places-src`; the result is committed) |
+| `make-places.py` | Rebuild `app/src/main/assets/places.bin` from GeoNames (downloads about 210 MB to `build/places-src`; the result is committed) |
 | `fetch-photo-fixtures.sh`, `make-text-fixtures.py`, `make-doc-fixtures.py`, `make-office-fixtures.py`, `make-audio-fixtures.sh` | Generate fixtures |
 
 ## Fixtures
@@ -47,7 +47,7 @@ Push documents, audio and video to `/sdcard/Documents|Recordings|Movies/fixtures
 
 - Log tags: `LSA.Residency`, `LSA.Auto`, `LSA.Search`.
 - Inspect the DB: `adb shell "run-as com.lsa.app sqlite3 databases/lsa.db 'select status,count(*) from items group by status'"`.
-- mobile-mcp (`.mcp.json`) lists screen elements and taps; the first-run dialog is a separate window and may need coordinate taps.
+- mobile-mcp (`.mcp.json`) lists screen elements and taps; system permission dialogs are separate windows and may need coordinate taps.
 
 ## Schema and version changes
 

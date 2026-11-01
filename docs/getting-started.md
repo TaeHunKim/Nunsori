@@ -22,11 +22,9 @@ scripts/run.sh                     # installDebug + launch
 
 ## First run
 
-1. **Choose automatic indexing** on the welcome screen (Manual, Immediately, Scheduled, or When idle and charging). You can change it later in Settings.
-2. Open **Settings**: pick the kinds to index, add folders, and press **Download** on an embedding model (440M is the default; 740M adds audio embedding). Speech recognition for audio and video transcripts is a separate download.
-3. Grant media permissions when asked. Text files and documents also need **All files access**.
-4. Go to **Index** and press **Start indexing**.
-5. Go to **Search** and type a query.
+1. Go through the **first-run wizard**: choose the kinds of files and folders (grant the media permissions when asked; text files and documents also need **All files access**), download an embedding model (440M is the default; 740M adds audio embedding), and choose automatic indexing (Manual, Immediately, Scheduled, or When idle and charging). Everything can be changed later in Settings. Speech recognition for audio and video transcripts is a separate download in Settings.
+2. Go to **Index** and press **Start indexing**.
+3. Go to **Search** and type a query.
 
 ## Try it with test files
 

@@ -33,7 +33,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.lsa.app.R
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lsa.app.ui.index.IndexScreen
+import com.lsa.app.ui.onboarding.OnboardingScreen
 import com.lsa.app.ui.search.SearchScreen
 import com.lsa.app.ui.settings.SettingsScreen
 import kotlinx.coroutines.launch
@@ -46,6 +49,18 @@ enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVec
 
 @Composable
 fun AppScaffold() {
+    val container = com.lsa.app.rememberContainer()
+    val onboardingDone by container.settings.onboardingDone.collectAsStateWithLifecycle(initialValue = null)
+    val scope = rememberCoroutineScope()
+    when (onboardingDone) {
+        null -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize())
+        false -> OnboardingScreen { mode, minutes, charging -> scope.launch { container.settings.completeOnboarding(mode, minutes, charging) } }
+        true -> MainScaffold()
+    }
+}
+
+@Composable
+private fun MainScaffold() {
     val nav = rememberNavController()
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()

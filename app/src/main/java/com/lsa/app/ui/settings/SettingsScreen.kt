@@ -73,28 +73,12 @@ fun SettingsScreen() {
     val container = rememberContainer()
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { initializer { SettingsViewModel(container) } })
     val ctx = LocalContext.current
-    var photoPermitted by remember { mutableStateOf(hasPhotoPermission(ctx)) }
-    var allFiles by remember { mutableStateOf(Environment.isExternalStorageManager()) }
-    var showPicker by remember { mutableStateOf(false) }
 
     // Both permissions can change while we are in the system settings screen: re-check when coming back.
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-        photoPermitted = hasPhotoPermission(ctx)
-        allFiles = Environment.isExternalStorageManager()
         vm.refreshModels(); vm.refreshThumbBytes()
     }
-    val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        photoPermitted = hasPhotoPermission(ctx)
-        if (photoPermitted) vm.refreshPhotoFolders()
-    }
-    LaunchedEffect(photoPermitted) { if (photoPermitted) vm.refreshPhotoFolders() }
-
-    val mediaPermLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    val folders by vm.folders.collectAsStateWithLifecycle()
-    val photoFolders by vm.photoFolders.collectAsStateWithLifecycle()
-    val kinds by vm.kinds.collectAsStateWithLifecycle()
     val states by vm.modelStates.collectAsStateWithLifecycle()
-    val embId by vm.embeddingModelId.collectAsStateWithLifecycle()
     val ocrId by vm.ocrModelId.collectAsStateWithLifecycle()
     val savedToken by vm.hfToken.collectAsStateWithLifecycle()
 
@@ -102,119 +86,13 @@ fun SettingsScreen() {
         Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // --- What to index
-        Section(R.string.kinds_title, R.string.kinds_desc)
-        listOf(
-            ItemKind.IMAGE to R.string.kind_images, ItemKind.TEXT to R.string.kind_text, ItemKind.DOC to R.string.kind_docs,
-            ItemKind.AUDIO to R.string.kind_audio, ItemKind.VIDEO to R.string.kind_video,
-        ).forEach { (kind, label) ->
-            val supported = kind in KindSupport.implemented
-            Row(
-                Modifier.fillMaxWidth().selectable(kind in kinds && supported, enabled = supported, role = Role.Checkbox) {
-                    // media types need their own runtime permission on Android 13+
-                    if (kind !in kinds && Build.VERSION.SDK_INT >= 33) {
-                        when (kind) {
-                            ItemKind.AUDIO -> mediaPermLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
-                            ItemKind.VIDEO -> mediaPermLauncher.launch(Manifest.permission.READ_MEDIA_VIDEO)
-                            else -> Unit
-                        }
-                    }
-                    vm.setKind(kind, kind !in kinds)
-                },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(checked = kind in kinds && supported, onCheckedChange = null, enabled = supported)
-                Column(Modifier.padding(start = 12.dp)) {
-                    Text(stringResource(label), color = if (supported) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (!supported) Text(stringResource(R.string.kind_coming_soon), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        if (ItemKind.AUDIO in kinds) {
-            val skipMusic by vm.skipMusic.collectAsStateWithLifecycle()
-            Row(Modifier.fillMaxWidth().padding(start = 36.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.skip_music))
-                    Text(stringResource(R.string.skip_music_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = skipMusic, onCheckedChange = vm::setSkipMusic)
-            }
-            if (ModelCatalog.byId(embId)?.audio != true) WarningCard(stringResource(R.string.audio_needs_740m))
-        }
-        if (ItemKind.VIDEO in kinds) {
-            val detail by vm.videoDetail.collectAsStateWithLifecycle()
-            val speech by vm.videoTranscribe.collectAsStateWithLifecycle()
-            Column(Modifier.padding(start = 36.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.video_detail_title), style = MaterialTheme.typography.titleSmall)
-                listOf(
-                    com.lsa.app.indexing.video.VideoDetail.LOW to R.string.video_detail_low,
-                    com.lsa.app.indexing.video.VideoDetail.MEDIUM to R.string.video_detail_medium,
-                    com.lsa.app.indexing.video.VideoDetail.HIGH to R.string.video_detail_high,
-                ).forEach { (d, label) ->
-                    Row(Modifier.fillMaxWidth().selectable(detail == d, role = Role.RadioButton) { vm.setVideoDetail(d) }, verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = detail == d, onClick = null, modifier = Modifier.padding(end = 12.dp))
-                        Text(stringResource(label))
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.video_speech))
-                        Text(stringResource(R.string.video_speech_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = speech, onCheckedChange = vm::setVideoTranscribe)
-                }
-            }
-        }
-        val needsFiles = kinds.any { it != ItemKind.IMAGE && it in KindSupport.implemented && it != ItemKind.AUDIO && it != ItemKind.VIDEO }
-        if (needsFiles && !allFiles) {
-            WarningCard(stringResource(R.string.perm_all_files), stringResource(R.string.perm_all_files_grant)) {
-                ctx.startActivity(
-                    Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${ctx.packageName}")),
-                )
-            }
-        }
+        KindsSection(vm)
         HorizontalDivider()
 
-        // --- Folders
-        Section(R.string.settings_folders, R.string.settings_folders_desc)
-        if (!photoPermitted && !allFiles) {
-            Button(onClick = {
-                val perms = buildList {
-                    add(if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE)
-                    add(Manifest.permission.ACCESS_MEDIA_LOCATION)
-                }
-                permLauncher.launch(perms.toTypedArray())
-            }) { Text(stringResource(R.string.perm_grant)) }
-        }
-        if (folders.isEmpty()) {
-            Text(stringResource(R.string.folder_none_selected), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        folders.forEach { row ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(displayFolder(row.relativePath))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Switch(checked = row.recursive, onCheckedChange = { vm.setRecursive(row.relativePath, it) }, modifier = Modifier.padding(end = 8.dp))
-                        Text(stringResource(R.string.folder_include_sub), style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-                TextButton(onClick = { vm.removeFolder(row) }) { Text(stringResource(R.string.folder_remove)) }
-            }
-        }
-        OutlinedButton(onClick = { showPicker = true }, enabled = photoPermitted || allFiles) { Text(stringResource(R.string.folder_add)) }
-        if (showPicker) {
-            FolderPickerDialog(
-                allFilesAccess = allFiles, photoFolders = photoFolders, selected = folders.map { it.relativePath }.toSet(),
-                onAdd = { path, rec -> vm.addFolder(path, rec) }, onDismiss = { showPicker = false },
-            )
-        }
+        FoldersSection(vm)
         HorizontalDivider()
 
-        // --- Models
-        Section(R.string.settings_embedding_models, R.string.settings_embedding_desc)
-        ModelCatalog.ofKind(ModelKind.EMBEDDING).forEach { spec ->
-            ModelCard(spec, states[spec.id], selected = spec.id == embId, vm = vm, onSelect = { vm.selectEmbedding(spec.id) })
-        }
+        EmbeddingModelsSection(vm)
         Section(R.string.settings_ocr_models, null)
         ModelCatalog.ofKind(ModelKind.OCR).forEach { spec ->
             ModelCard(spec, states[spec.id], selected = spec.id == ocrId, vm = vm, onSelect = { vm.selectOcr(spec.id) })
@@ -285,7 +163,7 @@ fun SettingsScreen() {
 }
 
 @Composable
-private fun Section(title: Int, desc: Int?) {
+internal fun Section(title: Int, desc: Int?) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(stringResource(title), style = MaterialTheme.typography.titleMedium)
         if (desc != null) Text(stringResource(desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -293,7 +171,7 @@ private fun Section(title: Int, desc: Int?) {
 }
 
 @Composable
-private fun ModelCard(spec: ModelSpec, state: ModelState?, selected: Boolean, vm: SettingsViewModel, onSelect: () -> Unit) {
+internal fun ModelCard(spec: ModelSpec, state: ModelState?, selected: Boolean, vm: SettingsViewModel, onSelect: () -> Unit) {
     val ctx = LocalContext.current
     val installed = state is ModelState.Installed
     Card(Modifier.fillMaxWidth()) {
