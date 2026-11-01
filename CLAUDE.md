@@ -1,6 +1,22 @@
 # Local Search Anything (Android)
 온디바이스 멀티모달 임베딩 + 시맨틱 검색 + 로컬 LLM RAG 앱. 패키지 `com.lsa.app`, Kotlin + Compose, minSdk 29 / target 36 / compile 37.
 
+## 문서 유지 규칙 (코드 구현 시 항상 적용)
+코드를 구현·수정할 때는 **같은 작업 안에서 관련 문서도 함께 갱신**하고, 코드와 문서를 같은 커밋에 넣는다. 갱신이 필요 없다고 판단하면 이유를 한 줄로 남긴다.
+
+| 변경 | 갱신할 문서 |
+|---|---|
+| 새 기능·화면·설정 | `README.md` + `README.ko.md`(기능 표), `docs/user-guide.md` |
+| 데이터 모델·파이프라인·패키지 구조 | `docs/architecture.md`, `docs/indexing.md` |
+| 랭킹·임계값·가중치 | `docs/search.md` |
+| 모델 추가·교체, 의존성, 라이선스 | `docs/models.md`, `THIRD_PARTY_NOTICES.md` |
+| 권한·네트워크·저장 데이터 | `docs/privacy.md` |
+| 빌드·스크립트·테스트 방법 | `docs/getting-started.md`, `docs/development.md` |
+| 계획·한계 변화 | `docs/roadmap.md` |
+
+- 영어판 README를 고치면 `README.ko.md`도 맞춘다. 문서에 적은 상수·경로는 코드와 일치하는지 확인한다.
+- 문서만 바꾼 변경은 코드 테스트를 다시 돌릴 필요 없지만 링크는 확인한다. 상세 설명은 `docs/`에 두고 이 파일에는 요약과 링크만 둔다.
+
 ## 환경
 - JDK: Android Studio 내장 JBR (`scripts/env.sh`가 JAVA_HOME/ANDROID_HOME/PATH 설정). 셸에서 adb 등이 안 잡히면 `source scripts/env.sh`.
 - SDK: `~/Library/Android/sdk` (API 36 + 37.0 platform, NDK 28.2, CMake 3.31.6). AVD: `lsa_api36` (RAM 8GB, data 32GB).
@@ -15,16 +31,10 @@
 - `./gradlew assembleDebug testDebugUnitTest` / `./gradlew connectedDebugAndroidTest`
 - 모델 파일(*.gguf, *.tflite, *.onnx 등)은 git 제외.
 
-## 앱 구조
-이미지·텍스트·문서(PDF/Office)·음성·영상을 인덱싱하고 시맨틱 + 키워드로 검색한다. 모델은 APK에 넣지 않고 Settings에서 사용자가 받는다(ML Kit OCR과 Silero VAD 0.6MB만 앱에 포함).
-
-- **데이터**(`data/db`): `items`(파일 1개: `sourceKey`, `kind`, `pipelineKey`, `progress`, 상태) + `segments`(검색 단위: `type`, 시간/쪽, 텍스트, int8 벡터 `Quant`, `thumbPath`). 종류별 세그먼트: IMAGE/OCR_TEXT(이미지), TEXT_CHUNK(텍스트·문서), PAGE_IMAGE(PDF 쪽), CARD_IMAGE(Office 텍스트 카드), TRANSCRIPT/AUDIO_CLIP(음성), VIDEO_CLIP(영상). 마이그레이션 v1→v2는 `Migrations.kt`.
-- **소스**(`data/media`): `MediaStoreRepository`(이미지·음성·영상) + `FileSource`(txt/md/문서, "모든 파일 접근" 필요) → `CompositeSource`. 폴더 키는 MediaStore `RELATIVE_PATH`와 같은 상대 경로.
-- **파이프라인**(`indexing`): `IndexRunner.sync()`(삭제·이동 정리, 대상 계산, 모델 불필요) → `process()`(파일 단위 커밋, `progress` 체크포인트로 재개). `ItemSession`이 종류별 추출기로 분배: `ImageExtractor`, `text/TextExtractor`(+ `TextChunker`·`MarkdownChunker`·`TextFormats`), `docs/PdfExtractor`·`OfficeExtractor`(+ `OfficeParsers`, `TextCard`, `ThumbStore`), `audio/AudioExtractor`(+ `AudioDecoder`, `SpeechTools`=sherpa-onnx VAD/ASR, `AudioWindows`), `video/VideoExtractor`(+ `VideoClips`). `pipelineKey`가 바뀌면(모델·청커 버전·영상 정밀도 등) 그 종류만 재처리.
-- **검색**(`search`): 세그먼트를 VISUAL / TEXT / AUDIO 그룹으로 나눠 그룹별로 "중앙값 대비 편차 게이트 + 상대 점수"(`Fusion`), SQL `LIKE` 키워드, 항목 단위로 묶어 가장 잘 맞은 위치(쪽/시간)를 표시. 완전일치 키워드는 최상단, 영상 전사 히트는 겹치는 클립으로 좁힘.
-- **자동 인덱싱**(`AutoIndexScheduler`): MANUAL / IMMEDIATE(WorkManager content-URI 트리거, 앱이 죽어 있어도 동작) / SCHEDULED / IDLE(충전+유휴). 첫 실행 온보딩에서 선택. 백그라운드 자동 실행은 foreground service를 못 띄워 `setForeground`를 try/catch로 시도.
-- **모델 메모리**(`ml/ModelResidency`, lease 방식): KEEP / IDLE_2M(기본) / IMMEDIATE + `onTrimMemory`. 임베딩·OCR·음성(ASR) 모두 관리. 로그 태그 `LSA.Residency`.
-- UI 문자열은 `values/strings.xml`(en) + `values-ko/strings.xml`(ko), 키 동일해야 함(`StringsParityTest`).
+## 앱 구조 (요약)
+이미지·텍스트·문서(PDF/Office)·음성·영상을 인덱싱하고 시맨틱 + 키워드로 검색한다. 모델은 APK에 넣지 않고 Settings에서 받는다(ML Kit OCR과 Silero VAD 0.6MB만 포함). 문자열은 `values/strings.xml`(en)과 `values-ko/strings.xml`(ko)의 키가 같아야 한다(`StringsParityTest`).
+- 데이터 `data/db`(`items` + `segments`, int8 벡터), 소스 `data/media`, 파이프라인 `indexing`(`IndexRunner.sync()`/`process()`, `pipelineKey`로 종류별 재처리), 검색 `search`(그룹별 상대 점수 + 키워드), 자동 인덱싱 `AutoIndexScheduler`, 모델 메모리 `ml/ModelResidency`.
+- 자세히: `docs/architecture.md`, `docs/indexing.md`, `docs/search.md`, `docs/models.md`.
 
 ## 빌드 전 준비
 - `scripts/fetch-sherpa-onnx.sh`: sherpa-onnx AAR(`app/libs`)과 Silero VAD(`app/src/main/assets`)를 내려받는다. 둘 다 git에 올리지 않는다.

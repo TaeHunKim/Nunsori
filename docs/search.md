@@ -1,0 +1,43 @@
+# Search
+
+Code: `search/SearchEngine.kt`, `search/Fusion.kt`.
+
+## Pipeline
+
+1. Embed the query as text (one vector).
+2. Score every vector segment by dot product and split the scores into three **signal groups** (`SignalGroup`): VISUAL, TEXT, AUDIO (mapping in [architecture.md](architecture.md#4-data-model)).
+3. Per group, apply `Fusion.relative` to get a score in 0..1.
+4. Run SQL `LIKE` keyword matching on segment text (up to 2000 candidates, `KEYWORD_CANDIDATES`).
+5. Combine, pin exact keyword matches, trim the tail, group by item, and show the best segment's location.
+
+## Why relative scores
+
+Cosine similarities live in different ranges per space (image to text vs text to text; unrelated OCR text still scores about 0.6). Raw scores are not comparable and rank fusion (RRF) was tried and dropped: it ignores how good the top hit is, so meaningless queries still return confident-looking results.
+
+## `Fusion.relative(sims, margin, minSpread, minTop)`
+
+- Returns nothing if the best score is below `minTop`.
+- With at least 4 segments (`MIN_DOCS_FOR_SPREAD`), returns nothing unless `max - median >= minSpread` (the best must stand out from the typical score).
+- Otherwise each score becomes `((s - (max - margin)) / margin)` clamped to 0..1: 1.0 at the maximum, 0.0 at `margin` below it.
+
+| Group | margin | minSpread | minTop | weight |
+|---|---|---|---|---|
+| VISUAL | 0.10 | 0.08 | 0.10 | 1.0 (`W_VISUAL`) |
+| TEXT | 0.08 | 0.08 | 0.30 | 0.8 (`W_TEXT`) |
+| AUDIO | 0.10 | 0.08 | 0.30 | 0.8 (`W_AUDIO`) |
+| Keyword | n/a | n/a | n/a | 1.2 (`W_KEYWORD`) |
+
+## Keywords (`KeywordMatcher`)
+
+Query is lowercased and split on whitespace; single ASCII letters are dropped, single Korean syllables are kept. ASCII tokens must match whole words; other scripts match as substrings. A match is **exact** when every token matches and the whole query occurs as a phrase.
+
+## Ranking rules
+
+- Exact keyword matches are pinned above everything and get a score floor of 0.6 (`EXACT_MATCH_FLOOR`).
+- Results scoring below 25% of the top score are dropped (`TAIL_FRACTION`).
+- Segments are grouped per item; the best segment gives the page (`p.N`) or time (`mm:ss`) shown on the card. Badges (Image, Text, Audio, Keyword) show which signals matched.
+- A video transcript hit is narrowed to the overlapping video clip so the shown time is the clip.
+
+## Tuning
+
+Change the constants above, then re-run the real-model E2E ([development.md](development.md#testing)) with queries that should match and queries that should return nothing. Unit tests in `app/src/test` cover `Fusion` and keyword matching.
