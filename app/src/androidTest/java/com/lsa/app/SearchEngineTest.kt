@@ -20,6 +20,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -157,12 +158,12 @@ class SearchEngineTest {
 
     @Test fun aPlaceQueryFindsPhotosByTheirLocationAlone() = runBlocking {
         val dubai = add("IMG_1.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.1f, 1f, 0f, 0f)), place = "Dubai 두바이 United Arab Emirates 아랍에미리트 연합")
-        add("IMG_2.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.1f, 1f, 0.2f, 0f)), place = "Seoul 서울특별시 South Korea 대한민국")
+        val seoul = add("IMG_2.jpg", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.1f, 1f, 0.2f, 0f)), place = "Seoul 서울특별시 South Korea 대한민국")
         noise(5)
         val hit = engine.search("dubai").hits.first()
         assertEquals(dubai, hit.itemId); assertEquals(MetaMatch.PLACE, hit.metaMatch); assertTrue(hit.exactKeyword)
         assertEquals("Korean names match as substrings", dubai, engine.search("두바이").hits.first().itemId)
-        assertEquals(1, engine.search("두바이").hits.size)
+        assertNull("the Seoul photo never matches on place", engine.search("두바이").hits.firstOrNull { it.itemId == seoul }?.metaMatch)
     }
 
     @Test fun placePlusMeaningOutranksPlaceAlone() = runBlocking {

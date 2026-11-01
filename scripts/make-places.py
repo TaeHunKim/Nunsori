@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds app/src/main/assets/places.tsv.gz from GeoNames dumps (CC BY 4.0, https://www.geonames.org).
+"""Builds app/src/main/assets/places.bin from GeoNames dumps (CC BY 4.0, https://www.geonames.org).
 
 Rows: lat, lon, population, city_en, city_ko, country_en, country_ko, aliases (tab separated, gzip).
 Aliases are extra searchable words for the country: abbreviations, continent and region names in English and Korean.
@@ -10,7 +10,7 @@ import csv, gzip, io, os, subprocess, sys, zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "build", "places-src")
-OUT = os.path.join(ROOT, "app", "src", "main", "assets", "places.tsv.gz")
+OUT = os.path.join(ROOT, "app", "src", "main", "assets", "places.bin")
 BASE = "https://download.geonames.org/export/dump/"
 os.makedirs(WORK, exist_ok=True)
 

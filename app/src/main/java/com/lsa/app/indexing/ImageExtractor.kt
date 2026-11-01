@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
+import android.util.Log
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
@@ -74,10 +75,14 @@ class ImageExtractor(
         val source = if (granted) MediaStore.setRequireOriginal(uri) else uri
         context.contentResolver.openInputStream(source)?.use { s ->
             ExifInterface(s).latLong?.let { it[0] to it[1] }
-        }
-    } catch (_: Exception) { null }
+        }.also { if (it == null) Log.d(TAG, "no GPS position in $uri (permission granted: $granted)") }
+    } catch (e: Exception) {
+        Log.w(TAG, "could not read the location of $uri", e)
+        null
+    }
 
     companion object {
+        private const val TAG = "LSA.Image"
         const val OCR_MAX_SIDE = 1600
         const val EMBED_MAX_SIDE = 1024
         const val MAX_OCR_CHARS = 6000

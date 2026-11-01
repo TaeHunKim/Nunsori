@@ -49,7 +49,7 @@ class PlaceFinderTest {
     }
 
     @Test fun bundledDataKnowsDubaiAndSeoul() {
-        val real = PlaceFinder.parse(GZIPInputStream(File("src/main/assets/places.tsv.gz").inputStream()))
+        val real = PlaceFinder.parse(GZIPInputStream(File("src/main/assets/places.bin").inputStream()))
         val dubai = real.find(25.2048, 55.2708)
         assertNotNull(dubai); assertTrue(dubai!!, "Dubai" in dubai && "두바이" in dubai && "중동" in dubai && "UAE" in dubai)
         val seoul = real.find(37.5665, 126.9780)

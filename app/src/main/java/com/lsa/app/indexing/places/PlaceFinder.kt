@@ -82,8 +82,11 @@ class PlaceFinder private constructor(private val rows: List<Row>) {
         fun parse(stream: InputStream): PlaceFinder =
             stream.bufferedReader(Charsets.UTF_8).use { parse(it.lineSequence()) }
 
-        /** Loads the bundled `places.tsv.gz`. */
+        /**
+         * Loads the bundled `places.bin` (gzip-compressed TSV). The file is deliberately not called `*.gz`: the Android Gradle
+         * plugin decompresses such assets and drops the extension, so `assets.open("places.tsv.gz")` fails at runtime.
+         */
         fun fromAssets(context: Context): PlaceFinder =
-            context.assets.open("places.tsv.gz").use { parse(GZIPInputStream(it)) }
+            context.assets.open("places.bin").use { parse(GZIPInputStream(it)) }
     }
 }

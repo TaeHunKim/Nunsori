@@ -23,7 +23,7 @@ It uses the components below. Versions come from [`gradle/libs.versions.toml`](g
 
 | Data | License |
 |---|---|
-| Place names for photo locations: `app/src/main/assets/places.tsv.gz`, built by `scripts/make-places.py` from [GeoNames](https://www.geonames.org) `cities15000`, alternate names and country info (about 34,000 cities, English and Korean names) | CC BY 4.0, attribution shown in Settings > About |
+| Place names for photo locations: `app/src/main/assets/places.bin`, built by `scripts/make-places.py` from [GeoNames](https://www.geonames.org) `cities15000`, alternate names and country info (about 34,000 cities, English and Korean names) | CC BY 4.0, attribution shown in Settings > About |
 
 ## Models
 
