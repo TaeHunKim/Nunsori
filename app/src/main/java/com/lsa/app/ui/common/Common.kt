@@ -218,6 +218,22 @@ fun openImage(ctx: Context, uri: Uri, mime: String?) {
     launch(ctx, Intent.createChooser(view, null))
 }
 
+/** Open any indexed file in an app that can show it (the type comes from the system, then from the name). */
+fun openFile(ctx: Context, uri: Uri, name: String) {
+    val mime = ctx.contentResolver.getType(uri)?.takeIf { it != "application/octet-stream" }
+        ?: android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substringAfterLast('.', "").lowercase())
+    openImage(ctx, uri, mime ?: "*/*")
+}
+
+/** Share plain text (the Markdown source of a chat message). */
+fun shareText(ctx: Context, text: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    launch(ctx, Intent.createChooser(send, null))
+}
+
 private fun launch(ctx: Context, intent: Intent) {
     try { ctx.startActivity(intent) } catch (_: ActivityNotFoundException) {
         Toast.makeText(ctx, R.string.no_app_found, Toast.LENGTH_SHORT).show()

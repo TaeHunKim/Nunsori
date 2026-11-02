@@ -21,7 +21,9 @@ The context window (2K, 4K default, 8K) is set in Settings. LiteRT-LM keeps the 
 
 ## Rendering
 
-Messages are shown as Markdown (`ui/common/Markdown.kt`): CommonMark with GFM tables, parsed by the commonmark library that indexing already uses, and drawn with Compose: headings, emphasis, inline code, code blocks, lists, quotes, links and simple tables. Your own messages use the same renderer.
+Messages are shown as Markdown (`ui/common/Markdown.kt`): CommonMark with GFM tables, parsed by the commonmark library that indexing already uses, and drawn with Compose: headings, emphasis, inline code, code blocks, lists, quotes, links and simple tables. Your own messages use the same renderer. Under each message a **Copy** button (answers also **Share**) puts the Markdown source on the clipboard / in the share sheet, not the rendered text.
+
+**File previews:** under an answer (also a scheduled run's), thumbnails of the files from the search/read calls of that turn whose file name the answer mentions (`chat/ChatPreviews.kt`; if it names none, up to 4 images of the results). Thumbnails are the ones made at indexing time, so documents, videos and audio show their page/frame/icon too. Tap opens the file in another app, long-press shows the details sheet.
 
 ## Tools
 

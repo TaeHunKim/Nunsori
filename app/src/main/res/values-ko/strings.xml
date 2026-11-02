@@ -68,6 +68,10 @@
     <string name="chat_hint">내 파일에 대해 물어보세요. 예: “출시 계획서의 일정이 어떻게 돼?” 모델이 색인을 검색하고 파일을 읽을 수 있습니다.</string>
     <string name="chat_input_hint">무엇이든 물어보세요…</string>
     <string name="chat_send">보내기</string>
+    <string name="chat_copy">복사</string>
+    <string name="chat_share">공유</string>
+    <string name="chat_copied">복사했습니다</string>
+    <string name="chat_preview">%1$s 열기</string>
     <string name="chat_stop">중지</string>
     <string name="chat_dismiss">닫기</string>
     <string name="chat_error">채팅 모델 오류: %1$s</string>

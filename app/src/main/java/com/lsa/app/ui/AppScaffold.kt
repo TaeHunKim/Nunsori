@@ -17,6 +17,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -122,7 +123,7 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
                 )
             },
         ) { padding ->
-            NavHost(nav, startDestination = Dest.Index.route, modifier = Modifier.padding(padding)) {
+            NavHost(nav, startDestination = Dest.Index.route, modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
                 composable(Dest.Index.route) { IndexScreen(onOpenSettings = { go(Dest.Settings) }) }
                 composable(Dest.Search.route) {
                     SearchScreen(onOpenSettings = { go(Dest.Settings) }, onOpenChat = { id -> nav.navigate("chat/$id") })

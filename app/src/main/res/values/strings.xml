@@ -69,6 +69,10 @@
     <string name="chat_hint">Ask about your files, for example “What did the launch plan say about the schedule?”. The model can search your index and read files.</string>
     <string name="chat_input_hint">Ask something…</string>
     <string name="chat_send">Send</string>
+    <string name="chat_copy">Copy</string>
+    <string name="chat_share">Share</string>
+    <string name="chat_copied">Copied</string>
+    <string name="chat_preview">Open %1$s</string>
     <string name="chat_stop">Stop</string>
     <string name="chat_dismiss">Dismiss</string>
     <string name="chat_error">The chat model failed: %1$s</string>
