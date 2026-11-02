@@ -21,7 +21,7 @@ class ScheduleTaskTool(private val tasks: TaskManager, private val sessionId: Lo
         "every_minutes":{"type":"integer","description":"every_minutes only: interval, at least 5."},
         "date":{"type":"string","description":"once only: YYYY-MM-DD (default today, or tomorrow if the time has passed)."},
         "in_minutes":{"type":"integer","description":"once only: run this many minutes from now instead of date/at."},
-        "query":{"type":"string","description":"file only, required: the key words of what a new file must be about (e.g. receipt), not the instruction."},
+        "query":{"type":"string","description":"file only, required: what a new file must be about, as alternatives separated by |: the user's own words first, then 2 to 5 concrete words or synonyms such a file would contain (e.g. schedule|wedding invitation|invitation|appointment). Not the instruction."},
         "any_file":{"type":"boolean","description":"file only: true only when the user explicitly wants every new file; then query may be empty."},
         "kinds":{"type":"string","description":"file only: comma separated document, image, audio, video; leave out for all."}},
         "required":["trigger","instruction"]}"""
@@ -45,7 +45,7 @@ class UpdateScheduledTaskTool(private val tasks: TaskManager, private val sessio
         "every_minutes":{"type":"integer","description":"every_minutes: interval, at least 5."},
         "date":{"type":"string","description":"once: YYYY-MM-DD."},
         "in_minutes":{"type":"integer","description":"once: minutes from now."},
-        "query":{"type":"string","description":"file tasks: new key words of what a new file must be about."},
+        "query":{"type":"string","description":"file tasks: new alternatives separated by | (the user's words, then concrete synonyms)."},
         "any_file":{"type":"boolean","description":"file tasks: true only to trigger on every new file (query empty)."},
         "kinds":{"type":"string","description":"file tasks: comma separated document, image, audio, video."}},
         "required":["task_id"]}"""

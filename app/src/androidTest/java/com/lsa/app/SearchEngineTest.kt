@@ -243,4 +243,12 @@ class SearchEngineTest {
         val byName = add("budget-review.pdf", ItemKind.DOC)
         assertTrue(byName in engine.matchItems("budget review", setOf(byName)))
     }
+
+    @Test fun matchItemsAcceptsAnyAlternativeOfAPipeSeparatedQuery() = runBlocking {
+        queryVec = null
+        val a = add("a.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, null, text = "invitation to the party"))
+        val b = add("b.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, null, text = "unrelated notes"))
+        assertEquals(setOf(a), engine.matchItems("schedule | invitation", setOf(a, b)).keys)
+        assertEquals(listOf("a", "b"), SearchEngine.alternatives(" a | b ||a"))
+    }
 }

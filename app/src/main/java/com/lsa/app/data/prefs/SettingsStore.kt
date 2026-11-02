@@ -32,6 +32,7 @@ class SettingsStore(private val context: Context) {
     private val kChatPrompt = stringPreferencesKey("chat_custom_prompt")
     private val kLowPower = booleanPreferencesKey("index_low_power")
     private val kResourceUi = booleanPreferencesKey("show_resource_indicator")
+    private val kTaskJudgeFirst = booleanPreferencesKey("task_judge_first")
     private val kSkipMusic = booleanPreferencesKey("skip_music")
     private val kVideoDetail = stringPreferencesKey("video_detail")
     private val kVideoSpeech = booleanPreferencesKey("video_transcribe")
@@ -47,6 +48,8 @@ class SettingsStore(private val context: Context) {
     /** Manual indexing in low-power mode: CPU only, fewer threads, pauses between files, stops when hot. */
     val indexLowPower: Flow<Boolean> = context.dataStore.data.map { it[kLowPower] ?: false }
     /** Top-bar indicator with backend, memory and CPU use. */
+    /** Scheduled file tasks: let the chat model judge every new file (when there are few) instead of relying on the embedding match alone. */
+    val taskJudgeFirst: Flow<Boolean> = context.dataStore.data.map { it[kTaskJudgeFirst] ?: true }
     val showResourceIndicator: Flow<Boolean> = context.dataStore.data.map { it[kResourceUi] ?: false }
     val asrModelId: Flow<String> = context.dataStore.data.map { it[kAsr] ?: DEFAULT_ASR }
     val skipMusic: Flow<Boolean> = context.dataStore.data.map { it[kSkipMusic] ?: true }
@@ -72,6 +75,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setChatModelId(id: String) { context.dataStore.edit { it[kChat] = id } }
     suspend fun setChatCustomPrompt(s: String) { context.dataStore.edit { it[kChatPrompt] = s.trim().take(MAX_CUSTOM_PROMPT) } }
     suspend fun setIndexLowPower(on: Boolean) { context.dataStore.edit { it[kLowPower] = on } }
+    suspend fun setTaskJudgeFirst(on: Boolean) { context.dataStore.edit { it[kTaskJudgeFirst] = on } }
     suspend fun setShowResourceIndicator(on: Boolean) { context.dataStore.edit { it[kResourceUi] = on } }
     suspend fun setChatContextTokens(n: Int) { context.dataStore.edit { it[kChatContext] = n } }
     suspend fun setAsrModelId(id: String) { context.dataStore.edit { it[kAsr] = id } }

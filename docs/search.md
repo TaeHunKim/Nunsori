@@ -19,7 +19,7 @@ Code: `search/SearchEngine.kt`, `search/Fusion.kt`.
 - **Keywords:** all query words (or the exact phrase) in the file's text, name, title or place.
 - **Meaning:** per signal group, the raw similarity of the item's best segment must be at least `Z_MIN` (2.5) standard deviations above the mean similarity of the whole index (restricted to the task's kinds) and above the group's `minTop`. With fewer than `MIN_BASELINE` (20) vectors there is no distribution, so a fixed floor is used instead (visual 0.20, text 0.65, audio 0.55).
 
-It is a recall-oriented pre-filter; the chat model then checks the candidates. The thresholds are starting values to tune with real files.
+A query may be several `|`-separated alternatives (any one can match; at most 6). It is a recall-oriented pre-filter; the chat model then checks the candidates, and for small batches the setting *judge new files* (`taskJudgeFirst`) lets it see every new file with text regardless of this pre-filter. The thresholds are starting values to tune with real files.
 
 ## Why relative scores
 

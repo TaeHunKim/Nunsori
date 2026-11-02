@@ -309,4 +309,6 @@
     <string name="bg_battery_settings">배터리 설정</string>
     <string name="onboarding_bg_title">백그라운드 작업</string>
     <string name="onboarding_bg_desc">선택 사항입니다. 채팅에서 “매일 요약해줘”처럼 나중에 실행할 작업을 부탁할 수 있고, 아래 허용이 있으면 제때 실행됩니다.</string>
+    <string name="settings_judge_first_title">새 파일을 어시스턴트가 직접 판단</string>
+    <string name="settings_judge_first_desc">파일을 기다리는 작업에서, 새 파일이 몇 개 안 될 때는 유사도 매칭만 믿지 않고 어시스턴트가 각 파일을 읽고 조건에 맞는지 판단합니다. “일정이 담긴 파일”처럼 모호한 조건도 잡지만 채팅 모델을 더 쓰므로 배터리를 조금 더 씁니다.</string>
 </resources>

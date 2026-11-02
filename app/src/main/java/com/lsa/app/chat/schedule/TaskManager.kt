@@ -45,6 +45,8 @@ class TaskManager(
     private val batteryLow: () -> Boolean = { isBatteryLow(context) },
     private val notifier: (ScheduledTaskEntity, String, Boolean) -> Unit = { t, text, ok -> notifyResult(context, t, text, ok) },
     private val enqueue: (Long) -> Unit = { TaskRunWorker.enqueue(context, it) },
+    /** Settings: let the chat model judge every new file when there are few (see [onIndexed]). */
+    private val judgeFirst: suspend () -> Boolean = { true },
 ) {
     // ---- proposing ----
 
@@ -245,7 +247,12 @@ class TaskManager(
                 val since = maxOf(passStart, t.activatedAt ?: 0L)
                 val fresh = items.doneSince(since, kinds.ifEmpty { ItemKind.entries.toSet() }.toList()).toSet()
                 if (fresh.isEmpty()) return@runCatching
-                val matched = if (t.fileQuery.isBlank()) fresh else search.matchItems(t.fileQuery, fresh, kinds).keys
+                val strong = if (t.fileQuery.isBlank()) fresh else search.matchItems(t.fileQuery, fresh, kinds).keys
+                // Abstract conditions ("anything with a schedule") do not embed well: with few new files, let the model
+                // judge all that have text; files without text still need their own meaning/word match.
+                val matched = if (t.fileQuery.isNotBlank() && fresh.size <= JUDGE_FIRST_MAX && judgeFirst()) {
+                    strong + fresh.filter { ReadFileTool.fullText(items.segmentsOf(it)).isNotBlank() }
+                } else strong
                 if (matched.isEmpty()) return@runCatching
                 val merged = (parseIds(tasks.get(t.taskId)?.pendingItemIds.orEmpty()) + matched).distinct().takeLast(MAX_PENDING)
                 tasks.setPending(t.taskId, merged.joinToString(","))
@@ -288,7 +295,7 @@ class TaskManager(
         }
 
         // File tasks with a condition: let the chat model check the candidates; nothing is posted when none really matches.
-        val confirmed = if (t.trigger == TaskTrigger.FILE && t.fileQuery.isNotBlank()) verify(t.fileQuery, ids) else ids
+        val confirmed = if (t.trigger == TaskTrigger.FILE && t.fileQuery.isNotBlank()) verify(SearchEngine.alternatives(t.fileQuery).joinToString(" / "), ids) else ids
         if (t.trigger == TaskTrigger.FILE) {
             tasks.setPending(taskId, "")
             if (confirmed.isEmpty()) { Log.i(TAG, "task $taskId: ${ids.size} candidate(s), none matched the condition"); return }
@@ -367,6 +374,7 @@ class TaskManager(
         private val SCHEDULE_KEYS = listOf("repeat", "at", "weekdays", "every_minutes", "date", "in_minutes")
         private const val MAX_QUERY = 200
         private const val MAX_JUDGED = 20
+        private const val JUDGE_FIRST_MAX = 20
         private const val MAX_PENDING = 200
         private const val MAX_FILES_LISTED = 10
         private const val FILE_EXCERPT = 300

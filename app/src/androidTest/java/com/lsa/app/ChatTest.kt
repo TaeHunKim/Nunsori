@@ -87,6 +87,7 @@ class ChatTest {
     private lateinit var alarms: FakeAlarms
     private var now = 1_800_000_000_000L
     private var lowBattery = false
+    private var judgeFirstOn = true
     private val notified = ArrayList<Triple<Long, String, Boolean>>()
     private val enqueued = ArrayList<Long>()
     private val chatSpec = ModelCatalog.byId("chat-qwen25-1.5b")!!
@@ -105,6 +106,7 @@ class ChatTest {
         tasks = TaskManager(
             ctx, db.taskDao(), db.chatDao(), db.itemDao(), search, alarms, { controller }, clock = { now },
             batteryLow = { lowBattery }, notifier = { t, text, ok -> notified += Triple(t.taskId, text, ok) }, enqueue = { enqueued += it },
+            judgeFirst = { judgeFirstOn },
         )
         controller = ChatController(ctx, db.chatDao(), db.itemDao(), residency, search, settings, scope, clock = { now }, taskManager = tasks)
     }
@@ -382,6 +384,7 @@ class ChatTest {
 
     @Test fun fileTasksSeeOnlyNewMatchingFilesOfTheirKinds() = runBlocking {
         val chat = controller.newSession()
+        judgeFirstOn = false // this test is about the match itself
         addItem("old-budget.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "the budget for last year"), indexedAt = now - 10_000)
         val args = JSONObject().put("trigger", "file").put("instruction", "Summarize it").put("query", "budget").put("kinds", "document")
         val id = JSONObject(tasks.propose(chat, args)).getLong("task_id").also { tasks.confirm(it) }
@@ -471,5 +474,31 @@ class ChatTest {
         assertEquals("", db.taskDao().get(id)!!.fileQuery)
         assertTrue(tasks.update(chat, JSONObject().put("task_id", id).put("query", "")).startsWith("Error"))
         assertTrue(!tasks.update(chat, JSONObject().put("task_id", id).put("query", "receipt")).startsWith("Error"))
+    }
+
+    @Test fun judgeFirstLetsTheModelSeeTextFilesTheWordsMissAndTheSettingTurnsItOff() = runBlocking {
+        val chat = controller.newSession()
+        val args = JSONObject().put("trigger", "file").put("instruction", "List the dates").put("query", "schedule").put("kinds", "document")
+        val id = JSONObject(tasks.propose(chat, args)).getLong("task_id").also { tasks.confirm(it) }
+        now += 1_000
+        val invitation = addItem("invitation.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "Wedding on December 5 at 2pm, Grand Hall"), indexedAt = now)
+        tasks.onIndexed(passStart = 0)
+        assertEquals("no word and no embedder, but the model gets to judge it", listOf(id), enqueued)
+        assertEquals(invitation.toString(), db.taskDao().get(id)!!.pendingItemIds)
+        enqueued.clear(); db.taskDao().setPending(id, ""); judgeFirstOn = false
+        tasks.onIndexed(passStart = 0)
+        assertTrue("with the setting off only the match counts", enqueued.isEmpty())
+    }
+
+    @Test fun anyAlternativeOfAFileTaskQueryCanMatch() = runBlocking {
+        val chat = controller.newSession()
+        judgeFirstOn = false
+        val args = JSONObject().put("trigger", "file").put("instruction", "x").put("query", "schedule|wedding|appointment")
+        val id = JSONObject(tasks.propose(chat, args)).getLong("task_id").also { tasks.confirm(it) }
+        now += 1_000
+        val hit = addItem("a.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "Our wedding is in spring"), indexedAt = now)
+        addItem("b.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "grocery list"), indexedAt = now)
+        tasks.onIndexed(passStart = 0)
+        assertEquals(hit.toString(), db.taskDao().get(id)!!.pendingItemIds)
     }
 }

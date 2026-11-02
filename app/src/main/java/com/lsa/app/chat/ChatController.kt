@@ -133,7 +133,7 @@ class ChatController(
             val lease = residency.chat() ?: return@withLock null
             lease.use { l ->
                 val sb = StringBuilder()
-                val prompt = "Condition: files about or related to \"$condition\".\n\nFiles:\n$files"
+                val prompt = (if (" / " in condition) "Condition: files about or related to any of these: $condition." else "Condition: files about or related to \"$condition\".") + "\n\nFiles:\n$files"
                 l.value.reply("judge|${clock()}", JUDGE_SYSTEM, emptyList(), ChatTurn(TurnRole.USER, prompt), emptyList()).collect { e ->
                     if (e is ChatEvent.Token) sb.append(e.text)
                 }
@@ -318,7 +318,7 @@ class ChatController(
             "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
             "and give search_index date_from/date_to as YYYY-MM-DD (a query is optional when you filter by date or kind, e.g. to list yesterday's photos). " +
             "When the user asks you to do something later or repeatedly (every day at 9, every Monday, in 30 minutes, whenever a new file about X is added), " +
-            "call schedule_task with the instruction written so it can run on its own (for a file task put only the key words of the condition in query, e.g. \"receipt\", never the whole instruction); it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. To change an existing task the user asks about, use list_scheduled_tasks and update_scheduled_task instead of creating a new one. " +
+            "call schedule_task with the instruction written so it can run on its own (for a file task, query lists the user's own words first and then 2 to 5 concrete words a matching file would contain, separated by |, e.g. \"schedule|wedding invitation|invitation|appointment\"; never the whole instruction); it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. To change an existing task the user asks about, use list_scheduled_tasks and update_scheduled_task instead of creating a new one. " +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +

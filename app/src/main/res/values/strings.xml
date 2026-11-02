@@ -315,4 +315,6 @@
     <string name="bg_battery_settings">Battery settings</string>
     <string name="onboarding_bg_title">Background tasks</string>
     <string name="onboarding_bg_desc">Optional. In chat you can ask for tasks that run later, such as a daily summary. These permissions let them run on time.</string>
+    <string name="settings_judge_first_title">Let the assistant judge new files</string>
+    <string name="settings_judge_first_desc">For tasks that wait for files: when only a few new files arrive, the assistant reads each one and decides whether it fits, instead of relying on the similarity match alone. Catches vague conditions like “anything with a schedule” but uses the chat model more (a little more battery).</string>
 </resources>

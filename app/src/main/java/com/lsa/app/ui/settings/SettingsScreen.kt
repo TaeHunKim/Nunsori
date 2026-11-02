@@ -139,6 +139,14 @@ fun SettingsScreen() {
         Section(R.string.bg_title, R.string.bg_desc)
         BackgroundAccessCards()
         Text(stringResource(R.string.task_file_disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val judgeFirst by vm.taskJudgeFirst.collectAsStateWithLifecycle()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_judge_first_title), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.settings_judge_first_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            androidx.compose.material3.Switch(checked = judgeFirst, onCheckedChange = vm::setTaskJudgeFirst)
+        }
         HorizontalDivider()
 
         // --- Model memory

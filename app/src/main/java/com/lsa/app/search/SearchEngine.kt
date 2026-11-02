@@ -209,9 +209,14 @@ class SearchEngine(
      * phrase) in the file's text, name, title or place. It is meant as a recall-oriented pre-filter; the chat model checks the rest.
      */
     suspend fun matchItems(query: String, itemIds: Set<Long>, kinds: Set<ItemKind> = emptySet()): Map<Long, ItemMatch> {
-        val q = query.trim()
-        if (q.isEmpty() || itemIds.isEmpty()) return emptyMap()
+        if (itemIds.isEmpty()) return emptyMap()
         val out = HashMap<Long, ItemMatch>()
+        // "a|b|c": any alternative may match (the model lists the user's words plus concrete synonyms)
+        for (alt in alternatives(query)) matchOne(alt, itemIds, kinds, out)
+        return out
+    }
+
+    private suspend fun matchOne(q: String, itemIds: Set<Long>, kinds: Set<ItemKind>, out: HashMap<Long, ItemMatch>) {
 
         val tokens = KeywordMatcher.tokens(q)
         if (tokens.isNotEmpty()) for (id in itemIds) {
@@ -223,7 +228,7 @@ class SearchEngine(
         }
 
         loadCache(settings.embeddingModelId.first())
-        val qVec = queryEmbedder(q) ?: return out
+        val qVec = queryEmbedder(q) ?: return
         val allowed: Set<Long>? = if (kinds.isNotEmpty()) dao.allowedItemIds(kinds.toList(), Long.MIN_VALUE, Long.MAX_VALUE).toHashSet() else null
         val groups = SignalGroup.entries
         val n = IntArray(groups.size)
@@ -249,7 +254,6 @@ class SearchEngine(
             }
         }
         Log.d(TAG, "MATCH q='$q' candidates=${itemIds.size} matched=${out.keys}")
-        return out
     }
 
     /** A transcript chunk covers many seconds; if the best visual clip lies within it, that clip is the better answer. */
@@ -289,6 +293,10 @@ class SearchEngine(
         const val BROWSE_LIMIT = 100
         /** [matchItems]: a semantic match must be this many standard deviations above the mean similarity of the index. */
         const val Z_MIN = 2.5f
+        const val MAX_ALTERNATIVES = 6
+
+        /** A task query may list alternatives separated by `|`; any one of them can match. */
+        fun alternatives(query: String): List<String> = query.split('|').map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(MAX_ALTERNATIVES)
         /** [matchItems]: fewer vectors than this and the z-score is not meaningful. */
         const val MIN_BASELINE = 20
         private const val MIN_STD = 1e-3

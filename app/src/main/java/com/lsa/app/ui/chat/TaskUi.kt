@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lsa.app.R
 import com.lsa.app.chat.schedule.TaskManager
 import com.lsa.app.data.db.ItemKind
+import com.lsa.app.search.SearchEngine
 import com.lsa.app.data.db.ScheduledTaskEntity
 import com.lsa.app.data.db.TaskRepeat
 import com.lsa.app.data.db.TaskResult
@@ -64,7 +65,7 @@ fun taskWhenText(t: ScheduledTaskEntity): String {
                 if (ItemKind.VIDEO in kinds) add(stringResource(R.string.task_kind_video))
             }.joinToString("/")
             when {
-                t.fileQuery.isNotEmpty() -> stringResource(R.string.task_when_file_match, names, t.fileQuery)
+                t.fileQuery.isNotEmpty() -> stringResource(R.string.task_when_file_match, names, SearchEngine.alternatives(t.fileQuery).joinToString(" / "))
                 names.isNotEmpty() -> stringResource(R.string.task_when_file_kinds, names)
                 else -> stringResource(R.string.task_when_file)
             }
