@@ -110,6 +110,7 @@ fun ChatScreen(sessionId: Long, onOpenSettings: () -> Unit) {
             FilterChip(on.contains(ChatToolNames.SEARCH), { vm.toggleTool(ChatToolNames.SEARCH) }, { Text(stringResource(R.string.chat_tool_search)) })
             FilterChip(on.contains(ChatToolNames.READ), { vm.toggleTool(ChatToolNames.READ) }, { Text(stringResource(R.string.chat_tool_read)) })
             FilterChip(on.contains(ChatToolNames.SCHEDULE), { vm.toggleTool(ChatToolNames.SCHEDULE) }, { Text(stringResource(R.string.chat_tool_schedule)) })
+            FilterChip(on.contains(ChatToolNames.CALENDAR), { vm.toggleTool(ChatToolNames.CALENDAR) }, { Text(stringResource(R.string.chat_tool_actions)) })
             FilterChip(session?.autoSearch == true, { vm.toggleAutoSearch() }, { Text(stringResource(R.string.chat_auto_search)) })
         }
         if (!modelReady) WarningCard(stringResource(R.string.chat_model_missing), stringResource(R.string.go_settings), onOpenSettings)
@@ -203,6 +204,10 @@ private fun MessageRow(sessionId: Long, m: ChatMessageEntity, names: Map<Long, S
             }
             Bubble(m.text, mine = m.role == ChatRole.USER)
         }
+        return
+    }
+    if (m.role == ChatRole.TOOL && m.actionId != null) {
+        ActionCard(m.actionId, vm)
         return
     }
     if (m.role == ChatRole.TOOL && (m.toolName == ChatToolNames.SCHEDULE || m.toolName == ChatToolNames.UPDATE_TASK) && m.taskId != null) {

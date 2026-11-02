@@ -183,7 +183,7 @@ interface ItemDao {
 @Database(
     entities = [
         ItemEntity::class, SegmentEntity::class, IndexedFolderEntity::class,
-        ChatSessionEntity::class, ChatMessageEntity::class, ScheduledTaskEntity::class,
+        ChatSessionEntity::class, ChatMessageEntity::class, ScheduledTaskEntity::class, PendingActionEntity::class,
     ],
     version = AppDatabase.VERSION,
     exportSchema = true,
@@ -192,9 +192,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
     abstract fun chatDao(): ChatDao
     abstract fun taskDao(): ScheduledTaskDao
+    abstract fun actionDao(): PendingActionDao
 
     companion object {
         /** Bump together with a new migration in Migrations.kt (see docs/development.md). */
-        const val VERSION = 6
+        const val VERSION = 7
     }
 }

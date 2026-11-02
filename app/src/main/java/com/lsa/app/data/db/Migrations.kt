@@ -111,5 +111,18 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
     }
 }
 
+/** v7: action cards (calendar event, contact, ...) the model proposes and the user approves in the chat. */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `actionId` INTEGER")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `pending_actions` (`actionId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, " +
+                "`kind` TEXT NOT NULL, `status` TEXT NOT NULL, `payload` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `resultNote` TEXT, " +
+                "FOREIGN KEY(`sessionId`) REFERENCES `chat_sessions`(`sessionId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pending_actions_sessionId` ON `pending_actions` (`sessionId`)")
+    }
+}
+
 /** Every migration, in order. Register new ones here only; the chain test in MigrationTest walks all exported schemas. */
-val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)

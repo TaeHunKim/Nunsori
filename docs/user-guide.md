@@ -59,6 +59,7 @@ See [chat.md](chat.md) for how the context is built.
 ![Re-create the index?](images/model-switch.png)
 - **Speech recognition:** needed for transcripts of audio and video.
 - **Chat model:** download and select Gemma 4 E2B (default), E4B or Qwen2.5 1.5B, and choose the context size (2K, 4K, 8K).
+- **Calendar and contacts:** with the *Calendar & contacts* chip on, ask the assistant to put an event or a person into your calendar or contacts (for example after it read an invitation photo). It shows a card with the details; **Open in Calendar/Contacts** opens the system app with the fields filled in and you press Save there. Nothing is added without you, and the app needs no calendar or contacts permission. Chats created before this version have the chip off; switch it on above the conversation.
 - **Automatic indexing:** Manual; Immediately (new files are picked up in the background); Scheduled (a time, optionally only while charging); When idle (charging and idle).
 - **Model memory:** keep loaded, unload after 2 minutes idle (default), or unload immediately. Lower memory use costs a reload on the next use.
 - Dark mode follows the system.

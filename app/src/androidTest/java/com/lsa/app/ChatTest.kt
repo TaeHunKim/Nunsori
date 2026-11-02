@@ -84,6 +84,7 @@ class ChatTest {
     private lateinit var controller: ChatController
     private var model = FakeChatModel()
     private lateinit var tasks: TaskManager
+    private lateinit var actionManager: com.lsa.app.chat.actions.ActionManager
     private lateinit var alarms: FakeAlarms
     private var now = 1_800_000_000_000L
     private var lowBattery = false
@@ -103,12 +104,13 @@ class ChatTest {
         residency.chatFactory = { _, _, _ -> model }
         search = SearchEngine(db.itemDao(), { null }, settings)
         alarms = FakeAlarms(ctx)
+        actionManager = com.lsa.app.chat.actions.ActionManager(db.actionDao()) { now }
         tasks = TaskManager(
             ctx, db.taskDao(), db.chatDao(), db.itemDao(), search, alarms, { controller }, clock = { now },
             batteryLow = { lowBattery }, notifier = { t, text, ok -> notified += Triple(t.taskId, text, ok) }, enqueue = { enqueued += it },
             judgeFirst = { judgeFirstOn },
         )
-        controller = ChatController(ctx, db.chatDao(), db.itemDao(), residency, search, settings, scope, clock = { now }, taskManager = tasks)
+        controller = ChatController(ctx, db.chatDao(), db.itemDao(), residency, search, settings, scope, clock = { now }, taskManager = tasks, actions = actionManager)
     }
 
     @After fun tearDown() = runBlocking {
@@ -500,5 +502,40 @@ class ChatTest {
         addItem("b.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "grocery list"), indexedAt = now)
         tasks.onIndexed(passStart = 0)
         assertEquals(hit.toString(), db.taskDao().get(id)!!.pendingItemIds)
+    }
+
+    @Test fun aCalendarProposalBecomesACardAndNothingHappensUntilApproved() = runBlocking {
+        val chat = controller.newSession()
+        model = FakeChatModel { tools ->
+            val t = tools.single { it.name == ChatToolNames.CALENDAR }
+            val r = t.execute(JSONObject().put("title", "Wedding").put("start", "2026-12-05 14:00").put("location", "Seoul"))
+            listOf(ChatEvent.ToolRan(t.name, "{}", r), ChatEvent.Token("Please approve the card."))
+        }
+        controller.send(chat, "add the wedding to my calendar"); awaitIdle()
+        val tool = db.chatDao().messages(chat).single { it.role == ChatRole.TOOL }
+        val action = db.actionDao().get(tool.actionId!!)!!
+        assertEquals(com.lsa.app.data.db.ActionStatus.PROPOSED, action.status)
+        assertEquals(com.lsa.app.data.db.ActionKind.CALENDAR_EVENT, action.kind)
+        val r = actionManager.intentFor(action.actionId)
+        assertTrue(r is com.lsa.app.chat.actions.ApprovalResult.Launch)
+        val intent = (r as com.lsa.app.chat.actions.ApprovalResult.Launch).intent
+        assertEquals(android.content.Intent.ACTION_INSERT, intent.action)
+        assertEquals("Wedding", intent.getStringExtra(android.provider.CalendarContract.Events.TITLE))
+        actionManager.markDone(action.actionId)
+        assertEquals(com.lsa.app.data.db.ActionStatus.DONE, db.actionDao().get(action.actionId)!!.status)
+        assertTrue("a handled card cannot be approved again", actionManager.intentFor(action.actionId) is com.lsa.app.chat.actions.ApprovalResult.Failed)
+    }
+
+    @Test fun aDismissedProposalStaysDismissedAndTheToolIsOffWhenTheSwitchIsOff() = runBlocking {
+        val chat = controller.newSession(setOf(ChatToolNames.SEARCH))
+        model = FakeChatModel { tools ->
+            assertTrue(tools.none { it.name == ChatToolNames.CALENDAR || it.name == ChatToolNames.CONTACT })
+            listOf(ChatEvent.Token("ok"))
+        }
+        controller.send(chat, "hi"); awaitIdle()
+        val id = JSONObject(actionManager.propose(chat, com.lsa.app.data.db.ActionKind.CONTACT, JSONObject().put("name", "Kim"))).getLong("action_id")
+        actionManager.dismiss(id)
+        actionManager.markDone(id)
+        assertEquals(com.lsa.app.data.db.ActionStatus.DISMISSED, db.actionDao().get(id)!!.status)
     }
 }

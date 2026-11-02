@@ -275,6 +275,17 @@
     <string name="chat_tool_ran_schedule">Proposed a scheduled task</string>
     <string name="chat_scheduled">Has scheduled tasks</string>
     <string name="task_label">Scheduled task</string>
+    <string name="chat_tool_actions">Calendar &amp; contacts</string>
+    <string name="action_calendar_title">Add to calendar</string>
+    <string name="action_contact_title">Add contact</string>
+    <string name="action_when_all_day">All day</string>
+    <string name="action_approve_calendar">Open in Calendar</string>
+    <string name="action_approve_contact">Open in Contacts</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_done">Opened: save it in the app to finish.</string>
+    <string name="action_dismissed">Dismissed.</string>
+    <string name="action_failed_no_app">No app found to handle this.</string>
+    <string name="action_gone">This proposal no longer exists.</string>
     <string name="task_card_title">Scheduled task</string>
     <string name="task_confirm">Confirm</string>
     <string name="task_dismiss">Dismiss</string>

@@ -11,6 +11,7 @@ import com.lsa.app.data.db.MIGRATION_2_3
 import com.lsa.app.data.db.MIGRATION_3_4
 import com.lsa.app.data.db.MIGRATION_4_5
 import com.lsa.app.data.db.MIGRATION_5_6
+import com.lsa.app.data.db.MIGRATION_6_7
 import com.lsa.app.ml.embedding.Quant
 import com.lsa.app.ml.embedding.VectorMath
 import org.junit.Assert.assertArrayEquals
@@ -121,6 +122,20 @@ class MigrationTest {
         )
         db.execSQL("DELETE FROM chat_sessions WHERE sessionId = 1")
         db.query("SELECT COUNT(*) FROM scheduled_tasks").use { c -> c.moveToFirst(); assertEquals("tasks go with their chat", 0, c.getInt(0)) }
+    }
+
+    @Test fun v6ToV7AddsActionCardsThatCascadeWithTheirChat() {
+        helper.createDatabase("mig67", 6).apply {
+            execSQL("INSERT INTO chat_sessions (title, enabledTools, autoSearch, createdAt, updatedAt, pinned) VALUES ('t', 'search_index', 0, 1, 1, 0)")
+            execSQL("INSERT INTO chat_messages (sessionId, role, text, createdAt) VALUES (1, 'USER', 'hi', 1)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate("mig67", 7, true, MIGRATION_6_7)
+        db.query("SELECT actionId FROM chat_messages").use { c -> c.moveToFirst(); assertTrue("old messages have no action", c.isNull(0)) }
+        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL("INSERT INTO pending_actions (sessionId, kind, status, payload, createdAt) VALUES (1, 'CONTACT', 'PROPOSED', '{}', 1)")
+        db.execSQL("DELETE FROM chat_sessions WHERE sessionId = 1")
+        db.query("SELECT COUNT(*) FROM pending_actions").use { c -> c.moveToFirst(); assertEquals("actions go with their chat", 0, c.getInt(0)) }
     }
 
     @Test fun v3ToV4AddsChatTablesThatCascadeOnDelete() {

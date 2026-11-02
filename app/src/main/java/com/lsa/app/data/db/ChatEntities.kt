@@ -42,5 +42,7 @@ data class ChatMessageEntity(
     val attachments: String? = null,
     /** Set on a scheduled task's confirmation card and on the messages one of its runs produced. */
     val taskId: Long? = null,
+    /** Set on the tool message of an action proposal (calendar event, contact, ...): the card to show. */
+    val actionId: Long? = null,
     val createdAt: Long,
 )

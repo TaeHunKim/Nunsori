@@ -52,6 +52,7 @@ flowchart TD
 | `indexing/places` | `PlaceFinder`: offline GPS to place name (GeoNames cities, English and Korean) |
 | `indexing/audio` | `AudioExtractor`, `AudioDecoder`, `Pcm` (window planning), `SpeechTools` |
 | `indexing/video` | `VideoExtractor`, `VideoClips` |
+| `chat/actions` | `ActionManager` (proposals, approve/dismiss, intents), `ActionPayloads` (validation), `ActionTools` (`add_calendar_event`, `add_contact`) |
 | `chat/schedule` | `TaskManager` (propose, confirm, run, file matching), `Schedule` (next run), `TaskAlarms` + receivers + `TaskRunWorker` |
 | `ml`, `ml/embedding`, `ml/ocr`, `ml/llm` | `ModelResidency`, `Embedder` and `EmbeddingGemma2Embedder`, `OcrEngine` and `MlKitOcrEngine`, `ChatModel` and `LiteRtChatModel` |
 | `chat` | `ChatController` (turns, context, attachments), `ChatTools` (`search_index`, `read_file`), `ContextBudget`: [chat.md](chat.md) |
@@ -145,3 +146,5 @@ Segments are scored per signal group (VISUAL, TEXT, AUDIO) with a median-spread 
 ## Scheduled tasks
 
 `scheduled_tasks` (schema v6, cascade with `chat_sessions`) holds the tasks; `chat_messages.taskId` links a confirmation card or a run's messages to a task. Time tasks: `TaskAlarms` (AlarmManager exact alarm per task) → `TaskAlarmReceiver` → unique `TaskRunWorker` per task (expedited, foreground `dataSync`) → `TaskManager.run` → `ChatController.runScheduled`. File tasks: `IndexingWorker` calls `TaskManager.onIndexed(passStart)` after a pass; matches are queued on the task and a `TaskRunWorker` is enqueued. `ChatController` serializes user turns and scheduled runs with one mutex. Notifications deep-link to a chat with the `sessionId` extra handled in `MainActivity`/`AppScaffold`. Details: [chat.md](chat.md#scheduled-tasks).
+
+`pending_actions` (schema v7, cascade with `chat_sessions`) holds action-card proposals (`kind` CALENDAR_EVENT or CONTACT, `status` PROPOSED, DONE, DISMISSED or FAILED, `payload` JSON); `chat_messages.actionId` links the tool message to its card. Approval happens in `ChatViewModel.approveAction`, which starts the intent; nothing is executed by the model itself. Details: [chat.md](chat.md#action-cards-calendar-and-contacts).

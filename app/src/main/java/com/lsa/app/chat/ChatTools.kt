@@ -25,7 +25,10 @@ object ChatToolNames {
     const val LIST_TASKS = "list_scheduled_tasks"
     const val CANCEL_TASK = "cancel_scheduled_task"
     const val UPDATE_TASK = "update_scheduled_task"
-    val ALL = listOf(SEARCH, READ, SCHEDULE)
+    /** add_calendar_event is the switch for the calendar and contact tools (action cards the user approves). */
+    const val CALENDAR = "add_calendar_event"
+    const val CONTACT = "add_contact"
+    val ALL = listOf(SEARCH, READ, SCHEDULE, CALENDAR)
 }
 
 /** Kind names the model uses; "document" covers text files and PDF/Office. */

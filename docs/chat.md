@@ -34,9 +34,15 @@ The model calls tools through LiteRT-LM's tool calling (`automaticToolCalling`).
 
 `read_file` reads the **indexed text**, not the original file: document and text chunks (with `[p.N]` markers), transcripts of audio and video (with `[mm:ss]` markers, selectable by time) and OCR text of images. Files without indexed text say so.
 
-Tool calls appear in the conversation as small cards ("Searched files for … · 3 results", "Read plan.docx"); tap a card to see the found files and open them.
+Calendar and contact tools are described in [Action cards](#action-cards-calendar-and-contacts). Tool calls appear in the conversation as small cards ("Searched files for … · 3 results", "Read plan.docx"); tap a card to see the found files and open them.
 
 **Auto search** is for models that handle tool calling poorly: before each question the app searches and puts the best excerpts in the context. It can be combined with the tools.
+
+## Action cards (calendar and contacts)
+
+The *Calendar & contacts* chip switches two tools: `add_calendar_event` (`title`, `start` as `YYYY-MM-DD HH:mm` local time or `YYYY-MM-DD` for all day, optional `end`, `all_day`, `location`, `description`) and `add_contact` (`name`, `phone`, `email`, `organization`, `note`). Like `schedule_task` they only **propose**: the app validates the fields (`ActionPayloads`), stores a proposal (`pending_actions`, status `PROPOSED`) and shows an **action card** in the chat with what would be added. The model supplies fields, never URLs or intents. **Open in Calendar / Contacts** hands an `ACTION_INSERT` intent with the fields filled in to the system app (no calendar or contacts permission is needed; you press Save there); the card then shows as done. **Dismiss** drops it. A handled card cannot be approved again. If no app can take the intent the card says so.
+
+The card is generic (`ActionManager`, `ActionKind`, `chat_messages.actionId`), so further actions (moving or deleting files) use the same flow: propose, show a card, act only after approval.
 
 ## Scheduled tasks
 

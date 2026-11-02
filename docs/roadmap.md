@@ -2,6 +2,7 @@
 
 ## Next
 
+- Done in 0.6.0 (phase 1): action cards for the chat with calendar-event and contact proposals (system app opens prefilled). Next phases: moving and deleting files (trash first), and letting scheduled runs propose actions.
 - Done in 0.5.0: scheduled chat tasks (time-based with exact alarms, and after-indexing file triggers), confirmation cards, notifications that open the chat, background-access checks (notifications, exact alarms, battery optimization).
 - Done in 0.4.0: failed-file list and retry, embedding-length guard, pinned chats, Markdown, chat instructions, low-power indexing, folder presets, resource indicator.
 

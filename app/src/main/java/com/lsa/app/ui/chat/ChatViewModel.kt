@@ -48,6 +48,18 @@ class ChatViewModel(private val c: AppContainer, val sessionId: Long) : ViewMode
     fun task(id: Long) = taskDao.observe(id)
     fun confirmTask(id: Long) { viewModelScope.launch { c.taskManager.confirm(id) } }
     fun deleteTask(id: Long) { viewModelScope.launch { c.taskManager.delete(id) } }
+    fun action(id: Long) = c.db.actionDao().observe(id)
+    /** Approve a card: [start] hands the intent to a system screen and returns false when no app can take it. */
+    fun approveAction(id: Long, start: (android.content.Intent) -> Boolean) {
+        viewModelScope.launch {
+            when (val r = c.actions.intentFor(id)) {
+                is com.lsa.app.chat.actions.ApprovalResult.Launch -> if (start(r.intent)) c.actions.markDone(id) else c.actions.markFailed(id, "no_app")
+                is com.lsa.app.chat.actions.ApprovalResult.Done -> c.actions.markDone(id, r.note)
+                is com.lsa.app.chat.actions.ApprovalResult.Failed -> Unit
+            }
+        }
+    }
+    fun dismissAction(id: Long) { viewModelScope.launch { c.actions.dismiss(id) } }
     fun pauseTask(id: Long, paused: Boolean) { viewModelScope.launch { c.taskManager.setPaused(id, paused) } }
 
     val modelReady: StateFlow<Boolean> = combine(c.settings.chatModelId, c.modelManager.states) { id, st ->
