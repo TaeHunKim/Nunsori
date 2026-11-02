@@ -54,13 +54,13 @@ fun rememberBackgroundAccess(): BackgroundAccess {
  * (same pattern as the all-files-access card). With [showWhenAllSet] a short "all set" line replaces them.
  */
 @Composable
-fun BackgroundAccessCards(showWhenAllSet: Boolean = true) {
+fun BackgroundAccessCards(showWhenAllSet: Boolean = true, batteryOnly: Boolean = false) {
     val ctx = LocalContext.current
     val access = rememberBackgroundAccess()
     val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val pkg = Uri.parse("package:${ctx.packageName}")
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!access.notifications) {
+        if (!access.notifications && !batteryOnly) {
             WarningCard(stringResource(R.string.bg_notifications), stringResource(R.string.bg_allow)) {
                 val needsRuntime = Build.VERSION.SDK_INT >= 33 &&
                     ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -68,7 +68,7 @@ fun BackgroundAccessCards(showWhenAllSet: Boolean = true) {
                 else ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName))
             }
         }
-        if (!access.exactAlarms && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (!access.exactAlarms && !batteryOnly && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             WarningCard(stringResource(R.string.bg_exact), stringResource(R.string.bg_allow)) {
                 ctx.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg))
             }
@@ -79,7 +79,7 @@ fun BackgroundAccessCards(showWhenAllSet: Boolean = true) {
                     .onFailure { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
             }
         }
-        if (access.allSet && showWhenAllSet) {
+        if (access.allSet && showWhenAllSet && !batteryOnly) {
             Text(stringResource(R.string.bg_all_set), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (Build.MANUFACTURER.equals("samsung", ignoreCase = true)) {

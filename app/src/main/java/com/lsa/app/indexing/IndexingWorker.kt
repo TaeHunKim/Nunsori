@@ -38,23 +38,48 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         Log.i(TAG, "worker started auto=$auto")
         // Starting a foreground service from the background is not allowed on Android 12+; run silently instead.
         try { setForeground(info(IndexProgress())) } catch (e: Exception) { Log.d(TAG, "no foreground: ${e.message}") }
-        return c.indexing.runLock.withLock { runPass(c) }.also { rearmTrigger(c) }
+        // Arm the next trigger first: a photo taken during this run must not fall into a gap.
+        if (detail == DETAIL_TRIGGER) c.autoIndex.armNextTrigger(inputData.getString(KEY_SLOT))
+        outcome = AutoOutcome.NOTHING_NEW; indexed = 0
+        val result = try {
+            c.indexing.runLock.withLock { runPass(c) }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Never end an automatic run in "failure": retry later (with a short backoff) instead.
+            Log.w(TAG, "indexing pass failed", e)
+            outcome = AutoOutcome.ERROR
+            if (auto) Result.retry() else Result.failure()
+        }
+        if (auto) {
+            Log.i(TAG, "auto run ($detail): $outcome $indexed")
+            runCatching { c.settings.setLastAutoRun(LastAutoRun(System.currentTimeMillis(), detail ?: "auto", outcome, indexed)) }
+        }
+        return result
     }
+
+    private val detail get() = inputData.getString(KEY_SOURCE_DETAIL)
+    private var outcome = AutoOutcome.NOTHING_NEW
+    private var indexed = 0
 
     private suspend fun runPass(c: com.lsa.app.AppContainer): Result {
         val ctl = c.indexing
         ctl.resetStop()
         val folders = ctl.folderSpecs()
         if (folders.isEmpty()) {
+            outcome = AutoOutcome.NO_FOLDERS
             if (!auto) ctl.update(IndexProgress(error = IndexError.NO_FOLDERS))
             return if (auto) Result.success() else Result.failure()
         }
-        if (!hasAnyStorageAccess(applicationContext)) return if (auto) Result.success() else Result.failure()
+        if (!hasAnyStorageAccess(applicationContext)) {
+            outcome = AutoOutcome.NO_ACCESS
+            return if (auto) Result.success() else Result.failure()
+        }
 
         val keys = ctl.pipelineKeys()
         val full = c.indexRunner.sync(folders, ctl.enabledKinds(), keys)
         // "Retry failed" touches only the failed files; paused work stays paused.
-        val plan = if (!onlyFailed) full else {
+        var plan = if (!onlyFailed) full else {
             val failed = full.todo.filter { it.existing?.status == com.lsa.app.data.db.ItemStatus.FAILED }
             com.lsa.app.indexing.IndexPlan(total = failed.size, done = 0, todo = failed)
         }
@@ -64,38 +89,55 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             ctl.update(IndexProgress(total = plan.total, done = plan.done, finished = true))
             return Result.success()
         }
-        if (auto && ctl.isHot()) return Result.retry()
+        if (auto && ctl.isHot()) { outcome = AutoOutcome.HOT; return Result.retry() }
 
         // Low-power mode is a manual-run option; automatic runs have their own battery rules.
         val low = !auto && c.settings.indexLowPower.first()
         val embLease = try { c.residency.embedder(low) } catch (e: Exception) {
             Log.w(TAG, "model load failed", e)
+            outcome = AutoOutcome.LOAD_FAILED
             if (!auto) ctl.update(IndexProgress(error = IndexError.LOAD_FAILED))
             return if (auto) Result.retry() else Result.failure()
         }
         if (embLease == null) {
+            outcome = AutoOutcome.NO_MODEL
             if (!auto) ctl.update(IndexProgress(error = IndexError.MODEL_MISSING))
             return if (auto) Result.success() else Result.failure()
         }
         val ocrLease = c.residency.ocr(c.settings.ocrModelId.first())
         var lastNotify = 0L
         val passStart = System.currentTimeMillis()
-        val result = try {
+        var result = IndexProgress()
+        try {
             val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, { c.residency.speech(low) }, java.io.File(applicationContext.cacheDir, "audio"),
                 VideoOptions(c.settings.videoDetail.first(), c.settings.videoTranscribe.first()))
-            c.indexRunner.process(
-                plan, session, keys,
-                gate = {
-                    if (low) delay(LOW_POWER_PAUSE_MS) // let the CPU cool down between files
-                    !ctl.stopRequested && !((auto || low) && ctl.isHot())
-                },
-            ) { p ->
-                ctl.update(p)
-                val now = System.currentTimeMillis()
-                if (now - lastNotify > 1000 || p.finished) {
-                    lastNotify = now
-                    runCatching { Notifications.notify(applicationContext, Notifications.ID_INDEXING, info(p).notification) }
+            var rounds = 0
+            while (true) {
+                val before = plan.done
+                result = c.indexRunner.process(
+                    plan, session, keys,
+                    gate = {
+                        if (low) delay(LOW_POWER_PAUSE_MS) // let the CPU cool down between files
+                        !ctl.stopRequested && !((auto || low) && ctl.isHot())
+                    },
+                ) { p ->
+                    ctl.update(p)
+                    val now = System.currentTimeMillis()
+                    if (now - lastNotify > 1000 || p.finished) {
+                        lastNotify = now
+                        runCatching { Notifications.notify(applicationContext, Notifications.ID_INDEXING, info(p).notification) }
+                    }
                 }
+                indexed += (result.done - before).coerceAtLeast(0)
+                rounds++
+                if (result.stoppedEarly || ctl.stopRequested || onlyFailed || rounds >= MAX_ROUNDS) break
+                // Files added while this pass was running: take them now instead of waiting for the next trigger.
+                // Files that failed are not retried within the same pass.
+                val next = c.indexRunner.sync(folders, ctl.enabledKinds(), keys)
+                val fresh = next.todo.filter { it.existing?.status != com.lsa.app.data.db.ItemStatus.FAILED }
+                if (fresh.isEmpty()) break
+                Log.i(TAG, "another round: ${fresh.size} file(s) arrived during the run")
+                plan = com.lsa.app.indexing.IndexPlan(total = next.total, done = next.done, todo = fresh)
             }
         } finally {
             ocrLease.close(); embLease.close()
@@ -103,12 +145,9 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         // Scheduled "new file" tasks look at what this pass added (after the models are released).
         runCatching { c.taskManager.onIndexed(passStart) }.onFailure { Log.w(TAG, "scheduled tasks check failed", it) }
         // Stopped by the thermal gate (not by the user): try again later.
-        return if (result.stoppedEarly && !ctl.stopRequested) Result.retry() else Result.success()
-    }
-
-    /** The content-URI trigger is one-shot: queue the next one behind this run. */
-    private fun rearmTrigger(c: com.lsa.app.AppContainer) {
-        if (inputData.getString(KEY_SOURCE_DETAIL) == DETAIL_TRIGGER) c.autoIndex.armTriggerAfterCurrent()
+        if (result.stoppedEarly && !ctl.stopRequested) { outcome = AutoOutcome.HOT; return Result.retry() }
+        if (indexed > 0) outcome = AutoOutcome.INDEXED
+        return Result.success()
     }
 
     companion object {
@@ -119,5 +158,13 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         const val SOURCE_AUTO = "auto"
         const val KEY_SOURCE_DETAIL = "detail"
         const val DETAIL_TRIGGER = "trigger"
+        const val DETAIL_CATCH_UP = "catch-up"
+        const val DETAIL_NET = "net"
+        const val DETAIL_SCHEDULED = "scheduled"
+        const val DETAIL_IDLE = "idle"
+        /** Which of the two alternating trigger slots this run was started by. */
+        const val KEY_SLOT = "slot"
+        /** A run keeps going while new files arrive during it, at most this many rounds. */
+        private const val MAX_ROUNDS = 3
     }
 }

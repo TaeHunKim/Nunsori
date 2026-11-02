@@ -317,4 +317,12 @@
     <string name="onboarding_bg_desc">Optional. In chat you can ask for tasks that run later, such as a daily summary. These permissions let them run on time.</string>
     <string name="settings_judge_first_title">Let the assistant judge new files</string>
     <string name="settings_judge_first_desc">For tasks that wait for files: when only a few new files arrive, the assistant reads each one and decides whether it fits, instead of relying on the similarity match alone. Catches vague conditions like “anything with a schedule” but uses the chat model more (a little more battery).</string>
+    <string name="auto_last_indexed">Last automatic run %1$s: indexed %2$d files</string>
+    <string name="auto_last_nothing">Last automatic run %1$s: nothing new</string>
+    <string name="auto_last_hot">Last automatic run %1$s: paused because the phone was warm (will retry)</string>
+    <string name="auto_last_no_model">Last automatic run %1$s: the search model is not installed</string>
+    <string name="auto_last_load_failed">Last automatic run %1$s: the model could not be loaded (will retry)</string>
+    <string name="auto_last_no_access">Last automatic run %1$s: no access to the files</string>
+    <string name="auto_last_no_folders">Last automatic run %1$s: no folders are selected</string>
+    <string name="auto_last_error">Last automatic run %1$s: it failed (will retry)</string>
 </resources>

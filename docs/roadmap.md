@@ -26,4 +26,5 @@
 - Only the 740M model embeds audio; input is limited to about 40 s per clip.
 - Emulator inference is CPU only and slow.
 
+- Automatic indexing is a WorkManager job: the system may delay it (Doze, standby buckets, Samsung *Sleeping apps*) unless the app is excluded from battery optimization; Immediate mode has an hourly safety net.
 - Scheduled tasks run one at a time and need the chat model, so a run can be late when another answer is being generated or the phone is in Doze/an OEM sleep list (Samsung *Sleeping apps*); file-triggered tasks run after indexing, never at file creation; a new file counts only if it clearly stands out from the typical similarity of the index (or contains all the query words) and the chat model confirms it; photos without text are not checked by the model (they need their own match), and the similarity thresholds still need tuning with real files. Only files indexed after confirming count.

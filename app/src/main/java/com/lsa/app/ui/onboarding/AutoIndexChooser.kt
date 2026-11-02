@@ -24,6 +24,7 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -97,6 +98,33 @@ fun AutoIndexOptions(
     if (showTime) {
         TimeDialog(minutes, onDismiss = { showTime = false }) { onMinutes(it); showTime = false }
     }
+    if (mode != null && mode != AutoIndexMode.MANUAL) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+            LastAutoRunLine()
+            // The system may delay automatic runs of apps that are battery-optimized.
+            com.lsa.app.ui.settings.BackgroundAccessCards(showWhenAllSet = false, batteryOnly = true)
+        }
+    }
+}
+
+/** "Last automatic run 10:32: indexed 2 files", or why it did nothing. Shows nothing before the first run. */
+@Composable
+fun LastAutoRunLine() {
+    val run by com.lsa.app.rememberContainer().settings.lastAutoRun.collectAsStateWithLifecycle(null)
+    val r = run ?: return
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val time = android.text.format.DateUtils.formatDateTime(ctx, r.at, android.text.format.DateUtils.FORMAT_SHOW_TIME or android.text.format.DateUtils.FORMAT_ABBREV_ALL or android.text.format.DateUtils.FORMAT_SHOW_DATE)
+    val text = when (r.outcome) {
+        com.lsa.app.indexing.AutoOutcome.INDEXED -> stringResource(R.string.auto_last_indexed, time, r.count)
+        com.lsa.app.indexing.AutoOutcome.HOT -> stringResource(R.string.auto_last_hot, time)
+        com.lsa.app.indexing.AutoOutcome.NO_MODEL -> stringResource(R.string.auto_last_no_model, time)
+        com.lsa.app.indexing.AutoOutcome.LOAD_FAILED -> stringResource(R.string.auto_last_load_failed, time)
+        com.lsa.app.indexing.AutoOutcome.NO_ACCESS -> stringResource(R.string.auto_last_no_access, time)
+        com.lsa.app.indexing.AutoOutcome.NO_FOLDERS -> stringResource(R.string.auto_last_no_folders, time)
+        com.lsa.app.indexing.AutoOutcome.ERROR -> stringResource(R.string.auto_last_error, time)
+        else -> stringResource(R.string.auto_last_nothing, time)
+    }
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable

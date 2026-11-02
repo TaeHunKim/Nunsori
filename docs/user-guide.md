@@ -31,6 +31,8 @@ Photos with GPS data are found by place name. Results that match both the meanin
 
 Tips: describe content in natural language for photos and scenes; use distinctive words for names, codes and numbers; Korean and English both work.
 
+Automatic indexing shows when it last ran and what it did (or why it did nothing). Immediate mode also checks hourly, in case the system delayed the instant trigger; for dependable timing exclude the app from battery optimization (the same card appears under the options).
+
 ## Chat
 
 ![Chat](images/chat.png)

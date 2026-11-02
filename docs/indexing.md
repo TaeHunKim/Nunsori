@@ -58,6 +58,12 @@ Without an ASR model only stage B runs; without the 740M model only stage A runs
 
 Clips are planned from scene changes (threshold 0.10 on a 16×16 grid) with length 4 to 20 s and 20% overlap. Each clip embeds up to 8 frames (side 448) as one `VIDEO_CLIP` vector. If the video has speech, stage "audio" (`AUDIO_STAGE`) transcribes it; transcript segments are about 220 chars or 10 s. Precision is a Settings option and part of `pipelineKey`. Moments shorter than a few seconds can be missed.
 
+## Automatic runs: how they are kept alive
+
+Immediate mode watches `MediaStore.Files` with a one-shot WorkManager content trigger (15 s quiet time, 2 min at most, battery not low). To avoid a blind window, a trigger run **arms the next trigger when it starts**, using two alternating unique-work slots (`auto-trigger-a`/`-b`, `AutoIndexScheduler.armNextTrigger`; `KEEP` leaves a waiting slot alone). A run also loops (at most 3 rounds, never re-trying failed files) while new files arrive during it. Automatic runs never end in WorkManager "failure": an unexpected exception, thermal throttling or a model-load failure return `retry()` with a linear 2-minute backoff (not the default exponential up to 5 hours). Immediate mode also queues an hourly catch-up (`auto-immediate-net`, battery not low) in case the system deferred or never delivered a trigger; it also catches plain files that never touch MediaStore (documents copied without a media scan). An unloaded model is not a reason to skip: the worker loads it.
+
+`SettingsStore.lastAutoRun` records each automatic run (time, source, outcome: indexed N, nothing new, too warm, model missing/failed, no access, no folders, error); Settings › Automatic indexing and the Index screen show it. The system can still delay jobs of battery-optimized apps (Doze, standby buckets, Samsung sleeping apps), so the auto-index options show the battery-optimization card.
+
 ## Checkpoints and re-processing
 
 - `items.progress` records where to resume (segment ordinal, or audio stage offsets such as `STAGE_B = 10^12`).

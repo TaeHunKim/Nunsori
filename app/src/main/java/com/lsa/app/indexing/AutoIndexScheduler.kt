@@ -3,6 +3,7 @@ package com.lsa.app.indexing
 import android.content.Context
 import android.provider.MediaStore
 import android.util.Log
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -53,15 +54,16 @@ class AutoIndexScheduler(
         wm.enqueueUniqueWork(
             CATCH_UP, ExistingWorkPolicy.KEEP,
             OneTimeWorkRequestBuilder<IndexingWorker>()
-                .setInputData(autoData())
+                .setInputData(autoData(IndexingWorker.DETAIL_CATCH_UP))
                 .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
+                .setBackoffCriteria(BackoffPolicy.LINEAR, BACKOFF_MIN, TimeUnit.MINUTES)
                 .addTag(IndexingController.TAG).build(),
         )
     }
 
     fun apply(cfg: Config) {
         Log.i(TAG, "apply $cfg")
-        if (cfg.mode != AutoIndexMode.IMMEDIATE) wm.cancelUniqueWork(TRIGGER)
+        if (cfg.mode != AutoIndexMode.IMMEDIATE) { wm.cancelUniqueWork(TRIGGER_A); wm.cancelUniqueWork(TRIGGER_B); wm.cancelUniqueWork(NET) }
         if (cfg.mode != AutoIndexMode.SCHEDULED) wm.cancelUniqueWork(SCHEDULED)
         if (cfg.mode != AutoIndexMode.IDLE) wm.cancelUniqueWork(IDLE)
 
@@ -70,13 +72,22 @@ class AutoIndexScheduler(
             AutoIndexMode.IMMEDIATE -> {
                 // Triggers only see changes made after they are registered, so also run one catch-up pass now.
                 enqueueCatchUp()
-                wm.enqueueUniqueWork(TRIGGER, ExistingWorkPolicy.KEEP, triggerRequest())
+                wm.enqueueUniqueWork(TRIGGER_A, ExistingWorkPolicy.KEEP, triggerRequest(TRIGGER_A))
+                // Safety net: triggers can be deferred by the system or never fire (plain files outside MediaStore).
+                wm.enqueueUniquePeriodicWork(
+                    NET, ExistingPeriodicWorkPolicy.UPDATE,
+                    PeriodicWorkRequestBuilder<IndexingWorker>(NET_HOURS, TimeUnit.HOURS)
+                        .setInputData(autoData(IndexingWorker.DETAIL_NET))
+                        .setConstraints(Constraints.Builder().setRequiresBatteryNotLow(true).build())
+                        .setBackoffCriteria(BackoffPolicy.LINEAR, BACKOFF_MIN, TimeUnit.MINUTES)
+                        .addTag(IndexingController.TAG).build(),
+                )
             }
             AutoIndexMode.SCHEDULED -> {
                 val delay = delayUntilNext(cfg.minutes, ZonedDateTime.now())
                 val req = PeriodicWorkRequestBuilder<IndexingWorker>(24, TimeUnit.HOURS)
                     .setInitialDelay(delay)
-                    .setInputData(autoData())
+                    .setInputData(autoData(IndexingWorker.DETAIL_SCHEDULED))
                     .setConstraints(
                         Constraints.Builder()
                             .setRequiresBatteryNotLow(true)
@@ -89,7 +100,7 @@ class AutoIndexScheduler(
             AutoIndexMode.IDLE -> {
                 // CPU/GPU/NPU load is not readable by apps; "charging + device idle" is the proxy for "not in use".
                 val req = PeriodicWorkRequestBuilder<IndexingWorker>(3, TimeUnit.HOURS)
-                    .setInputData(autoData())
+                    .setInputData(autoData(IndexingWorker.DETAIL_IDLE))
                     .setConstraints(
                         Constraints.Builder()
                             .setRequiresBatteryNotLow(true)
@@ -103,18 +114,26 @@ class AutoIndexScheduler(
         }
     }
 
-    /** Queues the next trigger behind the one that is currently running. */
-    fun armTriggerAfterCurrent() {
-        wm.enqueueUniqueWork(TRIGGER, ExistingWorkPolicy.APPEND_OR_REPLACE, triggerRequest())
+    /**
+     * Arms the trigger slot other than [currentSlot]. Called when a trigger run *starts*, so a change made while it runs
+     * is observed at once (a one-shot trigger queued after the run would leave a blind window). `KEEP` leaves an
+     * already waiting slot alone, so at least one trigger is always pending.
+     */
+    fun armNextTrigger(currentSlot: String?) {
+        val next = if (currentSlot == TRIGGER_A) TRIGGER_B else TRIGGER_A
+        Log.i(TAG, "arm trigger $next (current $currentSlot)")
+        wm.enqueueUniqueWork(next, ExistingWorkPolicy.KEEP, triggerRequest(next))
     }
 
-    private fun autoData(detail: String? = null): Data = Data.Builder()
+    private fun autoData(detail: String, slot: String? = null): Data = Data.Builder()
         .putString(IndexingWorker.KEY_SOURCE, IndexingWorker.SOURCE_AUTO)
-        .apply { detail?.let { putString(IndexingWorker.KEY_SOURCE_DETAIL, it) } }
+        .putString(IndexingWorker.KEY_SOURCE_DETAIL, detail)
+        .apply { slot?.let { putString(IndexingWorker.KEY_SLOT, it) } }
         .build()
 
-    private fun triggerRequest() = OneTimeWorkRequestBuilder<IndexingWorker>()
-        .setInputData(autoData(IndexingWorker.DETAIL_TRIGGER))
+    private fun triggerRequest(slot: String) = OneTimeWorkRequestBuilder<IndexingWorker>()
+        .setInputData(autoData(IndexingWorker.DETAIL_TRIGGER, slot))
+        .setBackoffCriteria(BackoffPolicy.LINEAR, BACKOFF_MIN, TimeUnit.MINUTES)
         .setConstraints(
             Constraints.Builder()
                 .addContentUriTrigger(MediaStore.Files.getContentUri("external"), true)
@@ -127,7 +146,14 @@ class AutoIndexScheduler(
 
     companion object {
         private const val TAG = "LSA.Auto"
-        const val TRIGGER = "auto-trigger"
+        /** Two alternating slots for the one-shot content trigger (see [armNextTrigger]). */
+        const val TRIGGER_A = "auto-trigger-a"
+        const val TRIGGER_B = "auto-trigger-b"
+        /** Hourly catch-up pass in Immediate mode. */
+        const val NET = "auto-immediate-net"
+        const val NET_HOURS = 1L
+        /** Retries after a failed or throttled automatic run: 2, 4, 6 … minutes instead of the default doubling up to 5 hours. */
+        const val BACKOFF_MIN = 2L
         const val SCHEDULED = "auto-scheduled"
         const val IDLE = "auto-idle"
         const val CATCH_UP = IndexingController.NAME

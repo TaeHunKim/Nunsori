@@ -38,13 +38,28 @@ class AutoIndexSchedulerTest {
 
     @Test fun immediateRegistersContentTriggerAndCatchUp() {
         scheduler.apply(AutoIndexScheduler.Config(AutoIndexMode.IMMEDIATE, 180, true))
-        val c = info(AutoIndexScheduler.TRIGGER)!!.constraints
+        val c = info(AutoIndexScheduler.TRIGGER_A)!!.constraints
         assertTrue("content trigger present", c.contentUriTriggers.isNotEmpty())
         assertTrue(c.contentUriTriggers.first().isTriggeredForDescendants)
         assertTrue(c.requiresBatteryNotLow())
         assertEquals(15_000L, c.contentTriggerUpdateDelayMillis)
         assertEquals(120_000L, c.contentTriggerMaxDelayMillis)
         assertTrue("catch-up queued", wm.getWorkInfosForUniqueWork(AutoIndexScheduler.CATCH_UP).get().isNotEmpty())
+        val net = info(AutoIndexScheduler.NET)!!
+        assertEquals("hourly safety net", 3600_000L, net.periodicityInfo!!.repeatIntervalMillis)
+        assertTrue(net.constraints.requiresBatteryNotLow())
+    }
+
+    @Test fun armingTheNextTriggerUsesTheOtherSlotAndNeverReplacesAWaitingOne() {
+        scheduler.apply(AutoIndexScheduler.Config(AutoIndexMode.IMMEDIATE, 180, true))
+        scheduler.armNextTrigger(AutoIndexScheduler.TRIGGER_A)
+        assertTrue("slot B armed while A is still there", active(AutoIndexScheduler.TRIGGER_B) && active(AutoIndexScheduler.TRIGGER_A))
+        val idB = info(AutoIndexScheduler.TRIGGER_B)!!.id
+        scheduler.armNextTrigger(AutoIndexScheduler.TRIGGER_A)
+        assertEquals("a waiting slot is kept", idB, info(AutoIndexScheduler.TRIGGER_B)!!.id)
+        // B runs and arms the other slot (A, finished or waiting)
+        scheduler.armNextTrigger(AutoIndexScheduler.TRIGGER_B)
+        assertTrue(active(AutoIndexScheduler.TRIGGER_A))
     }
 
     @Test fun scheduledHonoursChargingOptionAndDelay() {
@@ -67,7 +82,7 @@ class AutoIndexSchedulerTest {
     @Test fun switchingModeCancelsTheOthers() {
         scheduler.apply(AutoIndexScheduler.Config(AutoIndexMode.IMMEDIATE, 180, true))
         scheduler.apply(AutoIndexScheduler.Config(AutoIndexMode.IDLE, 180, true))
-        assertFalse("trigger cancelled", active(AutoIndexScheduler.TRIGGER))
+        assertFalse("trigger cancelled", active(AutoIndexScheduler.TRIGGER_A) || active(AutoIndexScheduler.TRIGGER_B) || active(AutoIndexScheduler.NET))
         assertTrue(active(AutoIndexScheduler.IDLE))
         scheduler.apply(AutoIndexScheduler.Config(AutoIndexMode.MANUAL, 180, true))
         assertFalse(active(AutoIndexScheduler.IDLE)); assertFalse(active(AutoIndexScheduler.SCHEDULED))

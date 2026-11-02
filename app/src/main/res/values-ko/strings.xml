@@ -311,4 +311,12 @@
     <string name="onboarding_bg_desc">선택 사항입니다. 채팅에서 “매일 요약해줘”처럼 나중에 실행할 작업을 부탁할 수 있고, 아래 허용이 있으면 제때 실행됩니다.</string>
     <string name="settings_judge_first_title">새 파일을 어시스턴트가 직접 판단</string>
     <string name="settings_judge_first_desc">파일을 기다리는 작업에서, 새 파일이 몇 개 안 될 때는 유사도 매칭만 믿지 않고 어시스턴트가 각 파일을 읽고 조건에 맞는지 판단합니다. “일정이 담긴 파일”처럼 모호한 조건도 잡지만 채팅 모델을 더 쓰므로 배터리를 조금 더 씁니다.</string>
+    <string name="auto_last_indexed">마지막 자동 실행 %1$s: %2$d개 인덱싱</string>
+    <string name="auto_last_nothing">마지막 자동 실행 %1$s: 새 파일 없음</string>
+    <string name="auto_last_hot">마지막 자동 실행 %1$s: 폰이 뜨거워 멈춤 (다시 시도)</string>
+    <string name="auto_last_no_model">마지막 자동 실행 %1$s: 검색 모델이 설치되지 않음</string>
+    <string name="auto_last_load_failed">마지막 자동 실행 %1$s: 모델을 불러오지 못함 (다시 시도)</string>
+    <string name="auto_last_no_access">마지막 자동 실행 %1$s: 파일 접근 권한 없음</string>
+    <string name="auto_last_no_folders">마지막 자동 실행 %1$s: 선택한 폴더 없음</string>
+    <string name="auto_last_error">마지막 자동 실행 %1$s: 실패 (다시 시도)</string>
 </resources>

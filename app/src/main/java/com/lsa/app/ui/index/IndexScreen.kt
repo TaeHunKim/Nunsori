@@ -120,6 +120,7 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
                     )
                 }
                 StatusCard(progress, running, canStart, onStart = ::onStart, onPause = vm::pause)
+                com.lsa.app.ui.onboarding.LastAutoRunLine()
                 val lowPower by vm.lowPower.collectAsStateWithLifecycle()
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
