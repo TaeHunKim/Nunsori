@@ -9,6 +9,11 @@ import com.lsa.app.data.db.ChatRole
 import com.lsa.app.data.db.ChatSessionEntity
 import com.lsa.app.data.db.ItemDao
 import com.lsa.app.data.db.ScheduledTaskEntity
+import com.lsa.app.chat.actions.ActionManager
+import com.lsa.app.chat.actions.AddCalendarEventTool
+import com.lsa.app.chat.actions.AddContactTool
+import com.lsa.app.chat.actions.DeleteFilesTool
+import com.lsa.app.chat.actions.MoveFilesTool
 import com.lsa.app.chat.schedule.TaskManager
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.BitmapLoader
@@ -70,6 +75,7 @@ class ChatController(
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
     private val taskManager: TaskManager? = null,
+    private val actions: ActionManager? = null,
 ) {
     private val _run = MutableStateFlow<ChatRun?>(null)
     val run: StateFlow<ChatRun?> = _run.asStateFlow()
@@ -178,7 +184,7 @@ class ChatController(
                         if (model.supportsImages) images += file.readBytes() else extra.append(PHOTO_UNSUPPORTED)
                     }
                 }
-                if (task != null) extra.append(SCHEDULED_NOTE).append(extraContext).append('\n')
+                if (task != null) extra.append(SCHEDULED_NOTE).append(if (actions != null) SCHEDULED_ACTIONS_NOTE else "").append(extraContext).append('\n')
                 else if (session.autoSearch && text.isNotBlank()) extra.append(autoSearchBlock(text))
                 // The clock changes every turn, so it rides with the message instead of the (cached) system prompt.
                 val modelText = "[Current time: ${nowStamp()}]\n" + if (extra.isEmpty()) text else "$extra\n$text"
@@ -200,13 +206,13 @@ class ChatController(
                     ContextBudget.estimateTokens(custom)
                 val history = ContextBudget.trim(stored, budget.coerceAtLeast(0))
 
-                val tools = if (task != null) scheduledTools() else enabledTools(session)
+                val tools = if (task != null) scheduledTools(session) else enabledTools(session)
                 // the custom prompt is part of the key: a changed prompt starts a fresh conversation state
                 // and so is the date: the system prompt names today, so a new day must not reuse yesterday's state
                 val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}|${todayString()}"
                 _run.value = ChatRun(sessionId, ChatPhase.GENERATING, trimmed = history.dropped > 0)
                 var toolCalls = 0
-                model.reply(key, systemPrompt(custom), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
+                model.reply(key, systemPrompt(custom, tools.any { it.name == ChatToolNames.CALENDAR }, tools.any { it.name == ChatToolNames.MOVE }), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
                     when (e) {
                         is ChatEvent.Token -> {
                             answer.append(e.text)
@@ -216,7 +222,7 @@ class ChatController(
                             chat.insertMessage(
                                 ChatMessageEntity(
                                     sessionId = sessionId, role = ChatRole.TOOL, text = ContextBudget.clip(e.result, MAX_STORED_RESULT),
-                                    toolName = e.name, toolArgs = e.args, taskId = task?.taskId ?: scheduledIdOf(e.name, e.result), createdAt = clock(),
+                                    toolName = e.name, toolArgs = e.args, taskId = task?.taskId ?: scheduledIdOf(e.name, e.result), actionId = actionIdOf(e.name, e.result), createdAt = clock(),
                                 ),
                             )
                             if (++toolCalls > MAX_TOOL_CALLS) throw TooManyToolCalls()
@@ -249,7 +255,21 @@ class ChatController(
     private fun scheduledIdOf(tool: String, result: String): Long? =
         if (tool != ChatToolNames.SCHEDULE && tool != ChatToolNames.UPDATE_TASK) null else runCatching { JSONObject(result).optLong("task_id", -1) }.getOrNull()?.takeIf { it > 0 }
 
-    private fun scheduledTools(): List<ChatTool> = listOf(SearchIndexTool(search, items), ReadFileTool(items))
+    /** The `action_id` of a proposal (calendar event, contact), so its card can be found from the stored tool message. */
+    private fun actionIdOf(tool: String, result: String): Long? =
+        if (tool !in ChatToolNames.ACTION_TOOLS) null else runCatching { JSONObject(result).optLong("action_id", -1) }.getOrNull()?.takeIf { it > 0 }
+
+    /** Search and read, plus the calendar/contact/file tools when the chat has them on: they only leave cards for the user to approve. */
+    private fun scheduledTools(session: ChatSessionEntity): List<ChatTool> {
+        val on = session.enabledTools.split(',').toSet()
+        return buildList {
+            add(SearchIndexTool(search, items)); add(ReadFileTool(items))
+            if (actions != null) {
+                if (ChatToolNames.CALENDAR in on) { add(AddCalendarEventTool(actions, session.sessionId)); add(AddContactTool(actions, session.sessionId)) }
+                if (ChatToolNames.MOVE in on) { add(MoveFilesTool(actions, items, session.sessionId)); add(DeleteFilesTool(actions, items, session.sessionId)) }
+            }
+        }
+    }
 
     private class TooManyToolCalls : Exception()
 
@@ -269,6 +289,14 @@ class ChatController(
                 add(ListScheduledTasksTool(taskManager, session.sessionId))
                 add(UpdateScheduledTaskTool(taskManager, session.sessionId))
                 add(CancelScheduledTaskTool(taskManager, session.sessionId))
+            }
+            if (ChatToolNames.CALENDAR in on && actions != null) {
+                add(AddCalendarEventTool(actions, session.sessionId))
+                add(AddContactTool(actions, session.sessionId))
+            }
+            if (ChatToolNames.MOVE in on && actions != null) {
+                add(MoveFilesTool(actions, items, session.sessionId))
+                add(DeleteFilesTool(actions, items, session.sessionId))
             }
         }
     }
@@ -313,12 +341,14 @@ class ChatController(
         return "${fmt.format(Date(clock()))}, ${tz.id}"
     }
 
-    private fun systemPrompt(custom: String): String {
+    private fun systemPrompt(custom: String, withActions: Boolean, withFiles: Boolean): String {
         return "You are the assistant of a private, on-device file search app. Today is ${todayString()} " +
             "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
             "and give search_index date_from/date_to as YYYY-MM-DD (a query is optional when you filter by date or kind, e.g. to list yesterday's photos). " +
             "When the user asks you to do something later or repeatedly (every day at 9, every Monday, in 30 minutes, whenever a new file about X is added), " +
             "call schedule_task with the instruction written so it can run on its own (for a file task, query lists the user's own words first and then 2 to 5 concrete words a matching file would contain, separated by |, e.g. \"schedule|wedding invitation|invitation|appointment\"; never the whole instruction); it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. To change an existing task the user asks about, use list_scheduled_tasks and update_scheduled_task instead of creating a new one. " +
+            (if (withActions) "When a file shows an event or a person worth saving (an invitation, ticket, appointment, business card) and the user wants it in their calendar or contacts, call add_calendar_event or add_contact with the details; the user approves a card first, so never say it is already added. " else "") +
+            (if (withFiles) "To move or delete files the user asks about, first find them with search_index and then call move_files or delete_files with their item_ids (never guess ids); the user approves a card first, deleting goes to the trash unless they ask for permanent deletion, and you must not say the files are already moved or deleted. " else "") +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +
@@ -339,6 +369,7 @@ class ChatController(
         private const val JUDGE_SYSTEM = "You check files against a condition. Reply with only the item_id numbers of the files that clearly match, " +
             "separated by commas, or the word NONE. No other words."
         private const val SCHEDULED_NOTE = "[This is a scheduled task running now without the user present. Carry out the instruction and write the result as a message to the user.]\n"
+        private const val SCHEDULED_ACTIONS_NOTE = "[Tools that add events or contacts or move or delete files only create cards the user approves later; never say they are done.]\n"
         private const val TOO_MANY_CALLS = "I stopped because I called tools too many times without an answer."
     }
 }

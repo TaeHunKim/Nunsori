@@ -49,3 +49,7 @@ Remove one model in Settings, remove a folder to drop its items, or clear app da
 ## Scheduled tasks
 
 Tasks, their schedule and their results live in the same private database as the chats (`scheduled_tasks`, `chat_messages`) and are deleted with the chat. Notifications show the beginning of an answer on the lock screen according to the system notification settings. Nothing is sent anywhere: tasks run on-device with the same local models.
+
+Action cards (`pending_actions`) keep the proposed event or contact fields in the same database until the chat is deleted. The app has no calendar or contacts permission: approving a card only opens the system calendar or contacts app with the fields filled in, and you save there.
+
+File actions change files only after you approve a card in the chat, and only files that are in the index: deleting goes to the system trash or to the hidden folder `.LSA_Trash` unless you choose *Delete permanently*. They use the existing "All files access"; no new permission is requested.
