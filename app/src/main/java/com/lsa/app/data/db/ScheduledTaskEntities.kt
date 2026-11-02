@@ -7,6 +7,7 @@ import androidx.room.Index
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 enum class TaskTrigger { TIME, FILE }
@@ -58,6 +59,9 @@ data class ScheduledTaskEntity(
 interface ScheduledTaskDao {
     @Insert
     suspend fun insert(task: ScheduledTaskEntity): Long
+
+    @Update
+    suspend fun update(task: ScheduledTaskEntity)
 
     @Query("SELECT * FROM scheduled_tasks WHERE taskId = :id")
     suspend fun get(id: Long): ScheduledTaskEntity?

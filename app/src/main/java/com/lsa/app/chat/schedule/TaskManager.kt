@@ -124,6 +124,39 @@ class TaskManager(
         )
     }
 
+    /** Handles update_scheduled_task: changes only the given fields and applies at once (re-arming the alarm). */
+    suspend fun update(sessionId: Long, args: JSONObject): String {
+        val old = tasks.get(args.optLong("task_id", -1)) ?: return "Error: no scheduled task with that task_id."
+        if (old.sessionId != sessionId) return "Error: no scheduled task #${old.taskId} in this chat."
+        if (old.status == TaskStatus.DONE) return "Error: that task has already finished; schedule a new one."
+        val now = clock()
+        val base = old.copy(instruction = args.optString("instruction").trim().ifEmpty { old.instruction }.take(MAX_INSTRUCTION))
+        val updated: ScheduledTaskEntity = if (old.trigger == TaskTrigger.FILE) {
+            base.copy(
+                fileQuery = if (args.has("query")) args.optString("query").trim().take(MAX_QUERY) else old.fileQuery,
+                fileKinds = if (args.has("kinds")) parseKinds(args.optString("kinds")).joinToString(",") { it.name } else old.fileKinds,
+            )
+        } else if (SCHEDULE_KEYS.none { args.has(it) }) {
+            base // only the instruction changed
+        } else {
+            val a = JSONObject(args.toString())
+            if (!a.has("repeat")) a.put("repeat", old.repeat.name.lowercase())
+            if (!a.has("at") && old.repeat != TaskRepeat.ONCE) a.put("at", "%02d:%02d".format(old.atMinuteOfDay / 60, old.atMinuteOfDay % 60))
+            if (!a.has("weekdays") && old.weekdayMask != 0) {
+                a.put("weekdays", java.time.DayOfWeek.entries.filter { old.weekdayMask and (1 shl (it.value - 1)) != 0 }.joinToString(",") { it.name.take(3).lowercase() })
+            }
+            if (!a.has("every_minutes") && old.intervalMinutes > 0) a.put("every_minutes", old.intervalMinutes)
+            when (val r = timeTask(base, a, now)) {
+                is String -> return r
+                else -> (r as ScheduledTaskEntity).copy(nextRunAt = if (old.status == TaskStatus.ACTIVE || old.status == TaskStatus.PENDING_CONFIRM) r.nextRunAt else null)
+            }
+        }
+        tasks.update(updated)
+        alarms.cancel(updated.taskId)
+        if (updated.status == TaskStatus.ACTIVE && updated.trigger == TaskTrigger.TIME) updated.nextRunAt?.let { alarms.arm(updated.taskId, it) }
+        return JSONObject().put("task_id", updated.taskId).put("status", updated.status.name).put("summary", describe(updated)).toString()
+    }
+
     // ---- user actions ----
 
     /** The user pressed Confirm on a card. Returns false when the task is gone or was already confirmed. */
@@ -299,6 +332,7 @@ class TaskManager(
     companion object {
         private const val TAG = "LSA.Tasks"
         private const val MAX_INSTRUCTION = 500
+        private val SCHEDULE_KEYS = listOf("repeat", "at", "weekdays", "every_minutes", "date", "in_minutes")
         private const val MAX_QUERY = 200
         private const val SEARCH_LIMIT = 100
         private const val MAX_PENDING = 200

@@ -408,4 +408,38 @@ class ChatTest {
         controller.deleteSession(chat)
         assertNull(db.taskDao().get(id))
     }
+
+    @Test fun updatingATaskChangesItsScheduleAndReArmsTheAlarm() = runBlocking {
+        val chat = controller.newSession()
+        val id = JSONObject(tasks.propose(chat, dailyArgs())).getLong("task_id").also { tasks.confirm(it) }
+        val before = db.taskDao().get(id)!!.nextRunAt
+        val out = JSONObject(tasks.update(chat, JSONObject().put("task_id", id).put("at", "18:30")))
+        assertEquals(id, out.getLong("task_id"))
+        val t = db.taskDao().get(id)!!
+        assertEquals(18 * 60 + 30, t.atMinuteOfDay); assertEquals("still daily", com.lsa.app.data.db.TaskRepeat.DAILY, t.repeat)
+        assertEquals("Summarize yesterday's photos", t.instruction)
+        assertEquals(t.nextRunAt, alarms.armed[id]); assertTrue(t.nextRunAt != before)
+        // weekly with days
+        tasks.update(chat, JSONObject().put("task_id", id).put("repeat", "weekly").put("weekdays", "mon,fri"))
+        val w = db.taskDao().get(id)!!
+        assertEquals(com.lsa.app.data.db.TaskRepeat.WEEKLY, w.repeat); assertEquals((1 shl 0) or (1 shl 4), w.weekdayMask); assertEquals(18 * 60 + 30, w.atMinuteOfDay)
+    }
+
+    @Test fun updatingOnlyTheInstructionKeepsTheScheduleAndFileTasksChangeTheirQuery() = runBlocking {
+        val chat = controller.newSession()
+        val once = JSONObject(tasks.propose(chat, JSONObject().put("trigger", "time").put("repeat", "once").put("in_minutes", 30).put("instruction", "a"))).getLong("task_id").also { tasks.confirm(it) }
+        val at = db.taskDao().get(once)!!.nextRunAt
+        tasks.update(chat, JSONObject().put("task_id", once).put("instruction", "b"))
+        assertEquals("b", db.taskDao().get(once)!!.instruction); assertEquals(at, db.taskDao().get(once)!!.nextRunAt)
+        val file = JSONObject(tasks.propose(chat, JSONObject().put("trigger", "file").put("instruction", "f").put("query", "x"))).getLong("task_id")
+        tasks.update(chat, JSONObject().put("task_id", file).put("query", "receipt").put("kinds", "image"))
+        assertEquals("receipt", db.taskDao().get(file)!!.fileQuery); assertEquals("IMAGE", db.taskDao().get(file)!!.fileKinds)
+    }
+
+    @Test fun aTaskOfAnotherChatCannotBeUpdated() = runBlocking {
+        val a = controller.newSession(); val b = controller.newSession()
+        val id = JSONObject(tasks.propose(a, dailyArgs())).getLong("task_id")
+        assertTrue(tasks.update(b, JSONObject().put("task_id", id).put("at", "10:00")).startsWith("Error"))
+        assertEquals(9 * 60, db.taskDao().get(id)!!.atMinuteOfDay)
+    }
 }

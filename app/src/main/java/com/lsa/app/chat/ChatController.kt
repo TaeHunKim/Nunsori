@@ -227,7 +227,7 @@ class ChatController(
 
     /** The `task_id` a schedule_task call returned, so its card can be found from the stored tool message. */
     private fun scheduledIdOf(tool: String, result: String): Long? =
-        if (tool != ChatToolNames.SCHEDULE) null else runCatching { JSONObject(result).optLong("task_id", -1) }.getOrNull()?.takeIf { it > 0 }
+        if (tool != ChatToolNames.SCHEDULE && tool != ChatToolNames.UPDATE_TASK) null else runCatching { JSONObject(result).optLong("task_id", -1) }.getOrNull()?.takeIf { it > 0 }
 
     private fun scheduledTools(): List<ChatTool> = listOf(SearchIndexTool(search, items), ReadFileTool(items))
 
@@ -247,6 +247,7 @@ class ChatController(
             if (ChatToolNames.SCHEDULE in on && taskManager != null) {
                 add(ScheduleTaskTool(taskManager, session.sessionId))
                 add(ListScheduledTasksTool(taskManager, session.sessionId))
+                add(UpdateScheduledTaskTool(taskManager, session.sessionId))
                 add(CancelScheduledTaskTool(taskManager, session.sessionId))
             }
         }
@@ -297,7 +298,7 @@ class ChatController(
             "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
             "and give search_index date_from/date_to as YYYY-MM-DD (a query is optional when you filter by date or kind, e.g. to list yesterday's photos). " +
             "When the user asks you to do something later or repeatedly (every day at 9, every Monday, in 30 minutes, whenever a new file about X is added), " +
-            "call schedule_task with the instruction written so it can run on its own; it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. " +
+            "call schedule_task with the instruction written so it can run on its own; it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. To change an existing task the user asks about, use list_scheduled_tasks and update_scheduled_task instead of creating a new one. " +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +

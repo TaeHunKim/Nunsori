@@ -205,7 +205,7 @@ private fun MessageRow(sessionId: Long, m: ChatMessageEntity, names: Map<Long, S
         }
         return
     }
-    if (m.role == ChatRole.TOOL && m.toolName == ChatToolNames.SCHEDULE && m.taskId != null) {
+    if (m.role == ChatRole.TOOL && (m.toolName == ChatToolNames.SCHEDULE || m.toolName == ChatToolNames.UPDATE_TASK) && m.taskId != null) {
         TaskCard(m.taskId, vm)
         return
     }

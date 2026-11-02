@@ -24,6 +24,7 @@ object ChatToolNames {
     const val SCHEDULE = "schedule_task"
     const val LIST_TASKS = "list_scheduled_tasks"
     const val CANCEL_TASK = "cancel_scheduled_task"
+    const val UPDATE_TASK = "update_scheduled_task"
     val ALL = listOf(SEARCH, READ, SCHEDULE)
 }
 
