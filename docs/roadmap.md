@@ -2,7 +2,7 @@
 
 ## Next
 
-- Done in 0.6.0: action cards for the chat: calendar-event and contact proposals (system app opens prefilled) and file move / trash / delete (approval first, trash by default, needs All files access). Next: scheduled runs proposing actions. Later ideas: restoring from `.LSA_Trash` in the app, opt-in auto-approval per task.
+- Done in 0.6.0: action cards for the chat: calendar-event and contact proposals (system app opens prefilled) and file move / trash / delete (approval first, trash by default, needs All files access). Scheduled runs can propose actions too (cards wait in the chat, the notification counts them). Later ideas: restoring from `.LSA_Trash` in the app, opt-in auto-approval per task.
 - Done in 0.5.0: scheduled chat tasks (time-based with exact alarms, and after-indexing file triggers), confirmation cards, notifications that open the chat, background-access checks (notifications, exact alarms, battery optimization).
 - Done in 0.4.0: failed-file list and retry, embedding-length guard, pinned chats, Markdown, chat instructions, low-power indexing, folder presets, resource indicator.
 

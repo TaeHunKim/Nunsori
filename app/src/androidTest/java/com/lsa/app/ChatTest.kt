@@ -108,7 +108,7 @@ class ChatTest {
         tasks = TaskManager(
             ctx, db.taskDao(), db.chatDao(), db.itemDao(), search, alarms, { controller }, clock = { now },
             batteryLow = { lowBattery }, notifier = { t, text, ok -> notified += Triple(t.taskId, text, ok) }, enqueue = { enqueued += it },
-            judgeFirst = { judgeFirstOn },
+            judgeFirst = { judgeFirstOn }, actionDao = db.actionDao(),
         )
         controller = ChatController(ctx, db.chatDao(), db.itemDao(), residency, search, settings, scope, clock = { now }, taskManager = tasks, actions = actionManager)
     }
@@ -346,7 +346,9 @@ class ChatTest {
         assertEquals(listOf(ChatRole.USER, ChatRole.ASSISTANT), msgs.map { it.role })
         assertTrue("both messages belong to the task", msgs.all { it.taskId == id })
         assertEquals("Three photos from yesterday.", msgs.last().text)
-        assertEquals(listOf(ChatToolNames.SEARCH, ChatToolNames.READ), model.calls.single().tools)
+        val offered = model.calls.single().tools
+        assertTrue("search and read are offered", ChatToolNames.SEARCH in offered && ChatToolNames.READ in offered)
+        assertTrue("a task cannot schedule tasks", offered.none { it.endsWith("scheduled_task") || it == ChatToolNames.SCHEDULE })
         assertTrue(model.calls.single().user.text.contains("scheduled task"))
         assertEquals(listOf(Triple(id, "Three photos from yesterday.", true)), notified)
         val t = db.taskDao().get(id)!!
@@ -537,5 +539,33 @@ class ChatTest {
         actionManager.dismiss(id)
         actionManager.markDone(id)
         assertEquals(com.lsa.app.data.db.ActionStatus.DISMISSED, db.actionDao().get(id)!!.status)
+    }
+
+    @Test fun aScheduledRunCanOnlyProposeAndTheNotificationCountsWaitingCards() = runBlocking {
+        val chat = controller.newSession()
+        val id = JSONObject(tasks.propose(chat, JSONObject().put("trigger", "time").put("repeat", "once").put("in_minutes", 5).put("instruction", "Add my dentist visit to the calendar")))
+            .getLong("task_id").also { tasks.confirm(it) }
+        model = FakeChatModel { tools ->
+            val t = tools.single { it.name == ChatToolNames.CALENDAR }
+            val r = t.execute(JSONObject().put("title", "Dentist").put("start", "2026-12-05 09:00"))
+            listOf(ChatEvent.ToolRan(t.name, "{}", r), ChatEvent.Token("Proposed."))
+        }
+        tasks.run(id)
+        val tool = db.chatDao().messages(chat).single { it.role == ChatRole.TOOL }
+        assertNotNull("the card is linked", tool.actionId)
+        assertEquals(com.lsa.app.data.db.ActionStatus.PROPOSED, db.actionDao().get(tool.actionId!!)!!.status)
+        assertTrue("the notification says an approval is waiting", notified.single().second.contains("1"))
+    }
+
+    @Test fun aScheduledRunDoesNotGetActionToolsThatTheChatSwitchedOff() = runBlocking {
+        val chat = controller.newSession(setOf(ChatToolNames.SEARCH, ChatToolNames.READ))
+        val id = JSONObject(tasks.propose(chat, JSONObject().put("trigger", "time").put("repeat", "once").put("in_minutes", 5).put("instruction", "x")))
+            .getLong("task_id").also { tasks.confirm(it) }
+        model = FakeChatModel { tools ->
+            assertEquals(setOf(ChatToolNames.SEARCH, ChatToolNames.READ), tools.map { it.name }.toSet())
+            listOf(ChatEvent.Token("ok"))
+        }
+        tasks.run(id)
+        assertEquals(1, model.calls.size)
     }
 }

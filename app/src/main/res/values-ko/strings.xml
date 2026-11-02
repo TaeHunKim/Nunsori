@@ -293,6 +293,7 @@
     <string name="action_files_failed">변경된 파일이 없습니다.</string>
     <string name="action_needs_access">파일을 바꾸려면 "모든 파일 액세스"가 필요합니다. 허용한 뒤 버튼을 다시 누르세요.</string>
     <string name="action_grant_access">설정 열기</string>
+    <string name="notif_actions_waiting">[승인 대기 %1$d건]</string>
     <string name="task_card_title">예약된 작업</string>
     <string name="task_confirm">확인</string>
     <string name="task_dismiss">취소</string>

@@ -184,7 +184,7 @@ class ChatController(
                         if (model.supportsImages) images += file.readBytes() else extra.append(PHOTO_UNSUPPORTED)
                     }
                 }
-                if (task != null) extra.append(SCHEDULED_NOTE).append(extraContext).append('\n')
+                if (task != null) extra.append(SCHEDULED_NOTE).append(if (actions != null) SCHEDULED_ACTIONS_NOTE else "").append(extraContext).append('\n')
                 else if (session.autoSearch && text.isNotBlank()) extra.append(autoSearchBlock(text))
                 // The clock changes every turn, so it rides with the message instead of the (cached) system prompt.
                 val modelText = "[Current time: ${nowStamp()}]\n" + if (extra.isEmpty()) text else "$extra\n$text"
@@ -206,7 +206,7 @@ class ChatController(
                     ContextBudget.estimateTokens(custom)
                 val history = ContextBudget.trim(stored, budget.coerceAtLeast(0))
 
-                val tools = if (task != null) scheduledTools() else enabledTools(session)
+                val tools = if (task != null) scheduledTools(session) else enabledTools(session)
                 // the custom prompt is part of the key: a changed prompt starts a fresh conversation state
                 // and so is the date: the system prompt names today, so a new day must not reuse yesterday's state
                 val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}|${todayString()}"
@@ -259,7 +259,17 @@ class ChatController(
     private fun actionIdOf(tool: String, result: String): Long? =
         if (tool !in ChatToolNames.ACTION_TOOLS) null else runCatching { JSONObject(result).optLong("action_id", -1) }.getOrNull()?.takeIf { it > 0 }
 
-    private fun scheduledTools(): List<ChatTool> = listOf(SearchIndexTool(search, items), ReadFileTool(items))
+    /** Search and read, plus the calendar/contact/file tools when the chat has them on: they only leave cards for the user to approve. */
+    private fun scheduledTools(session: ChatSessionEntity): List<ChatTool> {
+        val on = session.enabledTools.split(',').toSet()
+        return buildList {
+            add(SearchIndexTool(search, items)); add(ReadFileTool(items))
+            if (actions != null) {
+                if (ChatToolNames.CALENDAR in on) { add(AddCalendarEventTool(actions, session.sessionId)); add(AddContactTool(actions, session.sessionId)) }
+                if (ChatToolNames.MOVE in on) { add(MoveFilesTool(actions, items, session.sessionId)); add(DeleteFilesTool(actions, items, session.sessionId)) }
+            }
+        }
+    }
 
     private class TooManyToolCalls : Exception()
 
@@ -359,6 +369,7 @@ class ChatController(
         private const val JUDGE_SYSTEM = "You check files against a condition. Reply with only the item_id numbers of the files that clearly match, " +
             "separated by commas, or the word NONE. No other words."
         private const val SCHEDULED_NOTE = "[This is a scheduled task running now without the user present. Carry out the instruction and write the result as a message to the user.]\n"
+        private const val SCHEDULED_ACTIONS_NOTE = "[Tools that add events or contacts or move or delete files only create cards the user approves later; never say they are done.]\n"
         private const val TOO_MANY_CALLS = "I stopped because I called tools too many times without an answer."
     }
 }

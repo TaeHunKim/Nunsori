@@ -47,6 +47,8 @@ class TaskManager(
     private val enqueue: (Long) -> Unit = { TaskRunWorker.enqueue(context, it) },
     /** Settings: let the chat model judge every new file when there are few (see [onIndexed]). */
     private val judgeFirst: suspend () -> Boolean = { true },
+    /** Action cards a run left waiting for the user are counted in its notification. */
+    private val actionDao: com.lsa.app.data.db.PendingActionDao? = null,
 ) {
     // ---- proposing ----
 
@@ -305,10 +307,12 @@ class TaskManager(
             ChatController.TurnResult("", it.message ?: it.javaClass.simpleName)
         }
         val ok = result.error == null
+        val waiting = runCatching { actionDao?.proposedSince(t.sessionId, now) ?: 0 }.getOrDefault(0)
         if (!ok && t.trigger == TaskTrigger.FILE) tasks.setPending(taskId, confirmed.joinToString(",")) // try these files again next time
         tasks.setLastRun(taskId, clock(), if (ok) TaskResult.OK else TaskResult.FAILED, result.error)
         if (t.trigger == TaskTrigger.TIME && t.repeat == TaskRepeat.ONCE) tasks.setStatus(taskId, TaskStatus.DONE, t.activatedAt, null)
-        notifier(t, result.answer.ifBlank { result.error ?: "" }, ok)
+        val text = result.answer.ifBlank { result.error ?: "" }
+        notifier(t, if (waiting > 0) context.getString(com.lsa.app.R.string.notif_actions_waiting, waiting) + " " + text else text, ok)
     }
 
     /**

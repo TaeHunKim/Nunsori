@@ -52,4 +52,8 @@ interface PendingActionDao {
 
     @Query("SELECT COUNT(*) FROM pending_actions WHERE sessionId = :sessionId AND status = 'PROPOSED'")
     suspend fun proposedCount(sessionId: Long): Int
+
+    /** Proposals of [sessionId] made at or after [since] that still wait for the user (what a scheduled run left behind). */
+    @Query("SELECT COUNT(*) FROM pending_actions WHERE sessionId = :sessionId AND status = 'PROPOSED' AND createdAt >= :since")
+    suspend fun proposedSince(sessionId: Long, since: Long): Int
 }

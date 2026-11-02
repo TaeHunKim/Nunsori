@@ -299,6 +299,7 @@
     <string name="action_files_failed">Nothing was changed.</string>
     <string name="action_needs_access">Changing files needs "All files access". Allow it, then press the button again.</string>
     <string name="action_grant_access">Open settings</string>
+    <string name="notif_actions_waiting">[%1$d to approve]</string>
     <string name="task_card_title">Scheduled task</string>
     <string name="task_confirm">Confirm</string>
     <string name="task_dismiss">Dismiss</string>
