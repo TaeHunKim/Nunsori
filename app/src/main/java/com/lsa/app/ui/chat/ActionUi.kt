@@ -79,7 +79,7 @@ fun ActionCard(actionId: Long, vm: ChatViewModel) {
                     Text(stringResource(R.string.action_needs_access), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     TextButton(onClick = { openAllFilesSettings(ctx) }) { Text(stringResource(R.string.action_grant_access)) }
                 }
-                if (a.status != ActionStatus.PROPOSED && !a.resultNote.isNullOrEmpty()) Text(a.resultNote, style = MaterialTheme.typography.labelSmall)
+                if (a.status != ActionStatus.PROPOSED && a.resultNote?.contains("failed") == true) Text(a.resultNote, style = MaterialTheme.typography.labelSmall)
             }
             when (a.status) {
                 ActionStatus.PROPOSED -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
