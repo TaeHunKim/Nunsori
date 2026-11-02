@@ -118,9 +118,11 @@ class TaskManager(
 
     private fun fileTask(base: ScheduledTaskEntity, args: JSONObject): Any {
         val kinds = parseKinds(args.optString("kinds"))
+        val query = args.optString("query").trim().take(MAX_QUERY)
+        if (query.isEmpty() && !args.optBoolean("any_file", false)) return NEEDS_QUERY
         return base.copy(
             trigger = TaskTrigger.FILE, repeat = TaskRepeat.ONCE,
-            fileQuery = args.optString("query").trim().take(MAX_QUERY), fileKinds = kinds.joinToString(",") { it.name },
+            fileQuery = query, fileKinds = kinds.joinToString(",") { it.name },
         )
     }
 
@@ -132,8 +134,10 @@ class TaskManager(
         val now = clock()
         val base = old.copy(instruction = args.optString("instruction").trim().ifEmpty { old.instruction }.take(MAX_INSTRUCTION))
         val updated: ScheduledTaskEntity = if (old.trigger == TaskTrigger.FILE) {
+            val newQuery = if (args.has("query")) args.optString("query").trim().take(MAX_QUERY) else old.fileQuery
+            if (newQuery.isEmpty() && !args.optBoolean("any_file", false)) return NEEDS_QUERY
             base.copy(
-                fileQuery = if (args.has("query")) args.optString("query").trim().take(MAX_QUERY) else old.fileQuery,
+                fileQuery = newQuery,
                 fileKinds = if (args.has("kinds")) parseKinds(args.optString("kinds")).joinToString(",") { it.name } else old.fileKinds,
             )
         } else if (SCHEDULE_KEYS.none { args.has(it) }) {
@@ -241,9 +245,7 @@ class TaskManager(
                 val since = maxOf(passStart, t.activatedAt ?: 0L)
                 val fresh = items.doneSince(since, kinds.ifEmpty { ItemKind.entries.toSet() }.toList()).toSet()
                 if (fresh.isEmpty()) return@runCatching
-                val matched = if (t.fileQuery.isBlank()) fresh else {
-                    search.search(t.fileQuery, SearchFilter(kinds), SEARCH_LIMIT).hits.map { it.itemId }.filter { it in fresh }.toSet()
-                }
+                val matched = if (t.fileQuery.isBlank()) fresh else search.matchItems(t.fileQuery, fresh, kinds).keys
                 if (matched.isEmpty()) return@runCatching
                 val merged = (parseIds(tasks.get(t.taskId)?.pendingItemIds.orEmpty()) + matched).distinct().takeLast(MAX_PENDING)
                 tasks.setPending(t.taskId, merged.joinToString(","))
@@ -285,16 +287,44 @@ class TaskManager(
             return
         }
 
-        if (t.trigger == TaskTrigger.FILE) tasks.setPending(taskId, "")
-        val extra = if (t.trigger == TaskTrigger.FILE) filesBlock(ids) else ""
+        // File tasks with a condition: let the chat model check the candidates; nothing is posted when none really matches.
+        val confirmed = if (t.trigger == TaskTrigger.FILE && t.fileQuery.isNotBlank()) verify(t.fileQuery, ids) else ids
+        if (t.trigger == TaskTrigger.FILE) {
+            tasks.setPending(taskId, "")
+            if (confirmed.isEmpty()) { Log.i(TAG, "task $taskId: ${ids.size} candidate(s), none matched the condition"); return }
+        }
+        val extra = if (t.trigger == TaskTrigger.FILE) filesBlock(confirmed) else ""
         val result = runCatching { chatController().runScheduled(t, extra) }.getOrElse {
             ChatController.TurnResult("", it.message ?: it.javaClass.simpleName)
         }
         val ok = result.error == null
-        if (!ok && t.trigger == TaskTrigger.FILE) tasks.setPending(taskId, ids.joinToString(",")) // try these files again next time
+        if (!ok && t.trigger == TaskTrigger.FILE) tasks.setPending(taskId, confirmed.joinToString(",")) // try these files again next time
         tasks.setLastRun(taskId, clock(), if (ok) TaskResult.OK else TaskResult.FAILED, result.error)
         if (t.trigger == TaskTrigger.TIME && t.repeat == TaskRepeat.ONCE) tasks.setStatus(taskId, TaskStatus.DONE, t.activatedAt, null)
         notifier(t, result.answer.ifBlank { result.error ?: "" }, ok)
+    }
+
+    /**
+     * The candidate files the chat model confirms for [condition]. Files without any indexed text (e.g. photos with no
+     * recognized text) cannot be judged by words, so they pass on their semantic match alone. If the model cannot be
+     * asked at all, every candidate is kept and the run itself reports the problem.
+     */
+    private suspend fun verify(condition: String, ids: List<Long>): List<Long> {
+        val judged = ArrayList<Long>()
+        val passThrough = ArrayList<Long>()
+        val lines = StringBuilder()
+        for (id in ids.take(MAX_JUDGED)) {
+            val item = items.getItem(id) ?: continue
+            val text = ReadFileTool.fullText(items.segmentsOf(id)).replace(Regex("\\s+"), " ").take(FILE_EXCERPT)
+            if (text.isEmpty()) { passThrough += id; continue }
+            judged += id
+            lines.append("- item_id=$id ${item.displayName}: $text\n")
+        }
+        passThrough += ids.drop(MAX_JUDGED) // beyond the judged batch: keep, the run lists them as "more"
+        if (judged.isEmpty()) return passThrough
+        val reply = runCatching { chatController().judgeFiles(condition, lines.toString()) }.getOrNull() ?: return ids
+        val said = Regex("\\d+").findAll(reply).mapNotNull { it.value.toLongOrNull() }.toSet()
+        return judged.filter { it in said } + passThrough
     }
 
     private suspend fun addNote(t: ScheduledTaskEntity, text: String) {
@@ -332,9 +362,11 @@ class TaskManager(
     companion object {
         private const val TAG = "LSA.Tasks"
         private const val MAX_INSTRUCTION = 500
+        private const val NEEDS_QUERY = "Error: a file task needs a query with the key words of the files that should trigger it (for example \"receipt\"). " +
+            "Only if the user explicitly wants every new file, set any_file=true."
         private val SCHEDULE_KEYS = listOf("repeat", "at", "weekdays", "every_minutes", "date", "in_minutes")
         private const val MAX_QUERY = 200
-        private const val SEARCH_LIMIT = 100
+        private const val MAX_JUDGED = 20
         private const val MAX_PENDING = 200
         private const val MAX_FILES_LISTED = 10
         private const val FILE_EXCERPT = 300

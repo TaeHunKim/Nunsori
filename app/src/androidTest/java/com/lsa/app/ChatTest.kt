@@ -394,9 +394,11 @@ class ChatTest {
         assertEquals("only the new document that matches", fresh.toString(), db.taskDao().get(id)!!.pendingItemIds)
         assertEquals(listOf(id), enqueued)
 
-        model = FakeChatModel { listOf(ChatEvent.Token("Summary.")) }
+        // the model first checks the candidate (no tools), then runs the task (with tools)
+        model = FakeChatModel { tools -> if (tools.isEmpty()) listOf(ChatEvent.Token("$fresh")) else listOf(ChatEvent.Token("Summary.")) }
         tasks.run(id)
-        assertTrue(model.calls.single().user.text.contains("new-budget.txt"))
+        assertEquals(2, model.calls.size)
+        assertTrue(model.calls.last().user.text.contains("new-budget.txt"))
         assertEquals("the queue is emptied", "", db.taskDao().get(id)!!.pendingItemIds)
         tasks.onIndexed(passStart = now + 1)
         assertEquals("nothing new, nothing queued", 1, enqueued.size)
@@ -441,5 +443,33 @@ class ChatTest {
         val id = JSONObject(tasks.propose(a, dailyArgs())).getLong("task_id")
         assertTrue(tasks.update(b, JSONObject().put("task_id", id).put("at", "10:00")).startsWith("Error"))
         assertEquals(9 * 60, db.taskDao().get(id)!!.atMinuteOfDay)
+    }
+
+    private fun fileArgs() = JSONObject().put("trigger", "file").put("instruction", "Summarize it").put("query", "budget").put("kinds", "document")
+
+    @Test fun aCandidateTheModelRejectsPostsNothing() = runBlocking {
+        val chat = controller.newSession()
+        val id = JSONObject(tasks.propose(chat, fileArgs())).getLong("task_id").also { tasks.confirm(it) }
+        now += 1_000
+        addItem("budget-joke.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "a budget airline joke"), indexedAt = now)
+        tasks.onIndexed(passStart = 0)
+        assertEquals(listOf(id), enqueued)
+        model = FakeChatModel { listOf(ChatEvent.Token("NONE")) }
+        tasks.run(id)
+        assertEquals("only the check ran", 1, model.calls.size)
+        assertTrue(db.chatDao().messages(chat).isEmpty()); assertTrue(notified.isEmpty())
+        assertEquals("", db.taskDao().get(id)!!.pendingItemIds)
+        assertNull("a silent rejection is not a run", db.taskDao().get(id)!!.lastResult)
+    }
+
+    @Test fun aFileTaskNeedsAQueryUnlessEveryFileIsMeant() = runBlocking {
+        val chat = controller.newSession()
+        val noQuery = JSONObject().put("trigger", "file").put("instruction", "x").put("kinds", "image")
+        assertTrue(tasks.propose(chat, noQuery).startsWith("Error"))
+        assertEquals(0, db.taskDao().ofSession(chat).size)
+        val id = JSONObject(tasks.propose(chat, noQuery.put("any_file", true))).getLong("task_id")
+        assertEquals("", db.taskDao().get(id)!!.fileQuery)
+        assertTrue(tasks.update(chat, JSONObject().put("task_id", id).put("query", "")).startsWith("Error"))
+        assertTrue(!tasks.update(chat, JSONObject().put("task_id", id).put("query", "receipt")).startsWith("Error"))
     }
 }

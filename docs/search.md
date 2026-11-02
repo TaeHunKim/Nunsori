@@ -12,6 +12,15 @@ Code: `search/SearchEngine.kt`, `search/Fusion.kt`.
 5. Match the query against item **metadata** (place names, file name, title) the same way (`ItemDao.metaCandidates`, up to 2000, `META_CANDIDATES`).
 6. Combine, add the agreement bonus, pin exact matches, trim the tail, group by item, and show the best segment's location.
 
+## Matching new files for scheduled tasks
+
+`SearchEngine.matchItems(query, itemIds, kinds)` answers "does this new file match?" for chat tasks that wait for files ([chat.md](chat.md#scheduled-tasks)). It must not use the ranking above, because relative scores always crown something (the least bad file), and an existing better file hides a new good one. Instead, per item:
+
+- **Keywords:** all query words (or the exact phrase) in the file's text, name, title or place.
+- **Meaning:** per signal group, the raw similarity of the item's best segment must be at least `Z_MIN` (2.5) standard deviations above the mean similarity of the whole index (restricted to the task's kinds) and above the group's `minTop`. With fewer than `MIN_BASELINE` (20) vectors there is no distribution, so a fixed floor is used instead (visual 0.20, text 0.65, audio 0.55).
+
+It is a recall-oriented pre-filter; the chat model then checks the candidates. The thresholds are starting values to tune with real files.
+
 ## Why relative scores
 
 Cosine similarities live in different ranges per space (image to text vs text to text; unrelated OCR text still scores about 0.6). Raw scores are not comparable and rank fusion (RRF) was tried and dropped: it ignores how good the top hit is, so meaningless queries still return confident-looking results.

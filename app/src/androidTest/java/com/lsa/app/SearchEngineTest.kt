@@ -207,4 +207,40 @@ class SearchEngineTest {
         assertEquals(listOf(b, a), engine.search("", SearchFilter(kinds = setOf(ItemKind.IMAGE))).hits.map { it.itemId })
         assertTrue("no query and no filter returns nothing", engine.search("").hits.isEmpty())
     }
+
+    /** Vectors that all sit near the same far-off direction, with a little spread, so the index has a baseline. */
+    private suspend fun baseline(n: Int) {
+        for (i in 1..n) add("base$i", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.01f * (i % 7), 1f, (i % 5) * 0.02f, 0f)))
+    }
+
+    @Test fun matchItemsJudgesEachNewItemAgainstTheIndexNotAgainstTheBestFile() = runBlocking {
+        baseline(30)
+        val strong = add("strong", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(1f, 0.1f, 0f, 0f)))
+        val unrelated = add("unrelated", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.03f, 1f, 0.05f, 0f)))
+        val m = engine.matchItems("cat", setOf(strong, unrelated))
+        assertTrue(strong in m); assertFalse("an unrelated new file is not a match", unrelated in m)
+    }
+
+    @Test fun anExistingBetterMatchDoesNotHideANewGoodOne() = runBlocking {
+        baseline(30)
+        add("old-cat", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(1f, 0f, 0f, 0f)))
+        val fresh = add("new-cat", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(1f, 0.5f, 0f, 0f)))
+        assertTrue(fresh in engine.matchItems("cat", setOf(fresh)))
+    }
+
+    @Test fun matchItemsWhenNothingInTheIndexMatchesStillRejectsUnrelatedFiles() = runBlocking {
+        baseline(30)
+        val unrelated = add("unrelated", ItemKind.IMAGE, seg(SegmentType.IMAGE, 0, v(0.02f, 1f, 0.04f, 0f)))
+        assertTrue(engine.matchItems("cat", setOf(unrelated)).isEmpty())
+    }
+
+    @Test fun matchItemsKeywordsNeedEveryWordAndWorkWithoutAModel() = runBlocking {
+        queryVec = null
+        val both = add("a.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, null, text = "quarterly budget review"))
+        val one = add("b.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, null, text = "the budget airline"))
+        val m = engine.matchItems("budget review", setOf(both, one))
+        assertEquals(setOf(both), m.keys); assertTrue(m.getValue(both).keyword)
+        val byName = add("budget-review.pdf", ItemKind.DOC)
+        assertTrue(byName in engine.matchItems("budget review", setOf(byName)))
+    }
 }

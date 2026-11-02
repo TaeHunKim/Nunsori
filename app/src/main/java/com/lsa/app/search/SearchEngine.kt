@@ -36,6 +36,9 @@ data class SearchFilter(val kinds: Set<ItemKind> = emptySet(), val fromMs: Long?
     val active: Boolean get() = kinds.isNotEmpty() || fromMs != null || toMs != null
 }
 
+/** Why a new item was judged to match a query: [strength] is the semantic z-score (or a large value for a word match). */
+data class ItemMatch(val itemId: Long, val strength: Float, val keyword: Boolean)
+
 data class SearchResult(val hits: List<SearchHit>, val semanticAvailable: Boolean)
 
 /**
@@ -199,6 +202,56 @@ class SearchEngine(
         return SearchResult(hits, semanticAvailable = qVec != null)
     }
 
+    /**
+     * Decides, for each of [itemIds] on its own, whether it matches [query] (used by scheduled "new file" tasks).
+     * Unlike [search] it never compares an item with the best existing file: a semantic match must stand out from the
+     * typical similarity of the whole index (z-score per signal group) and a keyword match needs all words (or the exact
+     * phrase) in the file's text, name, title or place. It is meant as a recall-oriented pre-filter; the chat model checks the rest.
+     */
+    suspend fun matchItems(query: String, itemIds: Set<Long>, kinds: Set<ItemKind> = emptySet()): Map<Long, ItemMatch> {
+        val q = query.trim()
+        if (q.isEmpty() || itemIds.isEmpty()) return emptyMap()
+        val out = HashMap<Long, ItemMatch>()
+
+        val tokens = KeywordMatcher.tokens(q)
+        if (tokens.isNotEmpty()) for (id in itemIds) {
+            val item = dao.getItem(id) ?: continue
+            val texts = listOf(listOfNotNull(item.displayName, item.title, item.place).joinToString(" ")) + dao.segmentsOf(id).mapNotNull { it.text }
+            if (texts.any { t -> KeywordMatcher.match(t, tokens, q)?.let { m -> m.exact || m.count == tokens.size } == true }) {
+                out[id] = ItemMatch(id, KEYWORD_STRENGTH, true)
+            }
+        }
+
+        loadCache(settings.embeddingModelId.first())
+        val qVec = queryEmbedder(q) ?: return out
+        val allowed: Set<Long>? = if (kinds.isNotEmpty()) dao.allowedItemIds(kinds.toList(), Long.MIN_VALUE, Long.MAX_VALUE).toHashSet() else null
+        val groups = SignalGroup.entries
+        val n = IntArray(groups.size)
+        val sum = DoubleArray(groups.size)
+        val sumSq = DoubleArray(groups.size)
+        val mine = groups.map { HashMap<Long, Float>() }
+        for (v in vectors) {
+            if (allowed != null && v.itemId !in allowed) continue
+            val s = Quant.dot(qVec, v.embedding)
+            val g = v.type.group.ordinal
+            n[g]++; sum[g] += s; sumSq[g] += s.toDouble() * s
+            if (v.itemId in itemIds) mine[g].merge(v.itemId, s) { a, b -> maxOf(a, b) }
+        }
+        for (g in groups) {
+            val i = g.ordinal
+            val enoughBaseline = n[i] >= MIN_BASELINE
+            val mean = if (n[i] > 0) sum[i] / n[i] else 0.0
+            val std = if (n[i] > 1) kotlin.math.sqrt((sumSq[i] / n[i] - mean * mean).coerceAtLeast(0.0)).coerceAtLeast(MIN_STD) else MIN_STD
+            for ((id, s) in mine[i]) {
+                val z = ((s - mean) / std).toFloat()
+                val ok = s >= g.minTop && (if (enoughBaseline) z >= Z_MIN else s >= g.smallIndexFloor)
+                if (ok && z > (out[id]?.strength ?: -1f)) out[id] = ItemMatch(id, z, out[id]?.keyword == true)
+            }
+        }
+        Log.d(TAG, "MATCH q='$q' candidates=${itemIds.size} matched=${out.keys}")
+        return out
+    }
+
     /** A transcript chunk covers many seconds; if the best visual clip lies within it, that clip is the better answer. */
     private fun narrowToClip(chosen: SegmentRef?, clip: SegmentRef?): SegmentRef? {
         if (chosen == null || clip == null || chosen.type == SegmentType.VIDEO_CLIP) return chosen
@@ -212,6 +265,8 @@ class SearchEngine(
     private val SignalGroup.margin get() = when (this) { SignalGroup.VISUAL -> 0.10f; SignalGroup.TEXT -> 0.08f; SignalGroup.AUDIO -> 0.10f }
     private val SignalGroup.minSpread get() = 0.08f
     private val SignalGroup.minTop get() = when (this) { SignalGroup.VISUAL -> 0.10f; SignalGroup.TEXT -> 0.30f; SignalGroup.AUDIO -> 0.30f }
+    /** With a tiny index there is no distribution to judge against, so a fixed raw similarity is required instead. */
+    private val SignalGroup.smallIndexFloor get() = when (this) { SignalGroup.VISUAL -> 0.20f; SignalGroup.TEXT -> 0.65f; SignalGroup.AUDIO -> 0.55f }
     private val SignalGroup.weight get() = when (this) { SignalGroup.VISUAL -> W_VISUAL; SignalGroup.TEXT -> W_TEXT; SignalGroup.AUDIO -> W_AUDIO }
 
     /** Text cards drawn from Office documents say little about how the document looks. */
@@ -232,5 +287,11 @@ class SearchEngine(
         const val AGREEMENT_BONUS = 0.15f
         const val META_CANDIDATES = 2000
         const val BROWSE_LIMIT = 100
+        /** [matchItems]: a semantic match must be this many standard deviations above the mean similarity of the index. */
+        const val Z_MIN = 2.5f
+        /** [matchItems]: fewer vectors than this and the z-score is not meaningful. */
+        const val MIN_BASELINE = 20
+        private const val MIN_STD = 1e-3
+        private const val KEYWORD_STRENGTH = 100f
     }
 }

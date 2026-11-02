@@ -21,7 +21,8 @@ class ScheduleTaskTool(private val tasks: TaskManager, private val sessionId: Lo
         "every_minutes":{"type":"integer","description":"every_minutes only: interval, at least 5."},
         "date":{"type":"string","description":"once only: YYYY-MM-DD (default today, or tomorrow if the time has passed)."},
         "in_minutes":{"type":"integer","description":"once only: run this many minutes from now instead of date/at."},
-        "query":{"type":"string","description":"file only: words or description a new file must match; leave out for any new file of the kinds."},
+        "query":{"type":"string","description":"file only, required: the key words of what a new file must be about (e.g. receipt), not the instruction."},
+        "any_file":{"type":"boolean","description":"file only: true only when the user explicitly wants every new file; then query may be empty."},
         "kinds":{"type":"string","description":"file only: comma separated document, image, audio, video; leave out for all."}},
         "required":["trigger","instruction"]}"""
 
@@ -44,7 +45,8 @@ class UpdateScheduledTaskTool(private val tasks: TaskManager, private val sessio
         "every_minutes":{"type":"integer","description":"every_minutes: interval, at least 5."},
         "date":{"type":"string","description":"once: YYYY-MM-DD."},
         "in_minutes":{"type":"integer","description":"once: minutes from now."},
-        "query":{"type":"string","description":"file tasks: new query (empty string = any file)."},
+        "query":{"type":"string","description":"file tasks: new key words of what a new file must be about."},
+        "any_file":{"type":"boolean","description":"file tasks: true only to trigger on every new file (query empty)."},
         "kinds":{"type":"string","description":"file tasks: comma separated document, image, audio, video."}},
         "required":["task_id"]}"""
 

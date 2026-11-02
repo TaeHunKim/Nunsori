@@ -122,6 +122,26 @@ class ChatController(
         } finally { scheduledRunning = false }
     }
 
+    /**
+     * Asks the chat model which of [files] (lines `- item_id=N name: excerpt`) satisfy [condition]; returns the raw reply,
+     * or null when no model could be loaded. Used to check scheduled "new file" tasks before anything is posted; the chat
+     * itself is untouched.
+     */
+    suspend fun judgeFiles(condition: String, files: String): String? = turnLock.withLock {
+        scheduledRunning = true
+        try {
+            val lease = residency.chat() ?: return@withLock null
+            lease.use { l ->
+                val sb = StringBuilder()
+                val prompt = "Condition: files about or related to \"$condition\".\n\nFiles:\n$files"
+                l.value.reply("judge|${clock()}", JUDGE_SYSTEM, emptyList(), ChatTurn(TurnRole.USER, prompt), emptyList()).collect { e ->
+                    if (e is ChatEvent.Token) sb.append(e.text)
+                }
+                sb.toString()
+            }
+        } finally { scheduledRunning = false }
+    }
+
     private suspend fun runTurn(
         sessionId: Long, text: String, pending: List<PendingAttachment>,
         task: ScheduledTaskEntity? = null, extraContext: String = "",
@@ -298,7 +318,7 @@ class ChatController(
             "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
             "and give search_index date_from/date_to as YYYY-MM-DD (a query is optional when you filter by date or kind, e.g. to list yesterday's photos). " +
             "When the user asks you to do something later or repeatedly (every day at 9, every Monday, in 30 minutes, whenever a new file about X is added), " +
-            "call schedule_task with the instruction written so it can run on its own; it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. To change an existing task the user asks about, use list_scheduled_tasks and update_scheduled_task instead of creating a new one. " +
+            "call schedule_task with the instruction written so it can run on its own (for a file task put only the key words of the condition in query, e.g. \"receipt\", never the whole instruction); it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. To change an existing task the user asks about, use list_scheduled_tasks and update_scheduled_task instead of creating a new one. " +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +
@@ -316,6 +336,8 @@ class ChatController(
         private const val SYSTEM_TOKENS = 350
         private const val PHOTO_SIDE = 1024
         private const val PHOTO_UNSUPPORTED = "[A photo is attached, but this chat model cannot see images.]\n\n"
+        private const val JUDGE_SYSTEM = "You check files against a condition. Reply with only the item_id numbers of the files that clearly match, " +
+            "separated by commas, or the word NONE. No other words."
         private const val SCHEDULED_NOTE = "[This is a scheduled task running now without the user present. Carry out the instruction and write the result as a message to the user.]\n"
         private const val TOO_MANY_CALLS = "I stopped because I called tools too many times without an answer."
     }
