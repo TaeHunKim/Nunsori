@@ -65,7 +65,8 @@ class AppContainer(val context: Context) {
     val taskManager: com.lsa.app.chat.schedule.TaskManager by lazy {
         com.lsa.app.chat.schedule.TaskManager(context, db.taskDao(), db.chatDao(), db.itemDao(), search, taskAlarms, { chat }, judgeFirst = { settings.taskJudgeFirst.first() })
     }
-    val actions: com.lsa.app.chat.actions.ActionManager by lazy { com.lsa.app.chat.actions.ActionManager(db.actionDao()) }
+    val actions: com.lsa.app.chat.actions.ActionManager by lazy { com.lsa.app.chat.actions.ActionManager(db.actionDao(), fileOps = fileOps) }
+    val fileOps: com.lsa.app.chat.actions.FileOps by lazy { com.lsa.app.chat.actions.FileOps(context, db.itemDao(), folders = { indexing.folderSpecs() }) }
     val chat: com.lsa.app.chat.ChatController by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), residency, search, settings, appScope, taskManager = taskManager, actions = actions) }
     val search by lazy { SearchEngine(db.itemDao(), { q -> residency.embedder()?.use { it.value.embedQuery(q) } }, settings) }
 }

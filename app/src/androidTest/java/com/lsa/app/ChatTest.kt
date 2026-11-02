@@ -104,7 +104,7 @@ class ChatTest {
         residency.chatFactory = { _, _, _ -> model }
         search = SearchEngine(db.itemDao(), { null }, settings)
         alarms = FakeAlarms(ctx)
-        actionManager = com.lsa.app.chat.actions.ActionManager(db.actionDao()) { now }
+        actionManager = com.lsa.app.chat.actions.ActionManager(db.actionDao(), clock = { now })
         tasks = TaskManager(
             ctx, db.taskDao(), db.chatDao(), db.itemDao(), search, alarms, { controller }, clock = { now },
             batteryLow = { lowBattery }, notifier = { t, text, ok -> notified += Triple(t.taskId, text, ok) }, enqueue = { enqueued += it },
@@ -516,14 +516,14 @@ class ChatTest {
         val action = db.actionDao().get(tool.actionId!!)!!
         assertEquals(com.lsa.app.data.db.ActionStatus.PROPOSED, action.status)
         assertEquals(com.lsa.app.data.db.ActionKind.CALENDAR_EVENT, action.kind)
-        val r = actionManager.intentFor(action.actionId)
+        val r = actionManager.approve(action.actionId)
         assertTrue(r is com.lsa.app.chat.actions.ApprovalResult.Launch)
         val intent = (r as com.lsa.app.chat.actions.ApprovalResult.Launch).intent
         assertEquals(android.content.Intent.ACTION_INSERT, intent.action)
         assertEquals("Wedding", intent.getStringExtra(android.provider.CalendarContract.Events.TITLE))
         actionManager.markDone(action.actionId)
         assertEquals(com.lsa.app.data.db.ActionStatus.DONE, db.actionDao().get(action.actionId)!!.status)
-        assertTrue("a handled card cannot be approved again", actionManager.intentFor(action.actionId) is com.lsa.app.chat.actions.ApprovalResult.Failed)
+        assertTrue("a handled card cannot be approved again", actionManager.approve(action.actionId) is com.lsa.app.chat.actions.ApprovalResult.Failed)
     }
 
     @Test fun aDismissedProposalStaysDismissedAndTheToolIsOffWhenTheSwitchIsOff() = runBlocking {

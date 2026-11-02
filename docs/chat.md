@@ -40,9 +40,19 @@ Calendar and contact tools are described in [Action cards](#action-cards-calenda
 
 ## Action cards (calendar and contacts)
 
-The *Calendar & contacts* chip switches two tools: `add_calendar_event` (`title`, `start` as `YYYY-MM-DD HH:mm` local time or `YYYY-MM-DD` for all day, optional `end`, `all_day`, `location`, `description`) and `add_contact` (`name`, `phone`, `email`, `organization`, `note`). Like `schedule_task` they only **propose**: the app validates the fields (`ActionPayloads`), stores a proposal (`pending_actions`, status `PROPOSED`) and shows an **action card** in the chat with what would be added. The model supplies fields, never URLs or intents. **Open in Calendar / Contacts** hands an `ACTION_INSERT` intent with the fields filled in to the system app (no calendar or contacts permission is needed; you press Save there); the card then shows as done. **Dismiss** drops it. A handled card cannot be approved again. If no app can take the intent the card says so.
+The *Calendar & contacts* chip switches two tools (file tools are below): `add_calendar_event` (`title`, `start` as `YYYY-MM-DD HH:mm` local time or `YYYY-MM-DD` for all day, optional `end`, `all_day`, `location`, `description`) and `add_contact` (`name`, `phone`, `email`, `organization`, `note`). Like `schedule_task` they only **propose**: the app validates the fields (`ActionPayloads`), stores a proposal (`pending_actions`, status `PROPOSED`) and shows an **action card** in the chat with what would be added. The model supplies fields, never URLs or intents. **Open in Calendar / Contacts** hands an `ACTION_INSERT` intent with the fields filled in to the system app (no calendar or contacts permission is needed; you press Save there); the card then shows as done. **Dismiss** drops it. A handled card cannot be approved again. If no app can take the intent the card says so.
 
-The card is generic (`ActionManager`, `ActionKind`, `chat_messages.actionId`), so further actions (moving or deleting files) use the same flow: propose, show a card, act only after approval.
+### File actions
+
+The *File actions* chip switches `move_files` (`item_ids`, `destination`) and `delete_files` (`item_ids`, optional `permanent`). The model first finds files with `search_index` and passes their `item_id`s (up to 50; unknown ids are refused), never paths. The card lists the file names and what will happen; nothing changes before you approve.
+
+- **Delete** goes to the **trash** by default (button *Move to trash*). *Delete permanently* is a separate button on the card (the primary button only when the user asked for it explicitly). Photos, audio and video in the media store use the system trash (`IS_TRASHED`, restorable from the gallery, kept about 30 days); text and documents are moved to the hidden folder `.LSA_Trash` in the storage root (with `.nomedia`, skipped by indexing; restore by moving them back with a file manager).
+- **Move** puts files into a folder relative to the phone's storage (`Pictures/Wedding`, created if missing; not absolute, hidden or inside `Android/`). A name clash gets `name (1).ext`. Media store files move by changing `RELATIVE_PATH` (their id and index data stay; the system only allows folders that fit the file type, otherwise that file is reported as failed); plain files are renamed and their index row follows without re-indexing. A file that ends up outside the indexed folders leaves the index.
+- **Index:** moved or deleted files are updated in the index at once, so search does not show them. Every file is checked again at approval time (gone files are dropped and reported); partial failures are listed on the card.
+- **Needs "All files access"** (Android 11+, the same permission documents need). Without it, approving shows a hint and a button to the setting and the card stays open.
+- Not covered yet: restoring from `.LSA_Trash` inside the app, and moving files that live outside the primary storage.
+
+The card is generic (`ActionManager`, `ActionKind`, `chat_messages.actionId`): propose, show a card, act only after approval.
 
 ## Scheduled tasks
 

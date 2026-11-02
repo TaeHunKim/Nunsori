@@ -10,7 +10,7 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 /** What an action card does once the user approves it. */
-enum class ActionKind { CALENDAR_EVENT, CONTACT }
+enum class ActionKind { CALENDAR_EVENT, CONTACT, MOVE_FILES, DELETE_FILES }
 
 /** PROPOSED: waiting for the user. DONE: approved and carried out (or handed to the system screen). */
 enum class ActionStatus { PROPOSED, DONE, DISMISSED, FAILED }

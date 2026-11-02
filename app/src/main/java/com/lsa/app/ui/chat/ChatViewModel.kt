@@ -50,15 +50,17 @@ class ChatViewModel(private val c: AppContainer, val sessionId: Long) : ViewMode
     fun deleteTask(id: Long) { viewModelScope.launch { c.taskManager.delete(id) } }
     fun action(id: Long) = c.db.actionDao().observe(id)
     /** Approve a card: [start] hands the intent to a system screen and returns false when no app can take it. */
-    fun approveAction(id: Long, start: (android.content.Intent) -> Boolean) {
+    fun approveAction(id: Long, permanent: Boolean = false, start: (android.content.Intent) -> Boolean = { false }) {
         viewModelScope.launch {
-            when (val r = c.actions.intentFor(id)) {
+            when (val r = c.actions.approve(id, permanent)) {
                 is com.lsa.app.chat.actions.ApprovalResult.Launch -> if (start(r.intent)) c.actions.markDone(id) else c.actions.markFailed(id, "no_app")
                 is com.lsa.app.chat.actions.ApprovalResult.Done -> c.actions.markDone(id, r.note)
-                is com.lsa.app.chat.actions.ApprovalResult.Failed -> Unit
+                is com.lsa.app.chat.actions.ApprovalResult.Failed -> if (r.reason == com.lsa.app.chat.actions.FileOps.NEEDS_ACCESS) needsFileAccess = true
             }
         }
     }
+    /** Set when a file card was approved but "All files access" is missing (the UI then points to the setting). */
+    var needsFileAccess by mutableStateOf(false)
     fun dismissAction(id: Long) { viewModelScope.launch { c.actions.dismiss(id) } }
     fun pauseTask(id: Long, paused: Boolean) { viewModelScope.launch { c.taskManager.setPaused(id, paused) } }
 

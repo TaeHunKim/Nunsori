@@ -12,6 +12,8 @@ import com.lsa.app.data.db.ScheduledTaskEntity
 import com.lsa.app.chat.actions.ActionManager
 import com.lsa.app.chat.actions.AddCalendarEventTool
 import com.lsa.app.chat.actions.AddContactTool
+import com.lsa.app.chat.actions.DeleteFilesTool
+import com.lsa.app.chat.actions.MoveFilesTool
 import com.lsa.app.chat.schedule.TaskManager
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.BitmapLoader
@@ -210,7 +212,7 @@ class ChatController(
                 val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}|${todayString()}"
                 _run.value = ChatRun(sessionId, ChatPhase.GENERATING, trimmed = history.dropped > 0)
                 var toolCalls = 0
-                model.reply(key, systemPrompt(custom, tools.any { it.name == ChatToolNames.CALENDAR }), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
+                model.reply(key, systemPrompt(custom, tools.any { it.name == ChatToolNames.CALENDAR }, tools.any { it.name == ChatToolNames.MOVE }), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
                     when (e) {
                         is ChatEvent.Token -> {
                             answer.append(e.text)
@@ -255,7 +257,7 @@ class ChatController(
 
     /** The `action_id` of a proposal (calendar event, contact), so its card can be found from the stored tool message. */
     private fun actionIdOf(tool: String, result: String): Long? =
-        if (tool != ChatToolNames.CALENDAR && tool != ChatToolNames.CONTACT) null else runCatching { JSONObject(result).optLong("action_id", -1) }.getOrNull()?.takeIf { it > 0 }
+        if (tool !in ChatToolNames.ACTION_TOOLS) null else runCatching { JSONObject(result).optLong("action_id", -1) }.getOrNull()?.takeIf { it > 0 }
 
     private fun scheduledTools(): List<ChatTool> = listOf(SearchIndexTool(search, items), ReadFileTool(items))
 
@@ -281,6 +283,10 @@ class ChatController(
             if (ChatToolNames.CALENDAR in on && actions != null) {
                 add(AddCalendarEventTool(actions, session.sessionId))
                 add(AddContactTool(actions, session.sessionId))
+            }
+            if (ChatToolNames.MOVE in on && actions != null) {
+                add(MoveFilesTool(actions, items, session.sessionId))
+                add(DeleteFilesTool(actions, items, session.sessionId))
             }
         }
     }
@@ -325,13 +331,14 @@ class ChatController(
         return "${fmt.format(Date(clock()))}, ${tz.id}"
     }
 
-    private fun systemPrompt(custom: String, withActions: Boolean): String {
+    private fun systemPrompt(custom: String, withActions: Boolean, withFiles: Boolean): String {
         return "You are the assistant of a private, on-device file search app. Today is ${todayString()} " +
             "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
             "and give search_index date_from/date_to as YYYY-MM-DD (a query is optional when you filter by date or kind, e.g. to list yesterday's photos). " +
             "When the user asks you to do something later or repeatedly (every day at 9, every Monday, in 30 minutes, whenever a new file about X is added), " +
             "call schedule_task with the instruction written so it can run on its own (for a file task, query lists the user's own words first and then 2 to 5 concrete words a matching file would contain, separated by |, e.g. \"schedule|wedding invitation|invitation|appointment\"; never the whole instruction); it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. To change an existing task the user asks about, use list_scheduled_tasks and update_scheduled_task instead of creating a new one. " +
             (if (withActions) "When a file shows an event or a person worth saving (an invitation, ticket, appointment, business card) and the user wants it in their calendar or contacts, call add_calendar_event or add_contact with the details; the user approves a card first, so never say it is already added. " else "") +
+            (if (withFiles) "To move or delete files the user asks about, first find them with search_index and then call move_files or delete_files with their item_ids (never guess ids); the user approves a card first, deleting goes to the trash unless they ask for permanent deletion, and you must not say the files are already moved or deleted. " else "") +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +

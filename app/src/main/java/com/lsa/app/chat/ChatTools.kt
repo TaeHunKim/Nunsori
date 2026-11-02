@@ -28,7 +28,12 @@ object ChatToolNames {
     /** add_calendar_event is the switch for the calendar and contact tools (action cards the user approves). */
     const val CALENDAR = "add_calendar_event"
     const val CONTACT = "add_contact"
-    val ALL = listOf(SEARCH, READ, SCHEDULE, CALENDAR)
+    /** move_files is the switch for the move and delete tools (action cards the user approves). */
+    const val MOVE = "move_files"
+    const val DELETE = "delete_files"
+    val ALL = listOf(SEARCH, READ, SCHEDULE, CALENDAR, MOVE)
+    /** Tools whose result carries an `action_id` (a card in the chat). */
+    val ACTION_TOOLS = setOf(CALENDAR, CONTACT, MOVE, DELETE)
 }
 
 /** Kind names the model uses; "document" covers text files and PDF/Office. */

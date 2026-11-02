@@ -39,6 +39,10 @@ interface ItemDao {
     @Query("UPDATE items SET folderKey = :folderKey, displayName = :displayName WHERE itemId = :id")
     suspend fun updateLocation(id: Long, folderKey: String, displayName: String)
 
+    /** A plain file moved to another path: its identity (sourceKey) changes, its index data stays. */
+    @Query("UPDATE items SET sourceKey = :sourceKey, uri = :uri, folderKey = :folderKey, displayName = :displayName WHERE itemId = :id")
+    suspend fun relocate(id: Long, sourceKey: String, uri: String, folderKey: String, displayName: String)
+
     @Query("UPDATE items SET progress = :progress WHERE itemId = :id")
     suspend fun updateProgress(id: Long, progress: Long)
 
