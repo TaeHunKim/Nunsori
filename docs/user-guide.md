@@ -49,6 +49,8 @@ See [chat.md](chat.md) for how the context is built.
 
 ## Settings
 
+Four tabs: **Index** (what to index, folders, automatic indexing), **Models** (embedding, OCR, speech and chat models, model memory, Hugging Face token), **Chat** (context size, your instructions, background tasks) and **App** (storage, resource indicator, language, version).
+
 - **What to index:** Images, Text files, Documents, Audio, Video.
 - **Folders:** quick-add chips for Camera, Screenshots and Downloads, or pick any folder; choose whether to include subfolders. (Without "All files access" only photos, audio and video in a folder are indexed.)
 - **Speech recognition and OCR:** the first-run wizard offers the SenseVoice download when Audio or Video is on. OCR is Google ML Kit, built in, nothing to download. Android has no OCR API of its own, and its speech recognizer is meant for the microphone, so it is not used for files.

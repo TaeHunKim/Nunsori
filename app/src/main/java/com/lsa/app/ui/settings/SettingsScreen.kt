@@ -13,6 +13,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -27,6 +29,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
@@ -35,7 +39,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,59 +79,40 @@ import com.lsa.app.ui.common.WarningCard
 fun SettingsScreen() {
     val container = rememberContainer()
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { initializer { SettingsViewModel(container) } })
-    val ctx = LocalContext.current
 
     // Both permissions can change while we are in the system settings screen: re-check when coming back.
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
         vm.refreshModels(); vm.refreshThumbBytes()
     }
-    val states by vm.modelStates.collectAsStateWithLifecycle()
-    val ocrId by vm.ocrModelId.collectAsStateWithLifecycle()
-    val savedToken by vm.hfToken.collectAsStateWithLifecycle()
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    val tabs = listOf(R.string.settings_tab_index, R.string.settings_tab_models, R.string.settings_tab_chat, R.string.settings_tab_app)
+    Column(Modifier.fillMaxSize()) {
+        PrimaryTabRow(selectedTabIndex = tab) {
+            tabs.forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(label), maxLines = 1) }) }
+        }
+        // one scroll state per tab, so switching back keeps the position
+        key(tab) {
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                when (tab) {
+                    0 -> IndexTab(vm)
+                    1 -> ModelsTab(vm)
+                    2 -> ChatTab(vm)
+                    else -> AppTab(vm)
+                }
+            }
+        }
+    }
+}
 
-    Column(
-        Modifier.verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+@Composable
+private fun IndexTab(vm: SettingsViewModel) {
         KindsSection(vm)
         HorizontalDivider()
 
         FoldersSection(vm)
-        HorizontalDivider()
-
-        EmbeddingModelsSection(vm)
-        Section(R.string.settings_ocr_models, null)
-        ModelCatalog.ofKind(ModelKind.OCR).forEach { spec ->
-            ModelCard(spec, states[spec.id], selected = spec.id == ocrId, vm = vm, onSelect = { vm.selectOcr(spec.id) })
-        }
-        SpeechModelsSection(vm)
-        HorizontalDivider()
-
-        // --- Chat
-        Section(R.string.settings_chat_models, R.string.settings_chat_desc)
-        val chatId by vm.chatModelId.collectAsStateWithLifecycle()
-        ModelCatalog.ofKind(ModelKind.LLM).forEach { spec ->
-            ModelCard(spec, states[spec.id], selected = spec.id == chatId, vm = vm, onSelect = { vm.selectChat(spec.id) })
-        }
-        val chatContext by vm.chatContextTokens.collectAsStateWithLifecycle()
-        Text(stringResource(R.string.chat_context_title), style = MaterialTheme.typography.titleSmall)
-        Text(stringResource(R.string.chat_context_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(2048, 4096, 8192).forEach { n ->
-                FilterChip(selected = chatContext == n, onClick = { vm.setChatContext(n) }, label = { Text("${n / 1024}K") })
-            }
-        }
-        val savedPrompt by vm.chatCustomPrompt.collectAsStateWithLifecycle()
-        var prompt by remember(savedPrompt) { mutableStateOf(savedPrompt) }
-        Text(stringResource(R.string.chat_prompt_title), style = MaterialTheme.typography.titleSmall)
-        Text(stringResource(R.string.chat_prompt_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = prompt, onValueChange = { prompt = it.take(com.lsa.app.data.prefs.SettingsStore.MAX_CUSTOM_PROMPT) },
-            minLines = 3, maxLines = 8, modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.chat_prompt_hint)) },
-            supportingText = { Text("${prompt.length} / ${com.lsa.app.data.prefs.SettingsStore.MAX_CUSTOM_PROMPT}") },
-        )
-        OutlinedButton(onClick = { vm.saveChatPrompt(prompt) }, enabled = prompt.trim() != savedPrompt) { Text(stringResource(R.string.btn_save)) }
         HorizontalDivider()
 
         // --- Automatic indexing
@@ -133,19 +121,26 @@ fun SettingsScreen() {
         val minutes by vm.scheduleMinutes.collectAsStateWithLifecycle()
         val chargingOnly by vm.chargingOnly.collectAsStateWithLifecycle()
         AutoIndexOptions(autoMode, minutes, chargingOnly, vm::setAutoMode, vm::setScheduleMinutes, vm::setChargingOnly)
+}
+
+@Composable
+private fun ModelsTab(vm: SettingsViewModel) {
+    val states by vm.modelStates.collectAsStateWithLifecycle()
+    val ocrId by vm.ocrModelId.collectAsStateWithLifecycle()
+    val savedToken by vm.hfToken.collectAsStateWithLifecycle()
+        EmbeddingModelsSection(vm)
+        Section(R.string.settings_ocr_models, null)
+        ModelCatalog.ofKind(ModelKind.OCR).forEach { spec ->
+            ModelCard(spec, states[spec.id], selected = spec.id == ocrId, vm = vm, onSelect = { vm.selectOcr(spec.id) })
+        }
+        SpeechModelsSection(vm)
         HorizontalDivider()
 
-        // --- Scheduled tasks
-        Section(R.string.bg_title, R.string.bg_desc)
-        BackgroundAccessCards()
-        Text(stringResource(R.string.task_file_disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        val judgeFirst by vm.taskJudgeFirst.collectAsStateWithLifecycle()
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_judge_first_title), style = MaterialTheme.typography.titleSmall)
-                Text(stringResource(R.string.settings_judge_first_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            androidx.compose.material3.Switch(checked = judgeFirst, onCheckedChange = vm::setTaskJudgeFirst)
+        // --- Chat model
+        Section(R.string.settings_chat_models, R.string.settings_chat_desc)
+        val chatId by vm.chatModelId.collectAsStateWithLifecycle()
+        ModelCatalog.ofKind(ModelKind.LLM).forEach { spec ->
+            ModelCard(spec, states[spec.id], selected = spec.id == chatId, vm = vm, onSelect = { vm.selectChat(spec.id) })
         }
         HorizontalDivider()
 
@@ -167,6 +162,58 @@ fun SettingsScreen() {
         }
         HorizontalDivider()
 
+        // --- HF token
+        Section(R.string.settings_token, R.string.settings_token_desc)
+        var token by remember(savedToken) { mutableStateOf(savedToken) }
+        OutlinedTextField(
+            value = token, onValueChange = { token = it }, singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            label = { Text("hf_…") }, modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedButton(onClick = { vm.saveToken(token) }, enabled = token != savedToken) { Text(stringResource(R.string.btn_save)) }
+}
+
+@Composable
+private fun ChatTab(vm: SettingsViewModel) {
+        val chatContext by vm.chatContextTokens.collectAsStateWithLifecycle()
+        Text(stringResource(R.string.chat_context_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.chat_context_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(2048, 4096, 8192).forEach { n ->
+                FilterChip(selected = chatContext == n, onClick = { vm.setChatContext(n) }, label = { Text("${n / 1024}K") })
+            }
+        }
+        val savedPrompt by vm.chatCustomPrompt.collectAsStateWithLifecycle()
+        var prompt by remember(savedPrompt) { mutableStateOf(savedPrompt) }
+        Text(stringResource(R.string.chat_prompt_title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.chat_prompt_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedTextField(
+            value = prompt, onValueChange = { prompt = it.take(com.lsa.app.data.prefs.SettingsStore.MAX_CUSTOM_PROMPT) },
+            minLines = 3, maxLines = 8, modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.chat_prompt_hint)) },
+            supportingText = { Text("${prompt.length} / ${com.lsa.app.data.prefs.SettingsStore.MAX_CUSTOM_PROMPT}") },
+        )
+        OutlinedButton(onClick = { vm.saveChatPrompt(prompt) }, enabled = prompt.trim() != savedPrompt) { Text(stringResource(R.string.btn_save)) }
+        HorizontalDivider()
+
+        // --- Scheduled tasks
+        Section(R.string.bg_title, R.string.bg_desc)
+        BackgroundAccessCards()
+        Text(stringResource(R.string.task_file_disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val judgeFirst by vm.taskJudgeFirst.collectAsStateWithLifecycle()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_judge_first_title), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.settings_judge_first_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            androidx.compose.material3.Switch(checked = judgeFirst, onCheckedChange = vm::setTaskJudgeFirst)
+        }
+}
+
+@Composable
+private fun AppTab(vm: SettingsViewModel) {
+    val ctx = LocalContext.current
         // --- Storage
         Section(R.string.storage_title, null)
         val thumbBytes by vm.thumbBytes.collectAsStateWithLifecycle()
@@ -191,22 +238,9 @@ fun SettingsScreen() {
         }
         HorizontalDivider()
 
-        // --- HF token
-        Section(R.string.settings_token, R.string.settings_token_desc)
-        var token by remember(savedToken) { mutableStateOf(savedToken) }
-        OutlinedTextField(
-            value = token, onValueChange = { token = it }, singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            label = { Text("hf_…") }, modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedButton(onClick = { vm.saveToken(token) }, enabled = token != savedToken) { Text(stringResource(R.string.btn_save)) }
-        HorizontalDivider()
-
         // --- Language
         Section(R.string.settings_language, null)
         LanguagePicker()
-    }
 }
 
 @Composable

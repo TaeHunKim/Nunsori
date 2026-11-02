@@ -281,6 +281,10 @@
     <string name="task_label">Scheduled task</string>
     <string name="chat_tool_actions">Calendar &amp; contacts</string>
     <string name="chat_tools">Tools</string>
+    <string name="settings_tab_index">Index</string>
+    <string name="settings_tab_models">Models</string>
+    <string name="settings_tab_chat">Chat</string>
+    <string name="settings_tab_app">App</string>
     <string name="chat_tool_files">Move &amp; delete files</string>
     <string name="action_calendar_title">Add to calendar</string>
     <string name="action_contact_title">Add contact</string>

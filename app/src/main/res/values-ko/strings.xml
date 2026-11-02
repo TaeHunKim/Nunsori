@@ -275,6 +275,10 @@
     <string name="task_label">예약된 작업</string>
     <string name="chat_tool_actions">일정·연락처</string>
     <string name="chat_tools">도구</string>
+    <string name="settings_tab_index">색인</string>
+    <string name="settings_tab_models">모델</string>
+    <string name="settings_tab_chat">채팅</string>
+    <string name="settings_tab_app">앱</string>
     <string name="chat_tool_files">파일 이동·삭제</string>
     <string name="action_calendar_title">캘린더에 추가</string>
     <string name="action_contact_title">연락처 추가</string>
