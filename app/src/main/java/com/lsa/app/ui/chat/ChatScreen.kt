@@ -31,13 +31,16 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
@@ -124,15 +127,6 @@ fun ChatScreen(sessionId: Long, onOpenSettings: () -> Unit) {
             }
             IconButton(onClick = { renaming = true }) { Icon(Icons.Filled.Edit, stringResource(R.string.chat_rename)) }
         }
-        // Which tools the model may use in this session.
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val on = session?.enabledTools?.split(',')?.toSet().orEmpty()
-            FilterChip(on.contains(ChatToolNames.SEARCH), { vm.toggleTool(ChatToolNames.SEARCH) }, { Text(stringResource(R.string.chat_tool_search)) })
-            FilterChip(on.contains(ChatToolNames.READ), { vm.toggleTool(ChatToolNames.READ) }, { Text(stringResource(R.string.chat_tool_read)) })
-            FilterChip(on.contains(ChatToolNames.SCHEDULE), { vm.toggleTool(ChatToolNames.SCHEDULE) }, { Text(stringResource(R.string.chat_tool_schedule)) })
-            FilterChip(on.contains(ChatToolNames.CALENDAR), { vm.toggleTool(ChatToolNames.CALENDAR) }, { Text(stringResource(R.string.chat_tool_actions)) })
-            FilterChip(session?.autoSearch == true, { vm.toggleAutoSearch() }, { Text(stringResource(R.string.chat_auto_search)) })
-        }
         if (!modelReady) WarningCard(stringResource(R.string.chat_model_missing), stringResource(R.string.go_settings), onOpenSettings)
 
         LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp), state = listState, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -171,6 +165,30 @@ fun ChatScreen(sessionId: Long, onOpenSettings: () -> Unit) {
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Which tools the model may use in this session: a checklist that opens upwards from the composer.
+            Box {
+                var toolsOpen by remember { mutableStateOf(false) }
+                val on = session?.enabledTools?.split(',')?.toSet().orEmpty()
+                IconButton(onClick = { toolsOpen = true }) {
+                    Icon(Icons.Filled.Tune, stringResource(R.string.chat_tools), tint = if (toolsOpen) MaterialTheme.colorScheme.primary else LocalContentColor.current)
+                }
+                DropdownMenu(toolsOpen, { toolsOpen = false }) {
+                    listOf(
+                        ChatToolNames.SEARCH to R.string.chat_tool_search, ChatToolNames.READ to R.string.chat_tool_read,
+                        ChatToolNames.SCHEDULE to R.string.chat_tool_schedule, ChatToolNames.CALENDAR to R.string.chat_tool_actions,
+                        ChatToolNames.MOVE to R.string.chat_tool_files,
+                    ).forEach { (tool, label) ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(label)) }, onClick = { vm.toggleTool(tool) },
+                            leadingIcon = { Checkbox(on.contains(tool), null) },
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.chat_auto_search)) }, onClick = { vm.toggleAutoSearch() },
+                        leadingIcon = { Checkbox(session?.autoSearch == true, null) },
+                    )
+                }
+            }
             IconButton(onClick = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                 Icon(Icons.Filled.AttachFile, stringResource(R.string.chat_attach_photo))
             }
