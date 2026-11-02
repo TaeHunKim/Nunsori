@@ -91,13 +91,13 @@
     <string name="about_version">Version %1$s (database v%2$d)</string>
     <string name="about_places_credit">Place names: GeoNames (CC BY 4.0).</string>
     <string name="residency_title">Model memory</string>
-    <string name="residency_desc">How long the AI models stay loaded in memory after use.</string>
+    <string name="residency_desc">How long the AI models (search, chat, text recognition, speech) stay loaded in memory after use. During a chat answer the models it needs always stay loaded.</string>
     <string name="residency_idle">Unload after 2 minutes idle</string>
-    <string name="residency_idle_desc">Balanced. Searches right after each other stay fast.</string>
+    <string name="residency_idle_desc">Balanced. Searches and chat messages right after each other stay fast.</string>
     <string name="residency_keep">Keep loaded</string>
-    <string name="residency_keep_desc">Fastest, but holds about 0.5 GB of memory while the app process is alive.</string>
+    <string name="residency_keep_desc">Fastest, but holds the models in memory while the app process is alive: about 0.5 GB for search plus 2–4 GB once the chat model has been used.</string>
     <string name="residency_immediate">Unload right after use</string>
-    <string name="residency_immediate_desc">Lowest memory use; every search or indexing run reloads the model first.</string>
+    <string name="residency_immediate_desc">Lowest memory use; every search, indexing run or chat message reloads its models first (the chat model takes a while).</string>
 
     <!-- Index -->
     <string name="index_status_idle">Ready to index</string>

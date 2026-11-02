@@ -115,7 +115,7 @@ Automatic runs cannot start foreground services from the background on recent An
 Each `LeasedResource` also publishes what is loaded (`label`: GPU/CPU), used by the optional resource indicator (`ui/common/ResourceIndicator.kt`: `/proc/self/status` VmRSS and `/proc/self/stat` CPU ticks once a second while shown; GPU load is not available to apps).
 
 
-`ModelResidency` leases models through `LeasedResource`. Policy (`ResidencyPolicy`): `KEEP`, `IDLE_2M` (default, unload 2 minutes after the last lease), `IMMEDIATE`. `onTrimMemory` also releases models. It manages embedding, OCR and ASR. Log tag `LSA.Residency`.
+`ModelResidency` leases models through `LeasedResource`. Policy (`ResidencyPolicy`): `KEEP`, `IDLE_2M` (default, unload 2 minutes after the last lease), `IMMEDIATE`. `onTrimMemory` also releases models. One policy covers all four resources: embedding, OCR, ASR and the chat LLM. A chat turn also holds an embedder lease from start to finish (when search or auto search is on), so the idle timer cannot unload it while the LLM is still answering. Log tag `LSA.Residency`.
 
 ## 8. Search (summary)
 

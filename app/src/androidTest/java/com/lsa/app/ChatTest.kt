@@ -135,7 +135,7 @@ class ChatTest {
         sendAndWait(id, "first question"); sendAndWait(id, "second question")
         val second = model.calls.last()
         assertEquals(listOf("first question", "Hi there"), second.history.map { it.text })
-        assertEquals("second question", second.user.text)
+        assertTrue(second.user.text.endsWith("second question"))
         assertEquals("same conversation key while the tools are unchanged", model.calls.first().key, second.key)
     }
 
@@ -197,6 +197,14 @@ class ChatTest {
         sendAndWait(id, "hello")
         db.chatDao().rename(id, "Launch notes")
         assertEquals("Launch notes", db.chatDao().observeSession(id).first()!!.title)
+    }
+
+    @Test fun everyTurnCarriesTheCurrentTime() = runBlocking {
+        val id = controller.newSession()
+        sendAndWait(id, "what did I shoot yesterday?")
+        val sent = model.calls.single().user.text
+        assertTrue(sent, Regex("""^\[Current time: \d{4}-\d{2}-\d{2} \(\w+\) \d{2}:\d{2} UTC[+-]\d{2}:\d{2}, \S+]\n""").containsMatchIn(sent) && sent.endsWith("yesterday?"))
+        assertEquals("the stored question is only what the user typed", "what did I shoot yesterday?", db.chatDao().messages(id).first().text)
     }
 
     // ---- attachments

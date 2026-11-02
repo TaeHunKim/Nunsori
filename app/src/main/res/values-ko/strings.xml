@@ -90,13 +90,13 @@
     <string name="about_version">버전 %1$s (데이터베이스 v%2$d)</string>
     <string name="about_places_credit">장소 이름: GeoNames (CC BY 4.0).</string>
     <string name="residency_title">모델 메모리</string>
-    <string name="residency_desc">AI 모델을 사용한 뒤 메모리에 얼마나 올려 둘지 정합니다.</string>
+    <string name="residency_desc">AI 모델(검색, 채팅, 글자 인식, 음성 인식)을 사용한 뒤 메모리에 얼마나 올려 둘지 정합니다. 채팅 답변 중에는 필요한 모델이 항상 올라가 있습니다.</string>
     <string name="residency_idle">2분간 안 쓰면 해제</string>
-    <string name="residency_idle_desc">균형형입니다. 연달아 검색하면 빠르게 유지됩니다.</string>
+    <string name="residency_idle_desc">균형형입니다. 연달아 검색하거나 채팅하면 빠르게 유지됩니다.</string>
     <string name="residency_keep">항상 메모리에 유지</string>
-    <string name="residency_keep_desc">가장 빠르지만 앱 프로세스가 살아 있는 동안 메모리를 약 0.5GB 차지합니다.</string>
+    <string name="residency_keep_desc">가장 빠르지만 앱 프로세스가 살아 있는 동안 모델을 메모리에 둡니다. 검색용 약 0.5GB, 채팅 모델을 쓰면 2~4GB가 더해집니다.</string>
     <string name="residency_immediate">사용 직후 해제</string>
-    <string name="residency_immediate_desc">메모리 사용이 가장 적지만 검색이나 인덱싱 때마다 모델을 다시 불러옵니다.</string>
+    <string name="residency_immediate_desc">메모리 사용이 가장 적지만 검색, 인덱싱, 채팅 메시지마다 모델을 다시 불러옵니다(채팅 모델은 시간이 걸립니다).</string>
 
     <!-- Index -->
     <string name="index_status_idle">인덱싱 준비됨</string>

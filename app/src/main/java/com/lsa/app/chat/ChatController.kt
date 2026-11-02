@@ -33,6 +33,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import java.util.UUID
 
 /** Something the user attached to a message before sending. */
@@ -107,7 +108,11 @@ class ChatController(
                 _run.value = ChatRun(sessionId, ChatPhase.FAILED, error = NO_MODEL)
                 return
             }
-            lease.use { l ->
+            // Hold the embedding model for the whole turn: otherwise the idle policy can unload it while the LLM is
+            // still thinking and the search tool (or auto search) would have to reload it, or fail, mid-answer.
+            val needsEmbedder = ChatToolNames.SEARCH in session.enabledTools.split(',') || session.autoSearch
+            val embedderLease = if (needsEmbedder) runCatching { residency.embedder() }.getOrNull() else null
+            (embedderLease ?: AutoCloseable { }).use { lease.use { l ->
                 val model = l.value
                 val contextTokens = settings.chatContextTokens.first()
                 val custom = settings.chatCustomPrompt.first().trim()
@@ -128,7 +133,8 @@ class ChatController(
                     }
                 }
                 if (session.autoSearch && text.isNotBlank()) extra.append(autoSearchBlock(text))
-                val modelText = if (extra.isEmpty()) text else "$extra\n$text"
+                // The clock changes every turn, so it rides with the message instead of the (cached) system prompt.
+                val modelText = "[Current time: ${nowStamp()}]\n" + if (extra.isEmpty()) text else "$extra\n$text"
 
                 val firstMessage = chat.messageCount(sessionId) == 0
                 chat.insertMessage(
@@ -149,7 +155,8 @@ class ChatController(
 
                 val tools = enabledTools(session)
                 // the custom prompt is part of the key: a changed prompt starts a fresh conversation state
-                val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}"
+                // and so is the date: the system prompt names today, so a new day must not reuse yesterday's state
+                val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}|${todayString()}"
                 _run.value = ChatRun(sessionId, ChatPhase.GENERATING, trimmed = history.dropped > 0)
                 var toolCalls = 0
                 model.reply(key, systemPrompt(custom), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
@@ -169,7 +176,7 @@ class ChatController(
                         }
                     }
                 }
-            }
+            } }
             saveAnswer(sessionId, answer.toString())
             _run.value = null
         } catch (e: CancellationException) {
@@ -233,9 +240,18 @@ class ChatController(
         }.onFailure { Log.w(TAG, "could not save the photo", it) }.getOrNull()
     }
 
+    private fun todayString() = SimpleDateFormat("yyyy-MM-dd (EEEE)", Locale.US).format(Date(clock()))
+
+    private fun nowStamp(): String {
+        val tz = TimeZone.getDefault()
+        val fmt = SimpleDateFormat("yyyy-MM-dd (EEEE) HH:mm 'UTC'XXX", Locale.US).apply { timeZone = tz }
+        return "${fmt.format(Date(clock()))}, ${tz.id}"
+    }
+
     private fun systemPrompt(custom: String): String {
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(clock()))
-        return "You are the assistant of a private, on-device file search app. Today is $today. " +
+        return "You are the assistant of a private, on-device file search app. Today is ${todayString()} " +
+            "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
+            "and give search_index date_from/date_to as YYYY-MM-DD. " +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +
