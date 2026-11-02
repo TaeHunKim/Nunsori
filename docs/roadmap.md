@@ -15,6 +15,7 @@
 
 ### Other ideas
 
+- **Agent skills for the chat:** reusable instruction bundles (a name, a one-line description and a Markdown body, in the spirit of agent skills) that the user can add, edit and switch on per chat or for scheduled tasks. Sketch: the system prompt lists only each active skill's name and description; a small tool (for example `use_skill`) returns the full body when the model decides it applies, so the context cost stays low on the 4K default window. Open points: where skills live (app storage, imported from a folder or a shared file), a few built-in examples (receipt summary, weekly digest), how a skill may refer to the existing tools, whether scheduled runs can use them, and a size limit per skill. Skills stay plain text; they never run code.
 - Chat: attach arbitrary files that are not indexed (text extraction on the spot), NPU/GPU choice, summaries for long chats instead of dropping old messages.
 - Additional models: MobileCLIP2-S0 (listed, not implemented), PP-OCRv5.
 - Real-device performance measurements (GPU/NPU paths, thermal behaviour).
