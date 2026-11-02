@@ -49,7 +49,7 @@ See [chat.md](chat.md) for how the context is built.
 
 ## Settings
 
-Four tabs: **Index** (what to index, folders, automatic indexing), **Models** (embedding, OCR, speech and chat models, model memory, Hugging Face token), **Chat** (context size, your instructions, background tasks) and **App** (storage, resource indicator, language, version).
+Five tabs: **Index** (what to index, folders, automatic indexing), **Models** (embedding, OCR, speech and chat models, model memory, Hugging Face token), **Chat** (context size, your instructions, background tasks), **App** (storage, resource indicator, language) and **About** (app name, version, GitHub link, open-source licenses).
 
 - **What to index:** Images, Text files, Documents, Audio, Video.
 - **Folders:** quick-add chips for Camera, Screenshots and Downloads, or pick any folder; choose whether to include subfolders. (Without "All files access" only photos, audio and video in a folder are indexed.)

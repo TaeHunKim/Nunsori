@@ -85,7 +85,7 @@ fun SettingsScreen() {
         vm.refreshModels(); vm.refreshThumbBytes()
     }
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = listOf(R.string.settings_tab_index, R.string.settings_tab_models, R.string.settings_tab_chat, R.string.settings_tab_app)
+    val tabs = listOf(R.string.settings_tab_index, R.string.settings_tab_models, R.string.settings_tab_chat, R.string.settings_tab_app, R.string.settings_tab_about)
     Column(Modifier.fillMaxSize()) {
         PrimaryTabRow(selectedTabIndex = tab) {
             tabs.forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(label), maxLines = 1) }) }
@@ -100,7 +100,8 @@ fun SettingsScreen() {
                     0 -> IndexTab(vm)
                     1 -> ModelsTab(vm)
                     2 -> ChatTab(vm)
-                    else -> AppTab(vm)
+                    3 -> AppTab(vm)
+                    else -> AboutTab()
                 }
             }
         }
@@ -223,12 +224,6 @@ private fun AppTab(vm: SettingsViewModel) {
         }
         HorizontalDivider()
 
-        // --- About
-        Section(R.string.about_title, null)
-        Text(stringResource(R.string.about_version, com.lsa.app.BuildConfig.VERSION_NAME, com.lsa.app.data.db.AppDatabase.VERSION))
-        Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(stringResource(R.string.about_places_credit), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
         val showRes by vm.showResourceIndicator.collectAsStateWithLifecycle()
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -243,6 +238,33 @@ private fun AppTab(vm: SettingsViewModel) {
         Section(R.string.settings_language, null)
         LanguagePicker()
 }
+
+@Composable
+private fun AboutTab() {
+    val ctx = LocalContext.current
+    var showLicenses by remember { mutableStateOf(false) }
+    Text(stringResource(R.string.app_name_full), style = MaterialTheme.typography.headlineSmall)
+    Text(stringResource(R.string.about_tagline), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(stringResource(R.string.about_version, com.lsa.app.BuildConfig.VERSION_NAME, com.lsa.app.data.db.AppDatabase.VERSION))
+    HorizontalDivider()
+    androidx.compose.material3.TextButton(onClick = {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(GITHUB_URL)))
+    }) { Text(stringResource(R.string.about_github)) }
+    Text(GITHUB_URL, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    androidx.compose.material3.TextButton(onClick = { showLicenses = true }) { Text(stringResource(R.string.about_licenses)) }
+    Text(stringResource(R.string.about_places_credit), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (showLicenses) {
+        val text = remember { runCatching { ctx.assets.open("licenses.txt").bufferedReader().use { it.readText() } }.getOrDefault("") }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showLicenses = false },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { showLicenses = false }) { Text(stringResource(R.string.about_licenses_close)) } },
+            title = { Text(stringResource(R.string.about_licenses)) },
+            text = { Text(text, Modifier.verticalScroll(rememberScrollState()), style = MaterialTheme.typography.bodySmall) },
+        )
+    }
+}
+
+private const val GITHUB_URL = "https://github.com/TaeHunKim/Nunsori"
 
 @Composable
 internal fun Section(title: Int, desc: Int?) {

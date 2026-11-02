@@ -43,3 +43,4 @@
 !docs/images/*.png
 .claude/settings.json
 .codex/
+/app/src/main/assets/licenses.txt

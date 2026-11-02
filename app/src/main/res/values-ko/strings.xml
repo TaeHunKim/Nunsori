@@ -355,4 +355,9 @@
     <string name="auto_last_no_access">마지막 자동 실행 %1$s: 파일 접근 권한 없음</string>
     <string name="auto_last_no_folders">마지막 자동 실행 %1$s: 선택한 폴더 없음</string>
     <string name="auto_last_error">마지막 자동 실행 %1$s: 실패 (다시 시도)</string>
+    <string name="settings_tab_about">정보</string>
+    <string name="app_name_full">눈소리 (Nunsori)</string>
+    <string name="about_github">GitHub 저장소</string>
+    <string name="about_licenses">오픈소스 라이선스</string>
+    <string name="about_licenses_close">닫기</string>
 </resources>

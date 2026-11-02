@@ -5,7 +5,7 @@ plugins {
 }
 
 // Single place to bump the app version: major.minor.patch, versionCode = major*10000 + minor*100 + patch.
-val appVersionName = "0.7.0"
+val appVersionName = "0.7.1"
 val appVersionCode = appVersionName.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
 
 android {
@@ -28,6 +28,17 @@ android {
     // Room migration tests read the exported schemas.
     sourceSets.getByName("androidTest").assets.directories.add("$projectDir/schemas")
 }
+
+// Licenses shown in Settings › About: generated from the repo-root files so there is one source (git-ignored output).
+val licensesAsset = tasks.register("generateLicensesAsset") {
+    val notices = rootProject.file("THIRD_PARTY_NOTICES.md")
+    val license = rootProject.file("LICENSE")
+    val out = file("src/main/assets/licenses.txt")
+    inputs.files(notices, license)
+    outputs.file(out)
+    doLast { out.writeText(notices.readText() + "\n\n----------------------------------------\n\n" + license.readText()) }
+}
+tasks.named("preBuild") { dependsOn(licensesAsset) }
 
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 

@@ -361,4 +361,9 @@
     <string name="auto_last_no_access">Last automatic run %1$s: no access to the files</string>
     <string name="auto_last_no_folders">Last automatic run %1$s: no folders are selected</string>
     <string name="auto_last_error">Last automatic run %1$s: it failed (will retry)</string>
+    <string name="settings_tab_about">About</string>
+    <string name="app_name_full">Nunsori (눈소리)</string>
+    <string name="about_github">GitHub repository</string>
+    <string name="about_licenses">Open-source licenses</string>
+    <string name="about_licenses_close">Close</string>
 </resources>
