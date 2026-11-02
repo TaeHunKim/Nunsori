@@ -40,5 +40,7 @@ data class ChatMessageEntity(
     val toolArgs: String? = null,
     /** JSON array of attachments: `{"itemId":42}` for indexed files, `{"photo":"<file name>"}` for picked photos. */
     val attachments: String? = null,
+    /** Set on a scheduled task's confirmation card and on the messages one of its runs produced. */
+    val taskId: Long? = null,
     val createdAt: Long,
 )

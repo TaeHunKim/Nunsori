@@ -67,3 +67,7 @@ Clips are planned from scene changes (threshold 0.10 on a 16×16 grid) with leng
 ## Sync (`IndexRunner.sync`)
 
 Deleted files are pruned, moved files updated in place, changed files (size or modified time) reprocessed. An empty listing is treated as an error condition and never wipes the index. Sync does not need any model.
+
+## After a pass: scheduled file tasks
+
+When a pass finishes, `IndexingWorker` calls `TaskManager.onIndexed(passStart)` with the time the pass began: items that reached `DONE` with `indexedAt >= passStart` are the "new files" for chat tasks that wait for matching files (see [chat.md](chat.md#scheduled-tasks)). Tasks therefore fire after indexing, not when a file is created.

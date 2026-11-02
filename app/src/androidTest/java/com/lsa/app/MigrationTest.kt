@@ -10,6 +10,7 @@ import com.lsa.app.data.db.MIGRATION_1_2
 import com.lsa.app.data.db.MIGRATION_2_3
 import com.lsa.app.data.db.MIGRATION_3_4
 import com.lsa.app.data.db.MIGRATION_4_5
+import com.lsa.app.data.db.MIGRATION_5_6
 import com.lsa.app.ml.embedding.Quant
 import com.lsa.app.ml.embedding.VectorMath
 import org.junit.Assert.assertArrayEquals
@@ -103,6 +104,23 @@ class MigrationTest {
         }
         val db = helper.runMigrationsAndValidate("mig45", 5, true, MIGRATION_4_5)
         db.query("SELECT pinned FROM chat_sessions").use { c -> c.moveToFirst(); assertEquals(0, c.getInt(0)) }
+    }
+
+    @Test fun v5ToV6AddsScheduledTasksThatCascadeWithTheirChat() {
+        helper.createDatabase("mig56", 5).apply {
+            execSQL("INSERT INTO chat_sessions (title, enabledTools, autoSearch, createdAt, updatedAt, pinned) VALUES ('t', 'search_index', 0, 1, 1, 0)")
+            execSQL("INSERT INTO chat_messages (sessionId, role, text, createdAt) VALUES (1, 'USER', 'hi', 1)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate("mig56", 6, true, MIGRATION_5_6)
+        db.query("SELECT taskId FROM chat_messages").use { c -> c.moveToFirst(); assertTrue("old messages have no task", c.isNull(0)) }
+        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL(
+            "INSERT INTO scheduled_tasks (sessionId, `trigger`, status, instruction, `repeat`, atMinuteOfDay, weekdayMask, intervalMinutes, fileQuery, fileKinds, pendingItemIds, createdAt) " +
+                "VALUES (1, 'TIME', 'ACTIVE', 'x', 'DAILY', 540, 0, 0, '', '', '', 1)",
+        )
+        db.execSQL("DELETE FROM chat_sessions WHERE sessionId = 1")
+        db.query("SELECT COUNT(*) FROM scheduled_tasks").use { c -> c.moveToFirst(); assertEquals("tasks go with their chat", 0, c.getInt(0)) }
     }
 
     @Test fun v3ToV4AddsChatTablesThatCascadeOnDelete() {

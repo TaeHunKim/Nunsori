@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -50,6 +51,7 @@ fun ChatListScreen(onOpen: (Long) -> Unit) {
     val dao = container.db.chatDao()
     val sessions by dao.observeSessions().collectAsStateWithLifecycle(emptyList())
     val scope = rememberCoroutineScope()
+    val scheduled by container.db.taskDao().observeScheduledSessions().collectAsStateWithLifecycle(emptyList())
     var renaming by remember { mutableStateOf<ChatSessionEntity?>(null) }
     var deleting by remember { mutableStateOf<ChatSessionEntity?>(null) }
 
@@ -71,6 +73,9 @@ fun ChatListScreen(onOpen: (Long) -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (s.pinned) {
                                 Icon(Icons.Filled.PushPin, stringResource(R.string.chat_pinned), Modifier.size(16.dp).padding(end = 4.dp), tint = MaterialTheme.colorScheme.primary)
+                            }
+                            if (s.sessionId in scheduled) {
+                                Icon(Icons.Filled.Schedule, stringResource(R.string.chat_scheduled), Modifier.size(16.dp).padding(end = 4.dp), tint = MaterialTheme.colorScheme.tertiary)
                             }
                             Text(s.title.ifEmpty { stringResource(R.string.chat_untitled) }, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }

@@ -79,6 +79,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         }
         val ocrLease = c.residency.ocr(c.settings.ocrModelId.first())
         var lastNotify = 0L
+        val passStart = System.currentTimeMillis()
         val result = try {
             val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, { c.residency.speech(low) }, java.io.File(applicationContext.cacheDir, "audio"),
                 VideoOptions(c.settings.videoDetail.first(), c.settings.videoTranscribe.first()))
@@ -99,6 +100,8 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         } finally {
             ocrLease.close(); embLease.close()
         }
+        // Scheduled "new file" tasks look at what this pass added (after the models are released).
+        runCatching { c.taskManager.onIndexed(passStart) }.onFailure { Log.w(TAG, "scheduled tasks check failed", it) }
         // Stopped by the thermal gate (not by the user): try again later.
         return if (result.stoppedEarly && !ctl.stopRequested) Result.retry() else Result.success()
     }

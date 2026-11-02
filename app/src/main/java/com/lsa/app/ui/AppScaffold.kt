@@ -52,19 +52,19 @@ enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVec
 }
 
 @Composable
-fun AppScaffold() {
+fun AppScaffold(openChat: Long? = null, onChatOpened: () -> Unit = {}) {
     val container = com.lsa.app.rememberContainer()
     val onboardingDone by container.settings.onboardingDone.collectAsStateWithLifecycle(initialValue = null)
     val scope = rememberCoroutineScope()
     when (onboardingDone) {
         null -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize())
         false -> OnboardingScreen { mode, minutes, charging -> scope.launch { container.settings.completeOnboarding(mode, minutes, charging) } }
-        true -> MainScaffold()
+        true -> MainScaffold(openChat, onChatOpened)
     }
 }
 
 @Composable
-private fun MainScaffold() {
+private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
     val nav = rememberNavController()
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -72,6 +72,13 @@ private fun MainScaffold() {
     val route = entry?.destination?.route.orEmpty()
     val showResources by com.lsa.app.rememberContainer().settings.showResourceIndicator.collectAsStateWithLifecycle(false)
     val current = Dest.entries.firstOrNull { route == it.route || route.startsWith(it.route + "/") } ?: Dest.Index
+
+    androidx.compose.runtime.LaunchedEffect(openChat) {
+        if (openChat != null) {
+            nav.navigate("chat/$openChat") { launchSingleTop = true }
+            onChatOpened()
+        }
+    }
 
     fun go(d: Dest) {
         nav.navigate(d.route) {

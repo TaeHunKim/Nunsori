@@ -135,6 +135,12 @@ fun SettingsScreen() {
         AutoIndexOptions(autoMode, minutes, chargingOnly, vm::setAutoMode, vm::setScheduleMinutes, vm::setChargingOnly)
         HorizontalDivider()
 
+        // --- Scheduled tasks
+        Section(R.string.bg_title, R.string.bg_desc)
+        BackgroundAccessCards()
+        Text(stringResource(R.string.task_file_disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HorizontalDivider()
+
         // --- Model memory
         Section(R.string.residency_title, R.string.residency_desc)
         val residency by vm.residency.collectAsStateWithLifecycle()

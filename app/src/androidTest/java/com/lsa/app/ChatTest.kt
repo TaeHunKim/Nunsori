@@ -46,6 +46,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import com.lsa.app.chat.schedule.TaskAlarms
+import com.lsa.app.chat.schedule.TaskManager
+import com.lsa.app.data.db.TaskStatus
+import com.lsa.app.data.db.TaskResult
 
 /** Records what the controller hands to the model and answers with canned events. */
 private class FakeChatModel(override val supportsImages: Boolean = false, private val events: suspend (List<ChatTool>) -> List<ChatEvent> = { listOf(ChatEvent.Token("Hi there")) }) : ChatModel {
@@ -57,6 +61,14 @@ private class FakeChatModel(override val supportsImages: Boolean = false, privat
     }
     override fun reset() {}
     override fun close() {}
+}
+
+/** Remembers which alarms would have been set instead of touching the system AlarmManager. */
+private class FakeAlarms(ctx: Context) : TaskAlarms(ctx) {
+    val armed = HashMap<Long, Long>()
+    override fun canScheduleExact() = true
+    override fun arm(taskId: Long, atMs: Long) { armed[taskId] = atMs }
+    override fun cancel(taskId: Long) { armed.remove(taskId) }
 }
 
 @RunWith(AndroidJUnit4::class)
@@ -71,6 +83,12 @@ class ChatTest {
     private lateinit var search: SearchEngine
     private lateinit var controller: ChatController
     private var model = FakeChatModel()
+    private lateinit var tasks: TaskManager
+    private lateinit var alarms: FakeAlarms
+    private var now = 1_800_000_000_000L
+    private var lowBattery = false
+    private val notified = ArrayList<Triple<Long, String, Boolean>>()
+    private val enqueued = ArrayList<Long>()
     private val chatSpec = ModelCatalog.byId("chat-qwen25-1.5b")!!
 
     @Before fun setUp() = runBlocking {
@@ -83,7 +101,12 @@ class ChatTest {
         residency = ModelResidency(ctx, manager, settings, scope)
         residency.chatFactory = { _, _, _ -> model }
         search = SearchEngine(db.itemDao(), { null }, settings)
-        controller = ChatController(ctx, db.chatDao(), db.itemDao(), residency, search, settings, scope)
+        alarms = FakeAlarms(ctx)
+        tasks = TaskManager(
+            ctx, db.taskDao(), db.chatDao(), db.itemDao(), search, alarms, { controller }, clock = { now },
+            batteryLow = { lowBattery }, notifier = { t, text, ok -> notified += Triple(t.taskId, text, ok) }, enqueue = { enqueued += it },
+        )
+        controller = ChatController(ctx, db.chatDao(), db.itemDao(), residency, search, settings, scope, clock = { now }, taskManager = tasks)
     }
 
     @After fun tearDown() = runBlocking {
@@ -103,12 +126,12 @@ class ChatTest {
         controller.send(sessionId, text, attachments); awaitIdle()
     }
 
-    private suspend fun addItem(name: String, kind: ItemKind, vararg segs: SegmentEntity, place: String? = null): Long {
+    private suspend fun addItem(name: String, kind: ItemKind, vararg segs: SegmentEntity, place: String? = null, indexedAt: Long = 1): Long {
         val id = db.itemDao().insertItem(
             ItemEntity(
                 sourceKey = "k:$name", kind = kind, uri = "content://$name", folderKey = "F/", displayName = name, mimeType = null, sizeBytes = 1, modifiedAt = 1,
                 title = null, durationMs = null, pageCount = null, width = 0, height = 0, dateTaken = null, latitude = null, longitude = null,
-                status = ItemStatus.DONE, error = null, embeddingModelId = "test-model", pipelineKey = "p", progress = 0, indexedAt = 1, place = place,
+                status = ItemStatus.DONE, error = null, embeddingModelId = "test-model", pipelineKey = "p", progress = 0, indexedAt = indexedAt, place = place,
             ),
         )
         db.itemDao().insertSegments(segs.map { it.copy(itemId = id) })
@@ -266,5 +289,123 @@ class ChatTest {
         val out = JSONObject(ReadFileTool(db.itemDao()).execute(JSONObject().put("item_id", id).put("from_sec", 100).put("to_sec", 200)))
         assertEquals("[02:00] the budget part", out.getString("text")); assertEquals("audio", out.getString("kind"))
         assertNotNull(out.optString("date"))
+    }
+
+    // ---- scheduled tasks
+
+    private fun dailyArgs() = JSONObject().put("trigger", "time").put("repeat", "daily").put("at", "09:00").put("instruction", "Summarize yesterday's photos")
+
+    @Test fun aProposedTaskDoesNothingUntilTheUserConfirms() = runBlocking {
+        val chat = controller.newSession()
+        val out = JSONObject(tasks.propose(chat, dailyArgs()))
+        val id = out.getLong("task_id")
+        assertEquals("waiting_for_user_confirmation", out.getString("status"))
+        assertEquals(TaskStatus.PENDING_CONFIRM, db.taskDao().get(id)!!.status)
+        assertTrue("no alarm yet", alarms.armed.isEmpty())
+        assertTrue(tasks.confirm(id))
+        val t = db.taskDao().get(id)!!
+        assertEquals(TaskStatus.ACTIVE, t.status); assertEquals(now, t.activatedAt)
+        assertTrue(t.nextRunAt!! > now); assertEquals(t.nextRunAt, alarms.armed[id])
+        assertFalse("a second confirm is ignored", tasks.confirm(id))
+        tasks.delete(id)
+        assertNull(db.taskDao().get(id)); assertTrue(alarms.armed.isEmpty())
+    }
+
+    @Test fun badScheduleArgumentsComeBackAsErrors() = runBlocking {
+        val chat = controller.newSession()
+        assertTrue(tasks.propose(chat, JSONObject().put("trigger", "time").put("instruction", "x").put("repeat", "every_minutes").put("every_minutes", 1)).startsWith("Error"))
+        assertTrue(tasks.propose(chat, JSONObject().put("trigger", "time").put("instruction", "x").put("repeat", "weekly").put("at", "09:00")).startsWith("Error"))
+        assertTrue(tasks.propose(chat, JSONObject().put("trigger", "later").put("instruction", "x")).startsWith("Error"))
+        assertTrue(tasks.propose(chat, JSONObject().put("trigger", "time").put("instruction", " ")).startsWith("Error"))
+        assertEquals(0, db.taskDao().ofSession(chat).size)
+    }
+
+    @Test fun theScheduleToolCallLeavesACardLinkedToItsTask() = runBlocking {
+        val chat = controller.newSession()
+        model = FakeChatModel { tools ->
+            val tool = tools.first { it.name == ChatToolNames.SCHEDULE }
+            val args = dailyArgs()
+            listOf(ChatEvent.ToolRan(ChatToolNames.SCHEDULE, args.toString(), tool.execute(args)), ChatEvent.Token("Please confirm."))
+        }
+        sendAndWait(chat, "every day at 9 summarize yesterday's photos")
+        val card = db.chatDao().messages(chat).first { it.role == ChatRole.TOOL }
+        assertNotNull(card.taskId)
+        assertEquals(TaskStatus.PENDING_CONFIRM, db.taskDao().get(card.taskId!!)!!.status)
+    }
+
+    @Test fun aScheduledRunPostsToItsChatAndNotifiesWithoutTheScheduleTool() = runBlocking {
+        val chat = controller.newSession()
+        val id = JSONObject(tasks.propose(chat, dailyArgs())).getLong("task_id").also { tasks.confirm(it) }
+        model = FakeChatModel { listOf(ChatEvent.Token("Three photos from yesterday.")) }
+        tasks.run(id)
+        val msgs = db.chatDao().messages(chat)
+        assertEquals(listOf(ChatRole.USER, ChatRole.ASSISTANT), msgs.map { it.role })
+        assertTrue("both messages belong to the task", msgs.all { it.taskId == id })
+        assertEquals("Three photos from yesterday.", msgs.last().text)
+        assertEquals(listOf(ChatToolNames.SEARCH, ChatToolNames.READ), model.calls.single().tools)
+        assertTrue(model.calls.single().user.text.contains("scheduled task"))
+        assertEquals(listOf(Triple(id, "Three photos from yesterday.", true)), notified)
+        val t = db.taskDao().get(id)!!
+        assertEquals(TaskResult.OK, t.lastResult); assertEquals(TaskStatus.ACTIVE, t.status)
+        assertTrue("the next day is armed", t.nextRunAt!! > now && alarms.armed[id] == t.nextRunAt)
+        assertEquals("the chat keeps its own title", "", db.chatDao().session(chat)!!.title)
+    }
+
+    @Test fun aOneTimeTaskFinishesAfterItsRun() = runBlocking {
+        val chat = controller.newSession()
+        val id = JSONObject(tasks.propose(chat, JSONObject().put("trigger", "time").put("repeat", "once").put("in_minutes", 5).put("instruction", "say hi"))).getLong("task_id")
+        tasks.confirm(id)
+        now += 6 * 60_000
+        tasks.run(id)
+        assertEquals(TaskStatus.DONE, db.taskDao().get(id)!!.status)
+        assertNull("nothing left to fire", db.taskDao().get(id)!!.nextRunAt)
+    }
+
+    @Test fun aLowBatterySkipsARepeatingRunWithANote() = runBlocking {
+        val chat = controller.newSession()
+        val id = JSONObject(tasks.propose(chat, dailyArgs())).getLong("task_id").also { tasks.confirm(it) }
+        lowBattery = true
+        tasks.run(id)
+        assertTrue("no model call", model.calls.isEmpty())
+        assertEquals(TaskResult.SKIPPED, db.taskDao().get(id)!!.lastResult)
+        assertEquals(1, db.chatDao().messages(chat).size)
+    }
+
+    @Test fun aFailedRunIsRecordedAndNotified() = runBlocking {
+        val chat = controller.newSession()
+        val id = JSONObject(tasks.propose(chat, dailyArgs())).getLong("task_id").also { tasks.confirm(it) }
+        installModel(false)
+        tasks.run(id)
+        assertEquals(TaskResult.FAILED, db.taskDao().get(id)!!.lastResult)
+        assertEquals(false, notified.single().third)
+    }
+
+    @Test fun fileTasksSeeOnlyNewMatchingFilesOfTheirKinds() = runBlocking {
+        val chat = controller.newSession()
+        addItem("old-budget.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "the budget for last year"), indexedAt = now - 10_000)
+        val args = JSONObject().put("trigger", "file").put("instruction", "Summarize it").put("query", "budget").put("kinds", "document")
+        val id = JSONObject(tasks.propose(chat, args)).getLong("task_id").also { tasks.confirm(it) }
+        assertTrue("file tasks have no alarm", alarms.armed.isEmpty())
+        now += 5_000
+        val fresh = addItem("new-budget.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "the budget for next year"), indexedAt = now)
+        addItem("budget.png", ItemKind.IMAGE, seg(SegmentType.OCR_TEXT, 0, "budget"), indexedAt = now)
+        addItem("holiday.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, "beach trip photos"), indexedAt = now)
+        tasks.onIndexed(passStart = 0)
+        assertEquals("only the new document that matches", fresh.toString(), db.taskDao().get(id)!!.pendingItemIds)
+        assertEquals(listOf(id), enqueued)
+
+        model = FakeChatModel { listOf(ChatEvent.Token("Summary.")) }
+        tasks.run(id)
+        assertTrue(model.calls.single().user.text.contains("new-budget.txt"))
+        assertEquals("the queue is emptied", "", db.taskDao().get(id)!!.pendingItemIds)
+        tasks.onIndexed(passStart = now + 1)
+        assertEquals("nothing new, nothing queued", 1, enqueued.size)
+    }
+
+    @Test fun deletingAChatDeletesItsTasks() = runBlocking {
+        val chat = controller.newSession()
+        val id = JSONObject(tasks.propose(chat, dailyArgs())).getLong("task_id")
+        controller.deleteSession(chat)
+        assertNull(db.taskDao().get(id))
     }
 }

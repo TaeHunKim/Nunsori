@@ -64,3 +64,5 @@ Never use `fallbackToDestructiveMigration` for upgrades. Changes that only affec
 ## Conventions
 
 Commit only code, scripts and docs: no models, test media, databases or build output (see `.gitignore`). Update docs with code ([CONTRIBUTING.md](../CONTRIBUTING.md)).
+
+The current schema is v6 (`MIGRATION_5_6` adds `scheduled_tasks` and `chat_messages.taskId`; covered by `MigrationTest.v5ToV6AddsScheduledTasksThatCascadeWithTheirChat`). Scheduled-task logic is tested in `ChatTest` (fake alarms, clock, battery and model) and `ScheduleTest` (unit, next-run math).

@@ -6,7 +6,7 @@ An on-device assistant that answers questions from your files. Code: `chat/`, `m
 
 ## Sessions
 
-Every conversation is a session (`chat_sessions`, `chat_messages`; schema v5 (v4 added the tables, v5 `pinned`)). Sessions are listed pinned first, then newest first (`chat_sessions.pinned`, schema v5); they can be renamed and deleted (the messages and picked photos go with them). The title is the first 40 characters of the first question until you rename it. Only one answer is generated at a time (one model in memory).
+Every conversation is a session (`chat_sessions`, `chat_messages`; schema v6 (v4 added the tables, v5 `pinned`, v6 scheduled tasks)). Sessions are listed pinned first, then newest first (`chat_sessions.pinned`, schema v5); they can be renamed and deleted (the messages and picked photos go with them). The title is the first 40 characters of the first question until you rename it. Only one answer is generated at a time (one model in memory).
 
 ## What the model sees
 
@@ -37,6 +37,16 @@ The model calls tools through LiteRT-LM's tool calling (`automaticToolCalling`).
 Tool calls appear in the conversation as small cards ("Searched files for … · 3 results", "Read plan.docx"); tap a card to see the found files and open them.
 
 **Auto search** is for models that handle tool calling poorly: before each question the app searches and puts the best excerpts in the context. It can be combined with the tools.
+
+## Scheduled tasks
+
+Ask for something to happen later, for example "every day at 9 summarize yesterday's photos", "every Monday 8:30 list the new documents" or "when a photo of a receipt is added, read the total". The model calls `schedule_task` (with `list_scheduled_tasks` and `cancel_scheduled_task`); the tool only **proposes**: a card in the chat shows what, when and under which condition, and nothing runs until you press **Confirm**. The *Schedule* chip switches the tools per chat; the clock button in the chat header lists the chat's tasks (pause, resume, delete, next and last run).
+
+- **Lifetime:** a task belongs to the chat it was asked in (`scheduled_tasks.sessionId`, cascade delete). Chats with an active task show a clock icon in the list, next to (not instead of) the pin.
+- **Time tasks:** once (date and time, or "in N minutes"), every N minutes (at least 5), daily, or weekly on chosen weekdays. `Schedule.nextRun` computes the next local time. `TaskAlarms` sets one exact alarm (`setExactAndAllowWhileIdle`; without the exact-alarm permission it falls back to an inexact one) and `TaskAlarmReceiver` queues `TaskRunWorker`. Boot, time change, time zone change and the exact-alarm permission change re-arm all alarms (`TaskBootReceiver`, also at app start). A run missed while the phone was off still happens once if it is less than 12 hours late, otherwise it is skipped.
+- **File tasks:** after every indexing pass, `TaskManager.onIndexed` takes the files that finished in that pass (and after the task was confirmed), keeps the kinds the task names, and, when the task has a query, runs the normal hybrid search (meaning + keywords, as in the Search screen) and keeps the new files among the hits. They are queued on the task (`pendingItemIds`) and one run per task per pass handles all of them (up to 10 are listed to the model, the rest are mentioned). **These run after indexing, not at the moment a file appears**; with manual auto-index mode that means when you start indexing. The confirmation card, the task list and Settings say so.
+- **A run:** `ChatController.runScheduled` waits for any running answer (one lock for user and scheduled turns), then adds the instruction and the answer to the chat (both marked with a clock), using the chat's earlier messages as context and only the search and read tools (a task cannot schedule more tasks). The embedder and the chat model are loaded for the run and released by the normal memory policy. The result is also shown as a notification (channel *Scheduled tasks*); tapping it opens that chat. Failures (no model, load error) are stored on the task and notified too. A run is skipped with a note when the battery is under 15 % and not charging; a one-time task retries in 30 minutes.
+- **Limits:** 20 tasks in total, 5 per chat. The phone must allow background work: see *Background tasks* in the user guide (notifications, exact alarms, battery-optimization exemption).
 
 ## Ask in chat
 

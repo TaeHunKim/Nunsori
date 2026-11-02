@@ -82,6 +82,10 @@ interface ItemDao {
     @Query("SELECT COUNT(*) FROM items WHERE status = 'DONE' AND embeddingModelId != :modelId")
     fun observeStaleCount(modelId: String): Flow<Int>
 
+    /** Files whose indexing finished at or after [since] (used to decide which new files a scheduled task should see). */
+    @Query("SELECT itemId FROM items WHERE status = 'DONE' AND indexedAt >= :since AND kind IN (:kinds)")
+    suspend fun doneSince(since: Long, kinds: List<ItemKind>): List<Long>
+
     /** Cheap fingerprint of table contents, used to invalidate the in-memory search cache. */
     @Query("SELECT COUNT(*) || ':' || COALESCE(MAX(indexedAt), 0) || ':' || (SELECT COUNT(*) FROM segments) FROM items")
     suspend fun stamp(): String
@@ -179,7 +183,7 @@ interface ItemDao {
 @Database(
     entities = [
         ItemEntity::class, SegmentEntity::class, IndexedFolderEntity::class,
-        ChatSessionEntity::class, ChatMessageEntity::class,
+        ChatSessionEntity::class, ChatMessageEntity::class, ScheduledTaskEntity::class,
     ],
     version = AppDatabase.VERSION,
     exportSchema = true,
@@ -187,9 +191,10 @@ interface ItemDao {
 abstract class AppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
     abstract fun chatDao(): ChatDao
+    abstract fun taskDao(): ScheduledTaskDao
 
     companion object {
         /** Bump together with a new migration in Migrations.kt (see docs/development.md). */
-        const val VERSION = 5
+        const val VERSION = 6
     }
 }

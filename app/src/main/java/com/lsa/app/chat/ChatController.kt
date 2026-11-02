@@ -8,6 +8,8 @@ import com.lsa.app.data.db.ChatMessageEntity
 import com.lsa.app.data.db.ChatRole
 import com.lsa.app.data.db.ChatSessionEntity
 import com.lsa.app.data.db.ItemDao
+import com.lsa.app.data.db.ScheduledTaskEntity
+import com.lsa.app.chat.schedule.TaskManager
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.BitmapLoader
 import com.lsa.app.ml.ModelResidency
@@ -26,6 +28,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -65,12 +69,17 @@ class ChatController(
     private val settings: SettingsStore,
     private val scope: CoroutineScope,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val taskManager: TaskManager? = null,
 ) {
     private val _run = MutableStateFlow<ChatRun?>(null)
     val run: StateFlow<ChatRun?> = _run.asStateFlow()
     private var job: Job? = null
 
-    val busy: Boolean get() = job?.isActive == true
+    /** One answer at a time: user turns and scheduled runs take turns on this lock. */
+    private val turnLock = Mutex()
+    @Volatile private var scheduledRunning = false
+
+    val busy: Boolean get() = job?.isActive == true || scheduledRunning
 
     private val queued = HashMap<Long, List<Long>>()
 
@@ -92,25 +101,42 @@ class ChatController(
 
     fun send(sessionId: Long, text: String, attachments: List<PendingAttachment> = emptyList()) {
         if (busy || (text.isBlank() && attachments.isEmpty())) return
-        job = scope.launch { runTurn(sessionId, text.trim(), attachments) }
+        job = scope.launch { turnLock.withLock { runTurn(sessionId, text.trim(), attachments) } }
     }
 
     fun stop() { job?.cancel() }
 
     fun dismissError() { if (_run.value?.phase == ChatPhase.FAILED) _run.value = null }
 
-    private suspend fun runTurn(sessionId: Long, text: String, pending: List<PendingAttachment>) {
+    /** The outcome of one turn: the answer text and the error, if any. */
+    data class TurnResult(val answer: String, val error: String? = null)
+
+    /**
+     * Runs one scheduled task in its chat and returns the answer. Waits for a running answer to finish first.
+     * [extraContext] carries what triggered it (for file tasks: the new files).
+     */
+    suspend fun runScheduled(task: ScheduledTaskEntity, extraContext: String = ""): TurnResult = turnLock.withLock {
+        scheduledRunning = true
+        try {
+            runTurn(task.sessionId, task.instruction, emptyList(), task, extraContext)
+        } finally { scheduledRunning = false }
+    }
+
+    private suspend fun runTurn(
+        sessionId: Long, text: String, pending: List<PendingAttachment>,
+        task: ScheduledTaskEntity? = null, extraContext: String = "",
+    ): TurnResult {
         var answer = StringBuilder()
         try {
-            val session = chat.session(sessionId) ?: return
+            val session = chat.session(sessionId) ?: return TurnResult("", "no_chat")
             _run.value = ChatRun(sessionId, ChatPhase.LOADING)
             val lease = residency.chat() ?: run {
                 _run.value = ChatRun(sessionId, ChatPhase.FAILED, error = NO_MODEL)
-                return
+                return TurnResult("", NO_MODEL)
             }
             // Hold the embedding model for the whole turn: otherwise the idle policy can unload it while the LLM is
             // still thinking and the search tool (or auto search) would have to reload it, or fail, mid-answer.
-            val needsEmbedder = ChatToolNames.SEARCH in session.enabledTools.split(',') || session.autoSearch
+            val needsEmbedder = task != null || ChatToolNames.SEARCH in session.enabledTools.split(',') || session.autoSearch
             val embedderLease = if (needsEmbedder) runCatching { residency.embedder() }.getOrNull() else null
             (embedderLease ?: AutoCloseable { }).use { lease.use { l ->
                 val model = l.value
@@ -132,7 +158,8 @@ class ChatController(
                         if (model.supportsImages) images += file.readBytes() else extra.append(PHOTO_UNSUPPORTED)
                     }
                 }
-                if (session.autoSearch && text.isNotBlank()) extra.append(autoSearchBlock(text))
+                if (task != null) extra.append(SCHEDULED_NOTE).append(extraContext).append('\n')
+                else if (session.autoSearch && text.isNotBlank()) extra.append(autoSearchBlock(text))
                 // The clock changes every turn, so it rides with the message instead of the (cached) system prompt.
                 val modelText = "[Current time: ${nowStamp()}]\n" + if (extra.isEmpty()) text else "$extra\n$text"
 
@@ -140,10 +167,10 @@ class ChatController(
                 chat.insertMessage(
                     ChatMessageEntity(
                         sessionId = sessionId, role = ChatRole.USER, text = text,
-                        attachments = attachmentsJson.takeIf { it.length() > 0 }?.toString(), createdAt = clock(),
+                        attachments = attachmentsJson.takeIf { it.length() > 0 }?.toString(), taskId = task?.taskId, createdAt = clock(),
                     ),
                 )
-                if (firstMessage) chat.rename(sessionId, titleOf(text))
+                if (firstMessage && task == null) chat.rename(sessionId, titleOf(text))
                 chat.touch(sessionId, clock())
 
                 // History = stored user/assistant turns before this one, trimmed to the context budget.
@@ -153,7 +180,7 @@ class ChatController(
                     ContextBudget.estimateTokens(custom)
                 val history = ContextBudget.trim(stored, budget.coerceAtLeast(0))
 
-                val tools = enabledTools(session)
+                val tools = if (task != null) scheduledTools() else enabledTools(session)
                 // the custom prompt is part of the key: a changed prompt starts a fresh conversation state
                 // and so is the date: the system prompt names today, so a new day must not reuse yesterday's state
                 val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}|${todayString()}"
@@ -169,7 +196,7 @@ class ChatController(
                             chat.insertMessage(
                                 ChatMessageEntity(
                                     sessionId = sessionId, role = ChatRole.TOOL, text = ContextBudget.clip(e.result, MAX_STORED_RESULT),
-                                    toolName = e.name, toolArgs = e.args, createdAt = clock(),
+                                    toolName = e.name, toolArgs = e.args, taskId = task?.taskId ?: scheduledIdOf(e.name, e.result), createdAt = clock(),
                                 ),
                             )
                             if (++toolCalls > MAX_TOOL_CALLS) throw TooManyToolCalls()
@@ -177,26 +204,38 @@ class ChatController(
                     }
                 }
             } }
-            saveAnswer(sessionId, answer.toString())
+            saveAnswer(sessionId, answer.toString(), task?.taskId)
             _run.value = null
+            return TurnResult(answer.toString().trim())
         } catch (e: CancellationException) {
-            withContext(kotlinx.coroutines.NonCancellable) { saveAnswer(sessionId, answer.toString()); _run.value = null }
+            withContext(kotlinx.coroutines.NonCancellable) { saveAnswer(sessionId, answer.toString(), task?.taskId); _run.value = null }
             throw e
         } catch (e: TooManyToolCalls) {
-            saveAnswer(sessionId, answer.toString().ifBlank { TOO_MANY_CALLS })
+            val text = answer.toString().ifBlank { TOO_MANY_CALLS }
+            saveAnswer(sessionId, text, task?.taskId)
             _run.value = null
+            return TurnResult(text.trim())
         } catch (e: Exception) {
             Log.w(TAG, "chat turn failed", e)
-            saveAnswer(sessionId, answer.toString())
-            _run.value = ChatRun(sessionId, ChatPhase.FAILED, error = e.message ?: e.javaClass.simpleName)
+            saveAnswer(sessionId, answer.toString(), task?.taskId)
+            val msg = e.message ?: e.javaClass.simpleName
+            // a scheduled run has nobody to dismiss the error; the failure is recorded on the task instead
+            _run.value = if (task != null) null else ChatRun(sessionId, ChatPhase.FAILED, error = msg)
+            return TurnResult(answer.toString().trim(), msg)
         }
     }
 
+    /** The `task_id` a schedule_task call returned, so its card can be found from the stored tool message. */
+    private fun scheduledIdOf(tool: String, result: String): Long? =
+        if (tool != ChatToolNames.SCHEDULE) null else runCatching { JSONObject(result).optLong("task_id", -1) }.getOrNull()?.takeIf { it > 0 }
+
+    private fun scheduledTools(): List<ChatTool> = listOf(SearchIndexTool(search, items), ReadFileTool(items))
+
     private class TooManyToolCalls : Exception()
 
-    private suspend fun saveAnswer(sessionId: Long, text: String) {
+    private suspend fun saveAnswer(sessionId: Long, text: String, taskId: Long? = null) {
         if (text.isBlank()) return
-        chat.insertMessage(ChatMessageEntity(sessionId = sessionId, role = ChatRole.ASSISTANT, text = text.trim(), createdAt = clock()))
+        chat.insertMessage(ChatMessageEntity(sessionId = sessionId, role = ChatRole.ASSISTANT, text = text.trim(), taskId = taskId, createdAt = clock()))
         chat.touch(sessionId, clock())
     }
 
@@ -205,6 +244,11 @@ class ChatController(
         return buildList {
             if (ChatToolNames.SEARCH in on) add(SearchIndexTool(search, items))
             if (ChatToolNames.READ in on) add(ReadFileTool(items))
+            if (ChatToolNames.SCHEDULE in on && taskManager != null) {
+                add(ScheduleTaskTool(taskManager, session.sessionId))
+                add(ListScheduledTasksTool(taskManager, session.sessionId))
+                add(CancelScheduledTaskTool(taskManager, session.sessionId))
+            }
         }
     }
 
@@ -252,6 +296,8 @@ class ChatController(
         return "You are the assistant of a private, on-device file search app. Today is ${todayString()} " +
             "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
             "and give search_index date_from/date_to as YYYY-MM-DD (a query is optional when you filter by date or kind, e.g. to list yesterday's photos). " +
+            "When the user asks you to do something later or repeatedly (every day at 9, every Monday, in 30 minutes, whenever a new file about X is added), " +
+            "call schedule_task with the instruction written so it can run on its own; it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. " +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +
@@ -269,6 +315,7 @@ class ChatController(
         private const val SYSTEM_TOKENS = 350
         private const val PHOTO_SIDE = 1024
         private const val PHOTO_UNSUPPORTED = "[A photo is attached, but this chat model cannot see images.]\n\n"
+        private const val SCHEDULED_NOTE = "[This is a scheduled task running now without the user present. Carry out the instruction and write the result as a message to the user.]\n"
         private const val TOO_MANY_CALLS = "I stopped because I called tools too many times without an answer."
     }
 }

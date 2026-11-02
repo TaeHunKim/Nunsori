@@ -33,7 +33,10 @@ Place names for photo locations come from a small dataset bundled in the app (Ge
 | `ACCESS_MEDIA_LOCATION` | Read photo location from EXIF |
 | `MANAGE_EXTERNAL_STORAGE` (All files access) | Read text files and documents, which MediaStore does not list reliably; optional, only needed for those kinds |
 | `INTERNET` | Model download |
-| `POST_NOTIFICATIONS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` | Progress notification and long indexing runs |
+| `POST_NOTIFICATIONS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` | Progress notification, long indexing runs and scheduled-task runs, and scheduled-task results |
+| `SCHEDULE_EXACT_ALARM` | Run time-based chat tasks at the chosen time (the user grants it in system settings) |
+| `RECEIVE_BOOT_COMPLETED` | Set the task alarms again after a restart |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Ask (never silently) to leave battery optimization so alarms are not delayed; Google Play restricts this permission, which matters only if the app is ever published there |
 
 ## Backup
 
@@ -42,3 +45,7 @@ Android Auto Backup is disabled, so the index, thumbnails and settings are not c
 ## Deleting your data
 
 Remove one model in Settings, remove a folder to drop its items, or clear app data / uninstall to delete everything.
+
+## Scheduled tasks
+
+Tasks, their schedule and their results live in the same private database as the chats (`scheduled_tasks`, `chat_messages`) and are deleted with the chat. Notifications show the beginning of an answer on the lock screen according to the system notification settings. Nothing is sent anywhere: tasks run on-device with the same local models.

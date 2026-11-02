@@ -2,6 +2,7 @@
 
 ## Next
 
+- Done in 0.5.0: scheduled chat tasks (time-based with exact alarms, and after-indexing file triggers), confirmation cards, notifications that open the chat, background-access checks (notifications, exact alarms, battery optimization).
 - Done in 0.4.0: failed-file list and retry, embedding-length guard, pinned chats, Markdown, chat instructions, low-power indexing, folder presets, resource indicator.
 
 - **Web tools for chat:** web search and fetching a page for the chat model. Deferred on purpose: the app only uses the network to download models today, so this needs its own opt-in setting, a disclosure of what leaves the device, and a search API choice.
@@ -24,3 +25,5 @@
 - Video is embedded per scene/length clip, so moments shorter than a few seconds can be missed; precision is configurable.
 - Only the 740M model embeds audio; input is limited to about 40 s per clip.
 - Emulator inference is CPU only and slow.
+
+- Scheduled tasks run one at a time and need the chat model, so a run can be late when another answer is being generated or the phone is in Doze/an OEM sleep list (Samsung *Sleeping apps*); file-triggered tasks run after indexing, never at file creation; the match uses the normal search ranking over the 100 best hits, so a very large first index is ignored on purpose (only files indexed after confirming count).

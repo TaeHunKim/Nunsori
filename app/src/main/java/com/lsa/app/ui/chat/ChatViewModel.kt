@@ -41,6 +41,15 @@ class ChatViewModel(private val c: AppContainer, val sessionId: Long) : ViewMode
     val busy: StateFlow<Boolean> = controller.run.map { it != null && it.phase != com.lsa.app.chat.ChatPhase.FAILED }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    private val taskDao = c.db.taskDao()
+    /** Scheduled tasks of this chat (confirmed ones: active, paused, finished). */
+    val tasks: StateFlow<List<com.lsa.app.data.db.ScheduledTaskEntity>> = taskDao.observeOfSession(sessionId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun task(id: Long) = taskDao.observe(id)
+    fun confirmTask(id: Long) { viewModelScope.launch { c.taskManager.confirm(id) } }
+    fun deleteTask(id: Long) { viewModelScope.launch { c.taskManager.delete(id) } }
+    fun pauseTask(id: Long, paused: Boolean) { viewModelScope.launch { c.taskManager.setPaused(id, paused) } }
+
     val modelReady: StateFlow<Boolean> = combine(c.settings.chatModelId, c.modelManager.states) { id, st ->
         ModelCatalog.byId(id)?.let { st[id] is ModelState.Installed } == true
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)

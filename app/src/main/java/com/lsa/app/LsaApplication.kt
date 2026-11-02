@@ -60,7 +60,11 @@ class AppContainer(val context: Context) {
             modelManager.states.map { st -> st.filterValues { it is ModelState.Installed }.keys },
         ) { folders, model, kinds, installed -> listOf(folders, model, kinds, installed) },
     )
-    val chat by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), residency, search, settings, appScope) }
+    val taskAlarms by lazy { com.lsa.app.chat.schedule.TaskAlarms(context) }
+    val taskManager: com.lsa.app.chat.schedule.TaskManager by lazy {
+        com.lsa.app.chat.schedule.TaskManager(context, db.taskDao(), db.chatDao(), db.itemDao(), search, taskAlarms, { chat })
+    }
+    val chat: com.lsa.app.chat.ChatController by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), residency, search, settings, appScope, taskManager = taskManager) }
     val search by lazy { SearchEngine(db.itemDao(), { q -> residency.embedder()?.use { it.value.embedQuery(q) } }, settings) }
 }
 
@@ -73,6 +77,7 @@ class LsaApplication : Application() {
         container = AppContainer(this)
         Notifications.ensureChannels(this)
         container.autoIndex.start()
+        container.appScope.launch { runCatching { container.taskManager.rearmAll() } }
         container.appScope.launch { AppUpgrade.run(container.settings, container.db.itemDao(), BuildConfig.VERSION_CODE) }
     }
 

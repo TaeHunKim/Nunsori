@@ -59,7 +59,7 @@ fun OnboardingScreen(onDone: (AutoIndexMode, Int, Boolean) -> Unit) {
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                stringResource(listOf(R.string.onboarding_files_title, R.string.onboarding_model_title, R.string.onboarding_title)[step]),
+                stringResource(listOf(R.string.onboarding_files_title, R.string.onboarding_model_title, R.string.onboarding_title, R.string.onboarding_bg_title)[step]),
                 style = MaterialTheme.typography.headlineSmall,
             )
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -79,7 +79,11 @@ fun OnboardingScreen(onDone: (AutoIndexMode, Int, Boolean) -> Unit) {
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    else -> AutoIndexOptions(mode, minutes, chargingOnly, { mode = it }, { minutes = it }, { chargingOnly = it })
+                    2 -> AutoIndexOptions(mode, minutes, chargingOnly, { mode = it }, { minutes = it }, { chargingOnly = it })
+                    else -> {
+                        Text(stringResource(R.string.onboarding_bg_desc), style = MaterialTheme.typography.bodyMedium)
+                        com.lsa.app.ui.settings.BackgroundAccessCards()
+                    }
                 }
             }
             Text(
@@ -89,7 +93,7 @@ fun OnboardingScreen(onDone: (AutoIndexMode, Int, Boolean) -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 TextButton(onClick = { step-- }, enabled = step > 0) { Text(stringResource(R.string.onboarding_back)) }
                 if (step < last) {
-                    Button(onClick = { step++ }) { Text(stringResource(R.string.onboarding_next)) }
+                    Button(enabled = step != 2 || mode != null, onClick = { step++ }) { Text(stringResource(R.string.onboarding_next)) }
                 } else {
                     Button(enabled = mode != null, onClick = { onDone(mode!!, minutes, chargingOnly) }) {
                         Text(stringResource(R.string.onboarding_finish))
@@ -100,4 +104,4 @@ fun OnboardingScreen(onDone: (AutoIndexMode, Int, Boolean) -> Unit) {
     }
 }
 
-private const val STEPS = 3
+private const val STEPS = 4

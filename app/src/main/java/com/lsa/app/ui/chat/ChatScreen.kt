@@ -26,7 +26,9 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
@@ -81,6 +83,8 @@ fun ChatScreen(sessionId: Long, onOpenSettings: () -> Unit) {
     val images by vm.supportsImages.collectAsStateWithLifecycle()
     var detailId by remember { mutableStateOf<Long?>(null) }
     var renaming by remember { mutableStateOf(false) }
+    var tasksOpen by remember { mutableStateOf(false) }
+    val tasks by vm.tasks.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::addPhoto) }
 
@@ -95,6 +99,9 @@ fun ChatScreen(sessionId: Long, onOpenSettings: () -> Unit) {
                 session?.title?.ifEmpty { null } ?: stringResource(R.string.chat_untitled), style = MaterialTheme.typography.titleMedium,
                 maxLines = 1, modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = { tasksOpen = true }) {
+                Icon(Icons.Filled.Schedule, stringResource(R.string.tasks_open), tint = if (tasks.any { it.status == com.lsa.app.data.db.TaskStatus.ACTIVE }) MaterialTheme.colorScheme.tertiary else LocalContentColor.current)
+            }
             IconButton(onClick = { renaming = true }) { Icon(Icons.Filled.Edit, stringResource(R.string.chat_rename)) }
         }
         // Which tools the model may use in this session.
@@ -102,13 +109,14 @@ fun ChatScreen(sessionId: Long, onOpenSettings: () -> Unit) {
             val on = session?.enabledTools?.split(',')?.toSet().orEmpty()
             FilterChip(on.contains(ChatToolNames.SEARCH), { vm.toggleTool(ChatToolNames.SEARCH) }, { Text(stringResource(R.string.chat_tool_search)) })
             FilterChip(on.contains(ChatToolNames.READ), { vm.toggleTool(ChatToolNames.READ) }, { Text(stringResource(R.string.chat_tool_read)) })
+            FilterChip(on.contains(ChatToolNames.SCHEDULE), { vm.toggleTool(ChatToolNames.SCHEDULE) }, { Text(stringResource(R.string.chat_tool_schedule)) })
             FilterChip(session?.autoSearch == true, { vm.toggleAutoSearch() }, { Text(stringResource(R.string.chat_auto_search)) })
         }
         if (!modelReady) WarningCard(stringResource(R.string.chat_model_missing), stringResource(R.string.go_settings), onOpenSettings)
 
         LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp), state = listState, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (messages.isEmpty() && run == null) item { Text(stringResource(R.string.chat_hint), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 16.dp)) }
-            items(messages, key = { it.msgId }) { m -> MessageRow(sessionId, m, names, onOpenItem = { detailId = it }) }
+            items(messages, key = { it.msgId }) { m -> MessageRow(sessionId, m, names, vm, onOpenItem = { detailId = it }) }
             run?.let { r ->
                 item(key = "run") {
                     when (r.phase) {
@@ -162,6 +170,7 @@ fun ChatScreen(sessionId: Long, onOpenSettings: () -> Unit) {
         }
     }
     if (renaming) RenameDialog(session?.title.orEmpty(), onDismiss = { renaming = false }) { vm.rename(it); renaming = false }
+    if (tasksOpen) TasksSheet(vm) { tasksOpen = false }
     detailId?.let { ItemDetailSheet(it) { detailId = null } }
 }
 
@@ -184,7 +193,22 @@ private fun Bubble(text: String, mine: Boolean) {
 }
 
 @Composable
-private fun MessageRow(sessionId: Long, m: ChatMessageEntity, names: Map<Long, String>, onOpenItem: (Long) -> Unit) {
+private fun MessageRow(sessionId: Long, m: ChatMessageEntity, names: Map<Long, String>, vm: ChatViewModel, onOpenItem: (Long) -> Unit) {
+    if (m.role != ChatRole.TOOL && m.taskId != null) {
+        // a scheduled run: the instruction (right) and the answer (left), marked with a clock
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(Icons.Filled.Schedule, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.tertiary)
+                Text(stringResource(R.string.task_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+            }
+            Bubble(m.text, mine = m.role == ChatRole.USER)
+        }
+        return
+    }
+    if (m.role == ChatRole.TOOL && m.toolName == ChatToolNames.SCHEDULE && m.taskId != null) {
+        TaskCard(m.taskId, vm)
+        return
+    }
     when (m.role) {
         ChatRole.USER -> Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             ChatViewModel.attachmentsOf(m).forEach { a ->

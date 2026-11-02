@@ -95,5 +95,21 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+/** v6 adds scheduled chat tasks and links chat messages to them. */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `chat_messages` ADD COLUMN `taskId` INTEGER")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `scheduled_tasks` (`taskId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, " +
+                "`trigger` TEXT NOT NULL, `status` TEXT NOT NULL, `instruction` TEXT NOT NULL, `repeat` TEXT NOT NULL, `atMinuteOfDay` INTEGER NOT NULL, " +
+                "`weekdayMask` INTEGER NOT NULL, `intervalMinutes` INTEGER NOT NULL, `onceAtMs` INTEGER, `nextRunAt` INTEGER, `fileQuery` TEXT NOT NULL, " +
+                "`fileKinds` TEXT NOT NULL, `pendingItemIds` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `activatedAt` INTEGER, `lastRunAt` INTEGER, " +
+                "`lastResult` TEXT, `lastError` TEXT, " +
+                "FOREIGN KEY(`sessionId`) REFERENCES `chat_sessions`(`sessionId`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_scheduled_tasks_sessionId` ON `scheduled_tasks` (`sessionId`)")
+    }
+}
+
 /** Every migration, in order. Register new ones here only; the chain test in MigrationTest walks all exported schemas. */
-val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)

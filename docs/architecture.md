@@ -52,6 +52,7 @@ flowchart TD
 | `indexing/places` | `PlaceFinder`: offline GPS to place name (GeoNames cities, English and Korean) |
 | `indexing/audio` | `AudioExtractor`, `AudioDecoder`, `Pcm` (window planning), `SpeechTools` |
 | `indexing/video` | `VideoExtractor`, `VideoClips` |
+| `chat/schedule` | `TaskManager` (propose, confirm, run, file matching), `Schedule` (next run), `TaskAlarms` + receivers + `TaskRunWorker` |
 | `ml`, `ml/embedding`, `ml/ocr`, `ml/llm` | `ModelResidency`, `Embedder` and `EmbeddingGemma2Embedder`, `OcrEngine` and `MlKitOcrEngine`, `ChatModel` and `LiteRtChatModel` |
 | `chat` | `ChatController` (turns, context, attachments), `ChatTools` (`search_index`, `read_file`), `ContextBudget`: [chat.md](chat.md) |
 | `models` | `ModelCatalog`, `ModelManager`, `ModelDownloader` (resumable), `ModelDownloadWorker`, `ArchiveExtractor` |
@@ -140,3 +141,7 @@ Segments are scored per signal group (VISUAL, TEXT, AUDIO) with a median-spread 
 - Keyword search is `LIKE`; move to FTS5 trigram if it slows down.
 - New embedding or OCR models: see [models.md](models.md#adding-a-model).
 - Known limits and plans: [roadmap.md](roadmap.md).
+
+## Scheduled tasks
+
+`scheduled_tasks` (schema v6, cascade with `chat_sessions`) holds the tasks; `chat_messages.taskId` links a confirmation card or a run's messages to a task. Time tasks: `TaskAlarms` (AlarmManager exact alarm per task) → `TaskAlarmReceiver` → unique `TaskRunWorker` per task (expedited, foreground `dataSync`) → `TaskManager.run` → `ChatController.runScheduled`. File tasks: `IndexingWorker` calls `TaskManager.onIndexed(passStart)` after a pass; matches are queued on the task and a `TaskRunWorker` is enqueued. `ChatController` serializes user turns and scheduled runs with one mutex. Notifications deep-link to a chat with the `sessionId` extra handled in `MainActivity`/`AppScaffold`. Details: [chat.md](chat.md#scheduled-tasks).

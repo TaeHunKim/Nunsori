@@ -20,7 +20,11 @@ import java.util.Locale
 object ChatToolNames {
     const val SEARCH = "search_index"
     const val READ = "read_file"
-    val ALL = listOf(SEARCH, READ)
+    /** The tool switch that covers schedule_task, list_scheduled_tasks and cancel_scheduled_task. */
+    const val SCHEDULE = "schedule_task"
+    const val LIST_TASKS = "list_scheduled_tasks"
+    const val CANCEL_TASK = "cancel_scheduled_task"
+    val ALL = listOf(SEARCH, READ, SCHEDULE)
 }
 
 /** Kind names the model uses; "document" covers text files and PDF/Office. */
