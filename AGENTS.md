@@ -37,7 +37,7 @@
 ## 앱 구조 (요약)
 이미지·텍스트·문서(PDF/Office)·음성·영상을 인덱싱하고 시맨틱 + 키워드로 검색한다. 모델은 APK에 넣지 않고 Settings에서 받는다(ML Kit OCR과 Silero VAD 0.6MB만 포함). 문자열은 `values/strings.xml`(en)과 `values-ko/strings.xml`(ko)의 키가 같아야 한다(`StringsParityTest`).
 - 데이터 `data/db`(`items` + `segments`, int8 벡터), 소스 `data/media`, 파이프라인 `indexing`(`IndexRunner.sync()`/`process()`, `pipelineKey`로 종류별 재처리), 검색 `search`(그룹별 상대 점수 + 키워드), 자동 인덱싱 `AutoIndexScheduler`, 모델 메모리 `ml/ModelResidency`.
-- 채팅: `chat/`(`ChatController`, `ChatTools`: search_index·read_file, `ContextBudget`), `chat/schedule/`(예약 작업: 알람·워커·파일 트리거), `ml/llm/`(LiteRT-LM 채팅 모델), `ui/chat/`. 웹 검색·fetch 도구는 다음 단계(roadmap). 자세히: `docs/chat.md`.
+- 채팅: `chat/`(`ChatController`, `ChatTools`: search_index·read_file, `ContextBudget`), `chat/schedule/`(예약 작업: 알람·워커·파일 트리거), `ml/llm/`(LiteRT-LM 채팅 모델), `ui/chat/`. 웹 검색·fetch 도구는 후순위(roadmap). 자세히: `docs/chat.md`.
 - 자세히: `docs/architecture.md`, `docs/indexing.md`, `docs/search.md`, `docs/models.md`.
 
 ## 빌드 전 준비
