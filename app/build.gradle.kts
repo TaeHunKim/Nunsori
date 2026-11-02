@@ -20,6 +20,19 @@ android {
         versionName = appVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    // Release signing: the key lives outside the repo (see docs/development.md, "Release build").
+    // Without these properties (e.g. a fresh clone) `assembleRelease` still builds, but the APK is unsigned.
+    fun signingProp(name: String): String? = (project.findProperty(name) as String?) ?: System.getenv(name)
+    val releaseStore = signingProp("NUNSORI_STORE_FILE")
+    if (releaseStore != null) {
+        signingConfigs.create("release") {
+            storeFile = file(releaseStore)
+            storePassword = signingProp("NUNSORI_STORE_PASSWORD")
+            keyAlias = signingProp("NUNSORI_KEY_ALIAS")
+            keyPassword = signingProp("NUNSORI_KEY_PASSWORD")
+        }
+        buildTypes.getByName("release").signingConfig = signingConfigs.getByName("release")
+    }
     buildFeatures { compose = true; buildConfig = true }
     defaultConfig { ndk { abiFilters += listOf("arm64-v8a") } }
     androidResources { generateLocaleConfig = true }

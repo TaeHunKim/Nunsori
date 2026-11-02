@@ -20,6 +20,8 @@ scripts/run.sh                     # installDebug + launch
 
 `scripts/fetch-sherpa-onnx.sh` must run before the first build; the AAR and VAD file are not in git.
 
+For a signed release APK see [development.md](development.md#release-build).
+
 ## First run
 
 1. Go through the **first-run wizard**: choose the kinds of files and folders (grant the media permissions when asked; text files and documents also need **All files access**), download an embedding model (440M is the default; 740M adds audio embedding), and choose automatic indexing (Manual, Immediately, Scheduled, or When idle and charging). Everything can be changed later in Settings. Speech recognition for audio and video transcripts is a separate download in Settings.

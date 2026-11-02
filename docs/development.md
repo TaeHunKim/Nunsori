@@ -14,6 +14,19 @@ Setup: [getting-started.md](getting-started.md). Design: [architecture.md](archi
 | Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. `ChatTest` runs the chat controller and tools against a fake `ChatModel`. **It uninstalls the app at the end, deleting downloaded models.** Write tests that do not depend on the app's settings. Uses fake embedders and speech engines. |
 | Real-model E2E | manual, emulator | Download the real model in the app, index fixtures, query. Drive the UI with mobile-mcp; `adb uiautomator` is blocked while mobile-mcp is attached, so `scripts/e2e-setup.sh` may not work. |
 
+## Release build
+
+The release APK is signed with a release keystore that is **not in the repo**. Without it `./gradlew assembleRelease` still works but produces an unsigned APK that Android will not install.
+
+1. Create the key once (keep it outside the repo and **back it up with its passwords**: if it is lost, installed users can no longer be updated):
+   `keytool -genkeypair -keystore ~/.nunsori-keys/nunsori-release.jks -alias nunsori -keyalg RSA -keysize 4096 -validity 36500`
+2. Put the settings in `~/.gradle/gradle.properties` (or environment variables of the same names): `NUNSORI_STORE_FILE`, `NUNSORI_STORE_PASSWORD`, `NUNSORI_KEY_ALIAS`, `NUNSORI_KEY_PASSWORD`.
+3. Bump `appVersionName` in `app/build.gradle.kts`, then `./gradlew assembleRelease`. Output: `app/build/outputs/apk/release/app-release.apk` (arm64-v8a only). R8/minify is off on purpose (JNI libraries, reflection in pdfbox).
+4. Check: `$ANDROID_HOME/build-tools/<version>/apksigner verify --print-certs app-release.apk`.
+5. Publish: `git tag -a vX.Y.Z -m "Nunsori X.Y.Z"`, `git push origin vX.Y.Z`, `gh release create vX.Y.Z app-release.apk#Nunsori-X.Y.Z.apk --title ... --notes ...` (put the SHA-256 in the notes).
+
+A release APK cannot be installed over a debug build (different signing key): uninstall first, which deletes the index, thumbnails and downloaded models. `adb run-as` does not work on release builds, so app data cannot be copied into one.
+
 ## Scripts
 
 | Script | Purpose |
