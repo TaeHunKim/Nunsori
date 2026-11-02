@@ -11,3 +11,11 @@ dependencyResolutionManagement {
 }
 rootProject.name = "LocalSearchAnything"
 include(":app")
+
+// Develop against a sibling OndolSaem checkout (model host + client SDK): set `ondolsaem.dir=../ondolsaem`
+// in local.properties and Gradle builds the SDK from that source instead of the published artifact.
+// See docs/development.md, "OndolSaem SDK".
+val ondolsaemDir = java.util.Properties().apply {
+    file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}.getProperty("ondolsaem.dir")
+if (ondolsaemDir != null) includeBuild(ondolsaemDir)

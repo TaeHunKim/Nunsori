@@ -40,6 +40,9 @@
 - 채팅: `chat/`(`ChatController`, `ChatTools`: search_index·read_file, `ContextBudget`), `chat/schedule/`(예약 작업: 알람·워커·파일 트리거), `ml/llm/`(LiteRT-LM 채팅 모델), `ui/chat/`. 웹 검색·fetch 도구는 후순위(roadmap). 자세히: `docs/chat.md`.
 - 자세히: `docs/architecture.md`, `docs/indexing.md`, `docs/search.md`, `docs/models.md`.
 
+## OndolSaem (모델 호스트, 분리 진행 중)
+모델 다운로드·로딩·상주는 별도 레포 `taehunkim/ondolsaem`(앱 OndolSaem/온돌샘)으로 옮기는 중이다(roadmap 2번). SDK와 같이 고칠 때는 형제 폴더 `../ondolsaem`에 체크아웃하고 `local.properties`에 `ondolsaem.dir=../ondolsaem`(composite build). 자세히: `docs/development.md`.
+
 ## 빌드 전 준비
 - `scripts/fetch-sherpa-onnx.sh`: sherpa-onnx AAR(`app/libs`)과 Silero VAD(`app/src/main/assets`)를 내려받는다. 둘 다 git에 올리지 않는다.
 

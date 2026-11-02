@@ -27,6 +27,12 @@ The release APK is signed with a release keystore that is **not in the repo**. W
 
 A release APK cannot be installed over a debug build (different signing key): uninstall first, which deletes the index, thumbnails and downloaded models. `adb run-as` does not work on release builds, so app data cannot be copied into one.
 
+## OndolSaem SDK
+
+Model hosting is moving to the separate **OndolSaem** app (roadmap item 2), which lives in its own repository, `taehunkim/ondolsaem`. Nunsori reaches it through that repository's client SDK, `com.github.taehunkim.ondolsaem:sdk` (published on JitPack from git tags).
+
+To change the SDK and Nunsori together, check OndolSaem out next to this repository and add `ondolsaem.dir=../ondolsaem` to `local.properties`. `settings.gradle.kts` then adds it as a Gradle composite build, so the SDK is built from that source and edits there show up in the next Nunsori build. Without the line the published artifact is used.
+
 ## Scripts
 
 | Script | Purpose |
