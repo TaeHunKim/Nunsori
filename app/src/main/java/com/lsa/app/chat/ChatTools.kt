@@ -38,23 +38,27 @@ private fun formatTime(ms: Long): String {
 private fun dateOf(s: ItemSummary, takenOrModified: Long?): String? =
     takenOrModified?.let { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(it)) }
 
+/** Browse lists stop at 100 files (SearchEngine.BROWSE_LIMIT), so offset + limit must stay within it. */
+private const val MAX_OFFSET = 90
+
 /** Lets the model search the index the way the Search screen does. */
 class SearchIndexTool(private val search: SearchEngine, private val dao: ItemDao) : ChatTool {
     override val name = ChatToolNames.SEARCH
     override val description =
         "Search the user's indexed files (photos, documents, audio, video) by meaning and keywords. " +
-            "Returns the best matching files with their item_id; use read_file to read one."
+            "Returns the best matching files with their item_id; use read_file to read one. " +
+            "The query is optional when kinds or a date range is given: then it lists the files of that kind/period, newest first " +
+            "(use offset to get the next ones)."
     override val parameters = """{"type":"object","properties":{
-        "query":{"type":"string","description":"What to look for: words, a description, a place or a file name."},
+        "query":{"type":"string","description":"What to look for: words, a description, a place or a file name. Leave out to list by kinds/dates only."},
         "kinds":{"type":"string","description":"Optional comma separated filter: document, image, audio, video."},
         "date_from":{"type":"string","description":"Optional start date, YYYY-MM-DD."},
         "date_to":{"type":"string","description":"Optional end date, YYYY-MM-DD."},
-        "limit":{"type":"integer","description":"Number of results, 1 to 10 (default 5)."}},
-        "required":["query"]}"""
+        "limit":{"type":"integer","description":"Number of results, 1 to 10 (default 5)."},
+        "offset":{"type":"integer","description":"Skip this many results, to page through a long list (default 0)."}}}"""
 
     override fun execute(args: JSONObject): String = runBlocking {
         val query = args.optString("query").trim()
-        if (query.isEmpty()) return@runBlocking "Error: query is required."
         val kinds = args.optString("kinds").split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.flatMap { k ->
             when (k) {
                 "document", "documents", "text" -> listOf(ItemKind.TEXT, ItemKind.DOC)
@@ -70,11 +74,15 @@ class SearchIndexTool(private val search: SearchEngine, private val dao: ItemDao
             (if (endOfDay) d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1 else d.atStartOfDay(zone).toInstant().toEpochMilli())
         }.getOrNull()
         val limit = args.optInt("limit", 5).coerceIn(1, 10)
-        val result = search.search(query, SearchFilter(kinds, day("date_from", false), day("date_to", true)), limit)
-        val summaries = dao.summaries(result.hits.map { it.itemId }).associateBy { it.itemId }
-        val texts = dao.segmentTexts(result.hits.mapNotNull { it.best?.segId }).associate { it.segId to it.text }
+        val offset = args.optInt("offset", 0).coerceIn(0, MAX_OFFSET)
+        val filter = SearchFilter(kinds, day("date_from", false), day("date_to", true))
+        if (query.isEmpty() && !filter.active) return@runBlocking "Error: give a query, or kinds / date_from / date_to to list files."
+        val all = search.search(query, filter, offset + limit).hits
+        val result = all.drop(offset).take(limit)
+        val summaries = dao.summaries(result.map { it.itemId }).associateBy { it.itemId }
+        val texts = dao.segmentTexts(result.mapNotNull { it.best?.segId }).associate { it.segId to it.text }
         val out = JSONArray()
-        for (h in result.hits) {
+        for (h in result) {
             val s = summaries[h.itemId] ?: continue
             val item = dao.getItem(h.itemId)
             val place = item?.place?.takeIf { it.isNotBlank() }?.split(' ')?.take(2)?.joinToString(" ")

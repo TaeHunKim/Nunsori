@@ -25,7 +25,7 @@ Messages are shown as Markdown (`ui/common/Markdown.kt`): CommonMark with GFM ta
 
 ## Tools
 
-The model calls tools through LiteRT-LM's tool calling (`automaticToolCalling`). Each session can switch them on and off with the chips above the conversation; changing them starts a fresh model state from the stored history. At most 4 tool calls per question.
+The model calls tools through LiteRT-LM's tool calling (`automaticToolCalling`). Each session can switch them on and off with the chips above the conversation; changing them starts a fresh model state from the stored history. At most 8 tool calls per question. `search_index` takes an optional query: with only `kinds` and/or `date_from`/`date_to` it lists the matching files newest first (up to 100, paged with `offset`), so "everything I shot yesterday" works; with neither a query nor a filter it returns an error. Reading many files is bounded by the context window (2K/4K/8K tokens), not by the tool.
 
 | Tool | Arguments | Result |
 |---|---|---|

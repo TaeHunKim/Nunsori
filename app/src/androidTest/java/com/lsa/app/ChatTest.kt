@@ -242,6 +242,9 @@ class ChatTest {
         assertTrue(SearchIndexTool(search, db.itemDao()).execute(JSONObject()).startsWith("Error"))
         val filtered = SearchIndexTool(search, db.itemDao()).execute(JSONObject().put("query", "quokka").put("kinds", "audio"))
         assertEquals("kind filter excludes the document", "No matching files.", filtered)
+        val listed = JSONArray(SearchIndexTool(search, db.itemDao()).execute(JSONObject().put("kinds", "document")))
+        assertEquals("no query: lists by kind", id, listed.getJSONObject(0).getLong("item_id"))
+        assertEquals("offset pages past the list", "No matching files.", SearchIndexTool(search, db.itemDao()).execute(JSONObject().put("kinds", "document").put("offset", 5)))
     }
 
     @Test fun readToolPagesThroughLongText() = runBlocking {

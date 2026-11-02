@@ -251,7 +251,7 @@ class ChatController(
     private fun systemPrompt(custom: String): String {
         return "You are the assistant of a private, on-device file search app. Today is ${todayString()} " +
             "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
-            "and give search_index date_from/date_to as YYYY-MM-DD. " +
+            "and give search_index date_from/date_to as YYYY-MM-DD (a query is optional when you filter by date or kind, e.g. to list yesterday's photos). " +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +
@@ -261,7 +261,7 @@ class ChatController(
     companion object {
         private const val TAG = "LSA.Chat"
         const val NO_MODEL = "no_model"
-        const val MAX_TOOL_CALLS = 4
+        const val MAX_TOOL_CALLS = 8
         private const val MAX_STORED_RESULT = 4000
         private const val ATTACHMENT_CHARS = 3000
         private const val AUTO_SEARCH_RESULTS = 3
