@@ -7,11 +7,11 @@
 An Android app that indexes the files on your phone with on-device multimodal embedding models and lets you search them by meaning and by keyword. Nothing leaves the device; models are downloaded by you, never bundled.
 
 <p>
-<img src="docs/images/search.png" width="200" alt="Search results">
-<img src="docs/images/index.png" width="200" alt="Indexing">
-<img src="docs/images/settings.png" width="200" alt="Settings">
-<img src="docs/images/search-dark.png" width="200" alt="Dark mode">
+<img src="docs/images/demo-search.gif" width="260" alt="Files are indexed on the phone, then found by meaning ('italian food' finds a pizza photo)">
+<img src="docs/images/demo-contact-task.gif" width="260" alt="A scheduled task adds a contact from a business-card photo and opens the Contacts app">
 </p>
+
+*Left: files are indexed on the phone and found by meaning. Right: a scheduled chat task turns a new business-card photo into a contact (you confirm in the Contacts app).*
 
 ## Features
 

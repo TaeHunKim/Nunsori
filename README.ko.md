@@ -7,11 +7,11 @@
 폰에 있는 파일을 온디바이스 멀티모달 임베딩 모델로 인덱싱하고, 의미와 키워드로 검색하는 Android 앱입니다. 데이터는 기기 밖으로 나가지 않으며, 모델은 앱에 포함되지 않고 사용자가 직접 내려받습니다.
 
 <p>
-<img src="docs/images/search.png" width="200" alt="검색 결과">
-<img src="docs/images/index.png" width="200" alt="인덱싱">
-<img src="docs/images/settings.png" width="200" alt="설정">
-<img src="docs/images/search-dark.png" width="200" alt="다크 모드">
+<img src="docs/images/demo-search.gif" width="260" alt="폰 안에서 파일을 인덱싱하고 의미로 검색 ('italian food'로 피자 사진을 찾음)">
+<img src="docs/images/demo-contact-task.gif" width="260" alt="예약된 작업이 명함 사진에서 연락처를 만들고 연락처 앱을 엽니다">
 </p>
+
+*왼쪽: 폰 안에서 파일을 인덱싱하고 의미로 검색합니다. 오른쪽: 채팅의 예약 작업이 새 명함 사진을 연락처로 만들어 줍니다(저장은 연락처 앱에서 직접 확인).*
 
 ## 기능
 

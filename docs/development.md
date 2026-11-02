@@ -27,7 +27,7 @@ Setup: [getting-started.md](getting-started.md). Design: [architecture.md](archi
 | `fetch-sherpa-onnx.sh` | sherpa-onnx AAR and Silero VAD |
 | `goto-search.sh`, `ui-search.sh`, `ui-tap.sh`, `search-result.sh`, `e2e-search.sh`, `e2e-setup.sh` | UI automation helpers for E2E |
 | `make-places.py` | Rebuild `app/src/main/assets/places.bin` from GeoNames (downloads about 210 MB to `build/places-src`; the result is committed) |
-| `fetch-photo-fixtures.sh`, `make-text-fixtures.py`, `make-doc-fixtures.py`, `make-office-fixtures.py`, `make-audio-fixtures.sh` | Generate fixtures |
+| `fetch-photo-fixtures.sh`, `make-text-fixtures.py`, `make-doc-fixtures.py`, `make-office-fixtures.py`, `make-audio-fixtures.sh`, `make-card-fixture.py` (fictional business card), `make-demo-docs.py` (README demo documents) | Generate fixtures |
 
 ## Fixtures
 
