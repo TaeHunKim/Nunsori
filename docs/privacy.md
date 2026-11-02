@@ -1,6 +1,6 @@
 # Privacy
 
-Local Search Anything has no server, no account, no analytics. Indexing and search run on the device.
+Nunsori (Local Search Anything) has no server, no account, no analytics. Indexing and search run on the device.
 
 ## What is stored, and where
 

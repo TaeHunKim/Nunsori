@@ -1,6 +1,8 @@
-# Local Search Anything
+# Nunsori (눈소리)
 
 [한국어](README.ko.md)
+
+*Local Search Anything.* **N**ative **U**nified **N**atural-language **S**earch, **O**ffline **R**ecall & **I**ndex. The name is Korean for "eye" (눈) and "sound" (소리): it sees and hears your files.
 
 An Android app that indexes the files on your phone with on-device multimodal embedding models and lets you search them by meaning and by keyword. Nothing leaves the device; models are downloaded by you, never bundled.
 

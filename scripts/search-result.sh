@@ -3,7 +3,7 @@
 source "$(dirname "$0")/env.sh"
 LINE=$(adb logcat -d -s LSA.Search | grep RESULT | tail -1 | sed 's/.*q=/q=/')
 [ -z "$LINE" ] && { echo "(no result logged)"; exit 1; }
-MAP=$(adb shell "run-as com.lsa.app sqlite3 databases/lsa.db 'select itemId, displayName from items'" 2>/dev/null | tr -d '\r')
+MAP=$(adb shell "run-as $APP_ID sqlite3 databases/lsa.db 'select itemId, displayName from items'" 2>/dev/null | tr -d '\r')
 python3 - "$LINE" "$MAP" <<'PY'
 import re, sys
 line, mp = sys.argv[1], sys.argv[2]

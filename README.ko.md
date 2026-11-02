@@ -1,6 +1,8 @@
-# Local Search Anything
+# 눈소리 (Nunsori)
 
 [English](README.md)
+
+*Local Search Anything.* **N**ative **U**nified **N**atural-language **S**earch, **O**ffline **R**ecall & **I**ndex. 눈(보고)과 소리(듣는) 이 두 가지로 파일을 이해한다는 뜻의 이름입니다.
 
 폰에 있는 파일을 온디바이스 멀티모달 임베딩 모델로 인덱싱하고, 의미와 키워드로 검색하는 Android 앱입니다. 데이터는 기기 밖으로 나가지 않으며, 모델은 앱에 포함되지 않고 사용자가 직접 내려받습니다.
 

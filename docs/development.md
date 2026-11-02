@@ -46,7 +46,7 @@ Push documents, audio and video to `/sdcard/Documents|Recordings|Movies/fixtures
 ## Debugging
 
 - Log tags: `LSA.Residency`, `LSA.Auto`, `LSA.Search`.
-- Inspect the DB: `adb shell "run-as com.lsa.app sqlite3 databases/lsa.db 'select status,count(*) from items group by status'"`.
+- Inspect the DB: `adb shell "run-as io.github.taehunkim.nunsori sqlite3 databases/lsa.db 'select status,count(*) from items group by status'"`.
 - mobile-mcp (`.mcp.json`) lists screen elements and taps; system permission dialogs are separate windows and may need coordinate taps.
 
 ## Schema and version changes

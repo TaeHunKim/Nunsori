@@ -1,5 +1,5 @@
-# Local Search Anything (Android)
-온디바이스 멀티모달 임베딩 + 시맨틱 검색 + 로컬 LLM RAG 앱. 패키지 `com.lsa.app`, Kotlin + Compose, minSdk 29 / target 36 / compile 37.
+# Nunsori / 눈소리 (Local Search Anything, Android)
+온디바이스 멀티모달 임베딩 + 시맨틱 검색 + 로컬 LLM RAG 앱. 앱 이름 Nunsori(눈소리), applicationId `io.github.taehunkim.nunsori`, 코드 패키지·namespace `com.lsa.app`(둘은 별개; 스크립트는 `scripts/env.sh`의 `APP_ID`/`APP_ACTIVITY` 사용), Kotlin + Compose, minSdk 29 / target 36 / compile 37.
 
 ## 문서 유지 규칙 (코드 구현 시 항상 적용)
 코드를 구현·수정할 때는 **같은 작업 안에서 관련 문서도 함께 갱신**하고, 코드와 문서를 같은 커밋에 넣는다. 갱신이 필요 없다고 판단하면 이유를 한 줄로 남긴다.

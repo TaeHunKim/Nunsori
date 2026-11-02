@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Local Search</string>
+    <string name="app_name">Nunsori</string>
     <string name="open_menu">Open menu</string>
     <string name="nav_index">Index</string>
     <string name="nav_search">Search</string>
@@ -93,6 +93,7 @@
     <string name="chat_ask_choose">Ask in which chat?</string>
     <string name="about_title">About</string>
     <string name="about_version">Version %1$s (database v%2$d)</string>
+    <string name="about_tagline">Nunsori (눈소리): eye and sound. Native, Unified, Natural-language Search, Offline Recall &amp; Index.</string>
     <string name="about_places_credit">Place names: GeoNames (CC BY 4.0).</string>
     <string name="residency_title">Model memory</string>
     <string name="residency_desc">How long the AI models (search, chat, text recognition, speech) stay loaded in memory after use. During a chat answer the models it needs always stay loaded.</string>

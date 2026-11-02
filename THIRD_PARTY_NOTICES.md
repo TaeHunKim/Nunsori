@@ -1,6 +1,6 @@
 # Third-party notices
 
-Local Search Anything is licensed under the [Apache License 2.0](LICENSE), Copyright 2026 Taehun Kim.
+Nunsori (Local Search Anything) is licensed under the [Apache License 2.0](LICENSE), Copyright 2026 Taehun Kim.
 It uses the components below. Versions come from [`gradle/libs.versions.toml`](gradle/libs.versions.toml).
 
 ## Libraries (linked into the app)

@@ -1,6 +1,6 @@
 # Architecture
 
-Package `com.lsa.app` (Kotlin, Jetpack Compose). Source root: `app/src/main/java/com/lsa/app`.
+Code package and Gradle `namespace` `com.lsa.app` (Kotlin, Jetpack Compose); the installed app id (`applicationId`) is `io.github.taehunkim.nunsori`. Source root: `app/src/main/java/com/lsa/app`.
 
 ## 1. Goals and principles
 
