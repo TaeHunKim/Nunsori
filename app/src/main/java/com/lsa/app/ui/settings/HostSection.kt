@@ -37,6 +37,7 @@ private val USED = listOf(
     Categories.OCR to R.string.host_cat_ocr,
     Categories.ASR to R.string.host_cat_asr,
     Categories.LLM to R.string.host_cat_llm,
+    Categories.FACE to R.string.host_cat_face,
 )
 
 /**
@@ -101,6 +102,9 @@ fun HostStatusCard(
                         Text(stringResource(label), Modifier.weight(0.35f), style = MaterialTheme.typography.bodySmall)
                         Text(
                             when {
+                                // OndolSaem before 0.3.0 (API 1) has no face category at all
+                                m == null && cat == Categories.FACE && state.status == HostState.Status.CONNECTED &&
+                                    state.hostApi < io.github.taehunkim.ondolsaem.sdk.OndolSaem.Api.V2 -> stringResource(R.string.host_model_needs_update)
                                 m == null || m.id.isEmpty() -> stringResource(R.string.host_model_none)
                                 m.ready -> m.displayName
                                 else -> stringResource(R.string.host_model_not_downloaded, m.displayName)

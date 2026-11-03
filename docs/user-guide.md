@@ -17,6 +17,7 @@ A three-step wizard appears on the first launch. Everything in it can be changed
 Shows progress ("n / total files"), the file being processed, **Start / Pause**, and a thumbnail grid of indexed files. Indexing continues in the background with a notification, and resumes after the app is killed.
 
 - **Failed files:** a "Failed (n)" chip filters the grid to files that could not be indexed (tap one to see the error); **Retry failed** runs only those files, without resuming the rest of a paused run. Failed files are also retried by every normal run.
+- After the files, the same run looks for faces in photos not scanned yet (People); a second line under the status shows *Finding faces: n of m photos* while it works, so the run is not over yet even when the status says it is up to date.
 
 ## Search
 

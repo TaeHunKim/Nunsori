@@ -36,7 +36,7 @@
     <string name="onboarding_files_title">What should be indexed?</string>
     <string name="onboarding_files_desc">Choose the kinds of files and the folders to search. Everything stays on your phone.</string>
     <string name="onboarding_model_title">Set up the AI models</string>
-    <string name="onboarding_model_desc">The models run on your phone, in the companion app OndolSaem. Install it and download a search model there (EmbeddingGemma 440M is recommended; 740M also understands audio). You can skip this and do it later.</string>
+    <string name="onboarding_model_desc">The models run on your phone, in the companion app OndolSaem. Install it and download the models there (EmbeddingGemma 740M is recommended: it also understands voice recordings and video sound; 440M is smaller). You can skip this and do it later.</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_finish">Finish</string>
@@ -316,7 +316,7 @@
     <string name="about_licenses">Open-source licenses</string>
     <string name="about_licenses_close">Close</string>
     <string name="host_title">AI models (OndolSaem)</string>
-    <string name="host_desc">Nunsori\'s AI models (search, text recognition, speech, chat) are downloaded and run by the separate OndolSaem app, which other apps can share. Choose and download models there.</string>
+    <string name="host_desc">Nunsori\'s AI models (search, text recognition, speech, chat, faces) are downloaded and run by the separate OndolSaem app, which other apps can share. Choose and download models there.</string>
     <string name="host_checking">Checking OndolSaem…</string>
     <string name="host_not_installed">OndolSaem is not installed. Install it to search by meaning, read text in images, transcribe speech and chat.</string>
     <string name="host_not_approved">This build of Nunsori is signed with a key OndolSaem does not know, so it asks you first. Allow Nunsori in OndolSaem (Apps tab), then check again.</string>
@@ -328,6 +328,8 @@
     <string name="host_cat_ocr">Text in images</string>
     <string name="host_cat_asr">Speech recognition</string>
     <string name="host_cat_llm">Chat</string>
+    <string name="host_cat_face">Faces (People)</string>
+    <string name="host_model_needs_update">needs OndolSaem 0.3.0</string>
     <string name="host_model_none">none selected</string>
     <string name="host_model_not_downloaded">%1$s (not downloaded)</string>
     <string name="host_install">Install OndolSaem</string>

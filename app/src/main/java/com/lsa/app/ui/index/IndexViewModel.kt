@@ -23,6 +23,8 @@ class IndexViewModel(private val c: AppContainer) : ViewModel() {
     /** Failed files, counted from the database (not just the current run). */
     val failedCount = summaries.map { l -> l.count { it.status == com.lsa.app.data.db.ItemStatus.FAILED } }.state(0)
     val progress = c.indexing.progress
+    /** The face pass that follows indexing (People); shown so the run does not look finished while it works. */
+    val faceProgress = c.faces.progress
     val running = c.indexing.running.state(false)
     val enabledFolderCount = dao.observeFolders().map { f -> f.count { it.enabled } }.state(0)
     val modelReady = c.models.state.map { it.status == com.lsa.app.ml.HostState.Status.UNKNOWN || it.ready(io.github.taehunkim.ondolsaem.sdk.OndolSaem.Categories.EMBEDDING) }.state(true)

@@ -36,7 +36,7 @@
     <string name="onboarding_files_title">무엇을 인덱싱할까요?</string>
     <string name="onboarding_files_desc">검색할 파일 종류와 폴더를 고르세요. 모든 데이터는 폰 안에만 있습니다.</string>
     <string name="onboarding_model_title">AI 모델 준비</string>
-    <string name="onboarding_model_desc">모델은 동반 앱인 온돌샘에서 폰 안에서 실행됩니다. 온돌샘을 설치하고 검색 모델을 받으세요(EmbeddingGemma 440M 추천, 740M은 오디오도 이해). 건너뛰고 나중에 해도 됩니다.</string>
+    <string name="onboarding_model_desc">모델은 동반 앱인 온돌샘에서 폰 안에서 실행됩니다. 온돌샘을 설치하고 모델을 받으세요(EmbeddingGemma 740M 추천: 녹음과 영상 소리도 이해합니다. 440M은 더 작습니다). 건너뛰고 나중에 해도 됩니다.</string>
     <string name="onboarding_back">이전</string>
     <string name="onboarding_next">다음</string>
     <string name="onboarding_finish">완료</string>
@@ -311,7 +311,7 @@
     <string name="about_licenses">오픈소스 라이선스</string>
     <string name="about_licenses_close">닫기</string>
     <string name="host_title">AI 모델 (온돌샘)</string>
-    <string name="host_desc">눈소리의 AI 모델(검색, 글자 인식, 음성 인식, 채팅)은 별도 앱인 온돌샘이 내려받고 실행합니다. 다른 앱과도 함께 씁니다. 모델 선택과 다운로드는 온돌샘에서 하세요.</string>
+    <string name="host_desc">눈소리의 AI 모델(검색, 글자 인식, 음성 인식, 채팅, 얼굴)은 별도 앱인 온돌샘이 내려받고 실행합니다. 다른 앱과도 함께 씁니다. 모델 선택과 다운로드는 온돌샘에서 하세요.</string>
     <string name="host_checking">온돌샘 확인 중…</string>
     <string name="host_not_installed">온돌샘이 설치되어 있지 않습니다. 의미로 검색하기, 사진 속 글자 읽기, 음성 받아쓰기, 채팅을 쓰려면 설치하세요.</string>
     <string name="host_not_approved">이 눈소리 빌드는 온돌샘이 모르는 키로 서명돼 있어 먼저 허락을 받아야 합니다. 온돌샘(앱 탭)에서 눈소리를 허용한 뒤 다시 확인하세요.</string>
@@ -323,6 +323,8 @@
     <string name="host_cat_ocr">사진 속 글자</string>
     <string name="host_cat_asr">음성 인식</string>
     <string name="host_cat_llm">채팅</string>
+    <string name="host_cat_face">얼굴(인물)</string>
+    <string name="host_model_needs_update">온돌샘 0.3.0 이상 필요</string>
     <string name="host_model_none">선택 안 됨</string>
     <string name="host_model_not_downloaded">%1$s (받지 않음)</string>
     <string name="host_install">온돌샘 설치</string>

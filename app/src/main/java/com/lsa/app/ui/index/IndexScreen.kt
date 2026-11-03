@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -123,6 +124,13 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
                     )
                 }
                 StatusCard(progress, running, canStart, onStart = ::onStart, onPause = vm::pause)
+                val faces by vm.faceProgress.collectAsStateWithLifecycle()
+                if (faces.running) {
+                    Column(Modifier.fillMaxWidth().testTag("face_progress"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(stringResource(R.string.people_scanning, faces.done, faces.total), style = MaterialTheme.typography.bodyMedium)
+                        LinearProgressIndicator(progress = { if (faces.total > 0) faces.done.toFloat() / faces.total else 0f }, modifier = Modifier.fillMaxWidth())
+                    }
+                }
                 com.lsa.app.ui.onboarding.LastAutoRunLine()
                 if (failed > 0) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

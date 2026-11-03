@@ -10,7 +10,7 @@ Since 0.8.0 Nunsori **does not download or run models itself**. The companion ap
 | `ocr` | Text in photos and scanned PDF pages | ML Kit Korean + Latin (`mlkit-ko`, built into OndolSaem) |
 | `asr` | Speech detection (VAD, always available) and transcripts of audio and video | SenseVoice (`asr-sensevoice`) |
 | `llm` | Chat and scheduled tasks | Gemma 4 E2B (`chat-gemma4-e2b`) |
-| `face` (OndolSaem 0.3.0, API 2) | Faces in photos for People: box + 128-d identity vector | ML Kit face detection + SFace (`face-sface`); with an older OndolSaem the People screen asks to update it |
+| `face` (OndolSaem 0.3.0, API 2) | Faces in photos for People: box + 128-d identity vector | ML Kit face detection + SFace (`face-sface`); with an older OndolSaem the People screen asks to update it, and the OndolSaem card (Settings › Models, first-run wizard) says "needs OndolSaem 0.3.0" in its *Faces* row |
 
 ## How it fits
 
