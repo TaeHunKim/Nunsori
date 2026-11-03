@@ -14,7 +14,7 @@ class TextExtractor(private val embedder: Embedder) {
     suspend fun extract(entry: SourceEntry, resume: Long, sink: ItemSink) {
         val file = File(entry.uri.path ?: throw SkipItem("no path"))
         if (!file.exists()) throw SkipItem("file is gone")
-        val bytes = file.inputStream().use { it.readNBytes(MAX_BYTES) }
+        val bytes = file.inputStream().use { readUpTo(it, MAX_BYTES) }
         val text = TextDecoder.decode(bytes) ?: throw SkipItem("binary file")
         val doc = TextRouting.chunk(file.extension, text, entry.displayName)
         if (doc.chunks.isEmpty()) throw SkipItem("empty")
@@ -37,4 +37,16 @@ class TextExtractor(private val embedder: Embedder) {
         const val MAX_CHUNKS = 20_000
         const val BATCH = 8
     }
+}
+
+/** Up to [max] bytes of [input] (InputStream.readNBytes needs Android 13). */
+internal fun readUpTo(input: java.io.InputStream, max: Int): ByteArray {
+    val out = java.io.ByteArrayOutputStream(minOf(max, 64 * 1024))
+    val buf = ByteArray(8192)
+    while (out.size() < max) {
+        val n = input.read(buf, 0, minOf(buf.size, max - out.size()))
+        if (n < 0) break
+        out.write(buf, 0, n)
+    }
+    return out.toByteArray()
 }

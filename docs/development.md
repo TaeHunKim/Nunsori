@@ -80,6 +80,10 @@ Any change to an `@Entity` must, in the same commit:
 
 Never use `fallbackToDestructiveMigration` for upgrades. Changes that only affect derived output go into `PipelineKeys` instead (reprocesses just that kind). Settings or file-layout changes go into a step in `AppUpgrade`. To test an upgrade by hand, index with the previous build, then `adb install -r` the new one.
 
+## Lint
+
+`./gradlew lintDebug` has no errors (0.9.0). Calls above minSdk 29 need a guard: `hasAllFilesAccess()` (`ui/index/IndexScreen.kt`) instead of `Environment.isExternalStorageManager()` (API 30), `readUpTo` instead of `InputStream.readNBytes` (API 33).
+
 ## Conventions
 
 Commit only code, scripts and docs: no models, test media, databases or build output (see `.gitignore`). Update docs with code ([CONTRIBUTING.md](../CONTRIBUTING.md)).

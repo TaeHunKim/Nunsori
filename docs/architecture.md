@@ -58,7 +58,7 @@ flowchart TD
 | `ml`, `ml/embedding`, `ml/ocr`, `ml/llm` | `ModelHost` (OndolSaem client: leases, remote engines, model-id mirroring), interfaces `Embedder`, `OcrEngine`, `ChatModel` (`SpeechTools` is in `indexing/audio`) |
 | `chat` | `ChatController` (turns, context, attachments), `ChatTools` (`search_index`, `read_file`), `PeopleDirectory` (names for the `person` arguments), `ContextBudget`: [chat.md](chat.md) |
 | `search` | `SearchEngine`, `Fusion`, `KeywordMatcher` |
-| `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`), screens (`index`, `search`, `people`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
+| `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`; drawer menu on the lists, an up arrow to the list on detail routes such as `chat/{id}` and `people/{id}`), screens (`index`, `search`, `people`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
 
 ## 4. Data model
 

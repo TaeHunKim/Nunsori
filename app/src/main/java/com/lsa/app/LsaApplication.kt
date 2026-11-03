@@ -44,7 +44,7 @@ class AppContainer(val context: Context) {
         listOf(
             mediaRepo,
             // Plain files (documents, text) need "all files access"; without it this source simply lists nothing.
-            FileSource(Environment.getExternalStorageDirectory()) { Environment.isExternalStorageManager() },
+            FileSource(Environment.getExternalStorageDirectory()) { com.lsa.app.ui.index.hasAllFilesAccess() },
         ),
     )
     val places by lazy { PlaceFinder.fromAssets(context) }

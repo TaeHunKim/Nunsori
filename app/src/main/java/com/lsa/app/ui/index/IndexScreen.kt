@@ -54,7 +54,10 @@ import com.lsa.app.ui.common.WarningCard
 
 /** Photos via the media permission, or any file via "all files access". */
 fun hasAnyStorageAccess(ctx: android.content.Context): Boolean =
-    hasPhotoPermission(ctx) || android.os.Environment.isExternalStorageManager()
+    hasPhotoPermission(ctx) || hasAllFilesAccess()
+
+/** "All files access" (Android 11+); Android 10 has no such permission, so plain files are never readable there. */
+fun hasAllFilesAccess(): Boolean = Build.VERSION.SDK_INT >= 30 && android.os.Environment.isExternalStorageManager()
 
 fun hasPhotoPermission(ctx: android.content.Context): Boolean {
     val p = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE

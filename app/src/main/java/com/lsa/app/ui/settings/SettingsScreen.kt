@@ -154,28 +154,28 @@ private fun ChatTab(vm: SettingsViewModel) {
 @Composable
 private fun AppTab(vm: SettingsViewModel) {
     val ctx = LocalContext.current
-        // --- Storage
-        Section(R.string.storage_title, null)
-        val thumbBytes by vm.thumbBytes.collectAsStateWithLifecycle()
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.storage_previews, android.text.format.Formatter.formatShortFileSize(ctx, thumbBytes)), Modifier.weight(1f))
-            OutlinedButton(onClick = { vm.clearThumbs() }, enabled = thumbBytes > 0) { Text(stringResource(R.string.storage_clear)) }
-        }
-        HorizontalDivider()
+    // --- Storage
+    Section(R.string.storage_title, null)
+    val thumbBytes by vm.thumbBytes.collectAsStateWithLifecycle()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.storage_previews, android.text.format.Formatter.formatShortFileSize(ctx, thumbBytes)), Modifier.weight(1f))
+        OutlinedButton(onClick = { vm.clearThumbs() }, enabled = thumbBytes > 0) { Text(stringResource(R.string.storage_clear)) }
+    }
+    HorizontalDivider()
 
-        val showRes by vm.showResourceIndicator.collectAsStateWithLifecycle()
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_resource_title), style = MaterialTheme.typography.titleSmall)
-                Text(stringResource(R.string.settings_resource_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            androidx.compose.material3.Switch(checked = showRes, onCheckedChange = vm::setShowResourceIndicator)
+    val showRes by vm.showResourceIndicator.collectAsStateWithLifecycle()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.settings_resource_title), style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.settings_resource_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        HorizontalDivider()
+        androidx.compose.material3.Switch(checked = showRes, onCheckedChange = vm::setShowResourceIndicator)
+    }
+    HorizontalDivider()
 
-        // --- Language
-        Section(R.string.settings_language, null)
-        LanguagePicker()
+    // --- Language
+    Section(R.string.settings_language, null)
+    LanguagePicker()
 }
 
 @Composable

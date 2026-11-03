@@ -66,7 +66,7 @@ class FileOps(
     private val items: ItemDao,
     private val folders: suspend () -> List<FolderSpec>,
     private val root: File = Environment.getExternalStorageDirectory(),
-    private val allowed: () -> Boolean = { Build.VERSION.SDK_INT >= 30 && Environment.isExternalStorageManager() },
+    private val allowed: () -> Boolean = { com.lsa.app.ui.index.hasAllFilesAccess() },
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     val hasAccess: Boolean get() = allowed()

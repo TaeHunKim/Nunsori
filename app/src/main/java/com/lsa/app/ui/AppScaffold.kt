@@ -5,6 +5,8 @@ package com.lsa.app.ui
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.PhotoLibrary
@@ -83,6 +85,9 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
         }
     }
 
+    // a detail screen (one chat, one person) gets an up arrow to its list instead of the menu
+    val detail = route.contains('/')
+
     fun go(d: Dest) {
         nav.navigate(d.route) {
             popUpTo(nav.graph.findStartDestination().id) { saveState = true }
@@ -90,6 +95,7 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
             restoreState = true
         }
     }
+    fun up() { if (!nav.popBackStack(current.route, inclusive = false)) go(current) }
 
     ModalNavigationDrawer(
         drawerState = drawer,
@@ -115,11 +121,21 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(current.label)) },
+                    title = {
+                        val personId = if (current == Dest.People && detail) entry?.arguments?.getLong("id") else null
+                        if (personId != null) PersonTitle(personId)
+                        else Text(stringResource(current.label), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    },
                     actions = { if (showResources) com.lsa.app.ui.common.ResourceIndicator() },
                     navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawer.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
+                        if (detail) {
+                            IconButton(onClick = { up() }, modifier = Modifier.testTag("nav_up")) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.nav_up))
+                            }
+                        } else {
+                            IconButton(onClick = { scope.launch { drawer.open() } }) {
+                                Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.open_menu))
+                            }
                         }
                     },
                 )
@@ -148,4 +164,12 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
             }
         }
     }
+}
+
+/** The person's name (or "Unnamed") as the title of their page. */
+@Composable
+private fun PersonTitle(id: Long) {
+    val container = com.lsa.app.rememberContainer()
+    val person by androidx.compose.runtime.remember(id) { container.db.faceDao().observePerson(id) }.collectAsStateWithLifecycle(initialValue = null)
+    Text(person?.name ?: stringResource(R.string.people_unnamed), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
 }

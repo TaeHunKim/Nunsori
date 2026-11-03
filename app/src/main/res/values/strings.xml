@@ -369,4 +369,5 @@
         <item quantity="one">%d person with one photo hidden</item>
         <item quantity="other">%d people with one photo hidden</item>
     </plurals>
+    <string name="nav_up">Back</string>
 </resources>

@@ -362,4 +362,5 @@
     <plurals name="people_small_hidden">
         <item quantity="other">사진이 한 장인 인물 %d명 숨김</item>
     </plurals>
+    <string name="nav_up">뒤로</string>
 </resources>

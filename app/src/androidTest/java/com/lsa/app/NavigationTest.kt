@@ -10,6 +10,7 @@ import org.junit.Before
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -42,5 +43,23 @@ class NavigationTest {
         openMenu()
         item("Settings").performClick()
         rule.onNodeWithText("Folders to index").assertIsDisplayed()
+    }
+
+    @Test fun drawerListsPeopleBetweenSearchAndChat() {
+        openMenu()
+        item("People").assertIsDisplayed()
+        item("People").performClick()
+        rule.onNodeWithContentDescription("Open menu").assertIsDisplayed()
+    }
+
+    @Test fun aDetailScreenHasAnUpArrowToItsList() {
+        openMenu()
+        item("Chat").performClick()
+        rule.onNodeWithText("New chat", useUnmergedTree = true).performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithContentDescription("Back").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithContentDescription("Back").performClick()
+        // back on the list: the menu button again (the new chat is listed as "New chat" next to the button)
+        rule.onNodeWithContentDescription("Open menu").assertIsDisplayed()
+        rule.waitUntil(5_000) { rule.onAllNodesWithText("New chat", useUnmergedTree = true).fetchSemanticsNodes().size >= 2 }
     }
 }
