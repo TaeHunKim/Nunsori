@@ -62,11 +62,19 @@ fun OndolSaemSection() {
                 HostState.Status.NOT_ALLOWED -> R.string.host_not_allowed to true
                 HostState.Status.UNREACHABLE -> R.string.host_unreachable to true
                 HostState.Status.CONNECTED -> R.string.host_connected to false
+                HostState.Status.HOST_TOO_OLD -> R.string.host_too_old to true
+                HostState.Status.CLIENT_TOO_OLD -> R.string.host_client_too_old to true
             }
             Text(
                 stringResource(msg), style = MaterialTheme.typography.bodyMedium,
                 color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             )
+            if (state.status == HostState.Status.CONNECTED && state.hostVersion != null) {
+                Text(
+                    stringResource(R.string.host_version, state.hostVersion!!, state.hostApi),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (state.models.isNotEmpty()) {
                 USED.forEach { (cat, label) ->
                     val m = state.models[cat]
@@ -88,13 +96,19 @@ fun OndolSaemSection() {
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (state.status == HostState.Status.NOT_INSTALLED) {
-                    Button(onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.INSTALL_URL))) }) {
-                        Text(stringResource(R.string.host_install))
+                when (state.status) {
+                    HostState.Status.NOT_INSTALLED, HostState.Status.HOST_TOO_OLD -> Button(
+                        onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.INSTALL_URL))) },
+                    ) {
+                        Text(stringResource(if (state.status == HostState.Status.NOT_INSTALLED) R.string.host_install else R.string.host_update))
                     }
-                } else {
+                    HostState.Status.CLIENT_TOO_OLD -> Button(
+                        onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.APP_RELEASES_URL))) },
+                    ) { Text(stringResource(R.string.host_update_app)) }
+                    else -> {
                     Button(onClick = { container.models.client.launchIntent()?.let(ctx::startActivity) }) {
                         Text(stringResource(R.string.host_open))
+                    }
                     }
                 }
                 OutlinedButton(onClick = { scope.launch { container.models.refresh() } }) { Text(stringResource(R.string.host_check)) }

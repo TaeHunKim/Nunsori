@@ -45,6 +45,8 @@ class ModelHostTest {
     @Test fun refreshConnectsAndMirrorsTheActiveModels() = runBlocking {
         val s = host.refresh()
         assertEquals(HostState.Status.CONNECTED, s.status)
+        assertTrue("host version known", !s.hostVersion.isNullOrEmpty())
+        assertTrue(s.hostApi >= io.github.taehunkim.ondolsaem.sdk.OndolSaem.Api.V1)
         val emb = s.models[Categories.EMBEDDING]
         assertNotNull(emb)
         assertEquals(if (emb!!.ready) emb.id else "", settings.embeddingModelId.first())

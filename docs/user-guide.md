@@ -73,6 +73,7 @@ See [privacy.md](privacy.md#permissions-androidmanifestxml).
 | Nothing found | Is the file `DONE` on the Index screen? Is the folder added and the kind enabled? Text/documents need All files access. |
 | Documents or text never appear | Grant "All files access" in system settings. |
 | "No search model available" | Install OndolSaem, download a model there, then **Check again** in Settings › Models. |
+| "OndolSaem is too old" / "no longer supports this version" | Update the app named in the message (Settings › Models has a button). |
 | "OndolSaem refused the connection" | Nunsori and OndolSaem must be signed with the same key (or an allowed one), e.g. both debug builds from the same machine. |
 | Slow indexing | Emulators use CPU. On phones, a hot device pauses automatic runs. |
 | Audio never matches by sound | Audio embedding needs the 740M model; transcripts need the speech model (both chosen in OndolSaem). |

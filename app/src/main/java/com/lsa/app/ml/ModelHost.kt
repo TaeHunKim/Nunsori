@@ -44,8 +44,20 @@ class Lease<T>(val value: T, private val onClose: () -> Unit) : AutoCloseable {
 }
 
 /** What the OndolSaem model host offers right now. */
-data class HostState(val status: Status, val models: Map<String, ModelInfo> = emptyMap()) {
-    enum class Status { UNKNOWN, NOT_INSTALLED, NOT_ALLOWED, UNREACHABLE, CONNECTED }
+data class HostState(
+    val status: Status,
+    val models: Map<String, ModelInfo> = emptyMap(),
+    /** Host app version and API level, once connected. */
+    val hostVersion: String? = null,
+    val hostApi: Int = 0,
+) {
+    enum class Status {
+        UNKNOWN, NOT_INSTALLED, NOT_ALLOWED, UNREACHABLE, CONNECTED,
+        /** OndolSaem is older than this app needs: update OndolSaem. */
+        HOST_TOO_OLD,
+        /** OndolSaem no longer serves this app's SDK level: update Nunsori. */
+        CLIENT_TOO_OLD,
+    }
 
     fun ready(category: String) = models[category]?.ready == true
     fun model(category: String): ModelInfo? = models[category]?.takeIf { it.id.isNotEmpty() }
@@ -91,14 +103,12 @@ class ModelHost(
     /** Asks the host for its active models and mirrors their ids into the settings. Never throws. */
     suspend fun refresh(): HostState = refreshLock.withLock {
         val next = try {
-            HostState(HostState.Status.CONNECTED, client.categories().associateBy { it.category })
+            val models = client.categories().associateBy { it.category }
+            val info = client.hostInfo()
+            HostState(HostState.Status.CONNECTED, models, info.appVersion, info.apiVersion)
         } catch (e: HostUnavailableException) {
-            val status = when (e.reason) {
-                HostUnavailableException.Reason.NOT_INSTALLED -> HostState.Status.NOT_INSTALLED
-                HostUnavailableException.Reason.NOT_ALLOWED -> HostState.Status.NOT_ALLOWED
-                else -> HostState.Status.UNREACHABLE
-            }
-            HostState(status, _state.value.models)
+            Log.i(TAG, "OndolSaem unavailable: ${e.reason} ${e.message.orEmpty()}")
+            HostState(statusFor(e.reason), _state.value.models)
         } catch (e: Exception) {
             Log.w(TAG, "refresh failed", e)
             HostState(HostState.Status.UNREACHABLE, _state.value.models)
@@ -189,6 +199,16 @@ class ModelHost(
         const val DEFAULT_CONTEXT_TOKENS = 4096
         /** Where to get the host app. */
         const val INSTALL_URL = "https://github.com/taehunkim/ondolsaem/releases"
+        /** Where to get a newer Nunsori. */
+        const val APP_RELEASES_URL = "https://github.com/TaeHunKim/Nunsori/releases"
+
+        fun statusFor(reason: HostUnavailableException.Reason): HostState.Status = when (reason) {
+            HostUnavailableException.Reason.NOT_INSTALLED -> HostState.Status.NOT_INSTALLED
+            HostUnavailableException.Reason.NOT_ALLOWED -> HostState.Status.NOT_ALLOWED
+            HostUnavailableException.Reason.NO_ANSWER -> HostState.Status.UNREACHABLE
+            HostUnavailableException.Reason.HOST_TOO_OLD -> HostState.Status.HOST_TOO_OLD
+            HostUnavailableException.Reason.CLIENT_TOO_OLD -> HostState.Status.CLIENT_TOO_OLD
+        }
     }
 }
 

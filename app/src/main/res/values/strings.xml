@@ -334,4 +334,9 @@
     <string name="host_open">Open OndolSaem</string>
     <string name="host_check">Check again</string>
     <string name="host_note">When the search model changes in OndolSaem, Nunsori indexes the affected files again.</string>
+    <string name="host_too_old">OndolSaem is too old for this version of Nunsori. Update OndolSaem.</string>
+    <string name="host_client_too_old">OndolSaem no longer supports this version of Nunsori. Update Nunsori.</string>
+    <string name="host_update">Update OndolSaem</string>
+    <string name="host_update_app">Update Nunsori</string>
+    <string name="host_version">OndolSaem %1$s · API %2$d</string>
 </resources>
