@@ -47,10 +47,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Opens one indexed file for another app (Nunsori.openItemIntent) -->
+        <!-- Opens one indexed file for another app (Nunsori.openItemIntent); its own task, so Back returns to that app, not to Nunsori -->
         <activity
             android:name=".service.OpenItemActivity"
             android:exported="true"
+            android:taskAffinity=""
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:theme="@android:style/Theme.NoDisplay">
