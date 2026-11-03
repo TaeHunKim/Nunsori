@@ -54,6 +54,19 @@ fun OndolSaemSection() {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { scope.launch { container.models.refresh() } }
 
     Section(R.string.host_title, R.string.host_desc)
+    HostStatusCard(
+        state,
+        onInstall = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.INSTALL_URL))) },
+        onUpdateApp = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.APP_RELEASES_URL))) },
+        onOpen = { container.models.client.launchIntent()?.let(ctx::startActivity) },
+        onCheck = { scope.launch { container.models.refresh() } },
+    )
+    Text(stringResource(R.string.host_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** Connection state, active models and the matching action (install, update either app, open). Stateless for tests. */
+@Composable
+fun HostStatusCard(state: HostState, onInstall: () -> Unit, onUpdateApp: () -> Unit, onOpen: () -> Unit, onCheck: () -> Unit) {
     Card(Modifier.fillMaxWidth().testTag("host_status")) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val (msg, error) = when (state.status) {
@@ -98,22 +111,21 @@ fun OndolSaemSection() {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (state.status) {
                     HostState.Status.NOT_INSTALLED, HostState.Status.HOST_TOO_OLD -> Button(
-                        onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.INSTALL_URL))) },
+                        onClick = onInstall,
                     ) {
                         Text(stringResource(if (state.status == HostState.Status.NOT_INSTALLED) R.string.host_install else R.string.host_update))
                     }
                     HostState.Status.CLIENT_TOO_OLD -> Button(
-                        onClick = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.APP_RELEASES_URL))) },
+                        onClick = onUpdateApp,
                     ) { Text(stringResource(R.string.host_update_app)) }
                     else -> {
-                    Button(onClick = { container.models.client.launchIntent()?.let(ctx::startActivity) }) {
+                    Button(onClick = onOpen) {
                         Text(stringResource(R.string.host_open))
                     }
                     }
                 }
-                OutlinedButton(onClick = { scope.launch { container.models.refresh() } }) { Text(stringResource(R.string.host_check)) }
+                OutlinedButton(onClick = onCheck) { Text(stringResource(R.string.host_check)) }
             }
         }
     }
-    Text(stringResource(R.string.host_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

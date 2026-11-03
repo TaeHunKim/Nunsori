@@ -55,6 +55,14 @@ class ModelHostTest {
         assertEquals(s.models.getValue(Categories.LLM).id, settings.chatModelId.first())
     }
 
+    @Test fun aHostBelowTheNeededLevelIsReportedAsTooOld() = runBlocking {
+        val sdk = io.github.taehunkim.ondolsaem.sdk.OndolSaem
+        val demanding = ModelHost(ctx, settings, scope, io.github.taehunkim.ondolsaem.sdk.OndolSaemClient(ctx, minHostApi = sdk.API_VERSION + 1))
+        try {
+            assertEquals(HostState.Status.HOST_TOO_OLD, demanding.refresh().status)
+        } finally { demanding.client.disconnect() }
+    }
+
     @Test fun embedsThroughTheHost() = runBlocking {
         assumeTrue("no embedding model downloaded in OndolSaem", host.refresh().ready(Categories.EMBEDDING))
         host.embedder()!!.use { lease ->

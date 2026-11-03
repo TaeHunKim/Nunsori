@@ -11,7 +11,7 @@ Setup: [getting-started.md](getting-started.md). Design: [architecture.md](archi
 | Level | Command | Notes |
 |---|---|---|
 | Unit | `./gradlew assembleDebug testDebugUnitTest` | Chunkers, fusion, keyword matching, DB logic |
-| Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. `ChatTest` runs the chat controller and tools against a fake `ChatModel` (`ModelHost.chatOverride`). `ModelHostTest` talks to the real OndolSaem when it is installed on the device (connection, model-id mirroring, a real embedding; skipped otherwise). It uninstalls Nunsori at the end; models live in OndolSaem and stay. Write tests that do not depend on the app's settings. |
+| Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. `ChatTest` runs the chat controller and tools against a fake `ChatModel` (`ModelHost.chatOverride`). `ModelHostTest` talks to the real OndolSaem when it is installed on the device (connection, model-id mirroring, a real embedding, `HOST_TOO_OLD` from a client that asks for a newer level; skipped otherwise). `HostStatusCardTest` checks the message and button for each connection state without OndolSaem. It uninstalls Nunsori at the end; models live in OndolSaem and stay. Write tests that do not depend on the app's settings. |
 | Real-model E2E | manual, emulator | Install OndolSaem and download the models there, index fixtures, query. Drive the UI with mobile-mcp; `adb uiautomator` is blocked while mobile-mcp is attached, so `scripts/e2e-setup.sh` may not work. |
 
 ## Release build
