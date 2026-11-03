@@ -59,6 +59,7 @@ fun OndolSaemSection() {
         onInstall = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.INSTALL_URL))) },
         onUpdateApp = { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ModelHost.APP_RELEASES_URL))) },
         onOpen = { container.models.client.launchIntent()?.let(ctx::startActivity) },
+        onApprove = { runCatching { ctx.startActivity(io.github.taehunkim.ondolsaem.sdk.OndolSaem.approvalIntent()) } },
         onCheck = { scope.launch { container.models.refresh() } },
     )
     Text(stringResource(R.string.host_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -66,13 +67,17 @@ fun OndolSaemSection() {
 
 /** Connection state, active models and the matching action (install, update either app, open). Stateless for tests. */
 @Composable
-fun HostStatusCard(state: HostState, onInstall: () -> Unit, onUpdateApp: () -> Unit, onOpen: () -> Unit, onCheck: () -> Unit) {
+fun HostStatusCard(
+    state: HostState, onInstall: () -> Unit, onUpdateApp: () -> Unit, onOpen: () -> Unit, onCheck: () -> Unit,
+    onApprove: () -> Unit = onOpen,
+) {
     Card(Modifier.fillMaxWidth().testTag("host_status")) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val (msg, error) = when (state.status) {
                 HostState.Status.UNKNOWN -> R.string.host_checking to false
                 HostState.Status.NOT_INSTALLED -> R.string.host_not_installed to true
                 HostState.Status.NOT_ALLOWED -> R.string.host_not_allowed to true
+                HostState.Status.NOT_APPROVED -> R.string.host_not_approved to true
                 HostState.Status.UNREACHABLE -> R.string.host_unreachable to true
                 HostState.Status.CONNECTED -> R.string.host_connected to false
                 HostState.Status.HOST_TOO_OLD -> R.string.host_too_old to true
@@ -115,6 +120,7 @@ fun HostStatusCard(state: HostState, onInstall: () -> Unit, onUpdateApp: () -> U
                     ) {
                         Text(stringResource(if (state.status == HostState.Status.NOT_INSTALLED) R.string.host_install else R.string.host_update))
                     }
+                    HostState.Status.NOT_APPROVED -> Button(onClick = onApprove) { Text(stringResource(R.string.host_approve)) }
                     HostState.Status.CLIENT_TOO_OLD -> Button(
                         onClick = onUpdateApp,
                     ) { Text(stringResource(R.string.host_update_app)) }

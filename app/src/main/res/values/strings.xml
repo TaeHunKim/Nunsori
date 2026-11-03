@@ -319,6 +319,8 @@
     <string name="host_desc">Nunsori\'s AI models (search, text recognition, speech, chat) are downloaded and run by the separate OndolSaem app, which other apps can share. Choose and download models there.</string>
     <string name="host_checking">Checking OndolSaem…</string>
     <string name="host_not_installed">OndolSaem is not installed. Install it to search by meaning, read text in images, transcribe speech and chat.</string>
+    <string name="host_not_approved">This build of Nunsori is signed with a key OndolSaem does not know, so it asks you first. Allow Nunsori in OndolSaem (Apps tab), then check again.</string>
+    <string name="host_approve">Allow in OndolSaem</string>
     <string name="host_not_allowed">OndolSaem refused the connection: this build of Nunsori is signed with a key OndolSaem does not trust.</string>
     <string name="host_unreachable">OndolSaem did not answer. Open it once, then check again.</string>
     <string name="host_connected">Connected to OndolSaem.</string>

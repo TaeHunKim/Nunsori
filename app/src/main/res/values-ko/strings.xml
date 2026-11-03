@@ -314,6 +314,8 @@
     <string name="host_desc">눈소리의 AI 모델(검색, 글자 인식, 음성 인식, 채팅)은 별도 앱인 온돌샘이 내려받고 실행합니다. 다른 앱과도 함께 씁니다. 모델 선택과 다운로드는 온돌샘에서 하세요.</string>
     <string name="host_checking">온돌샘 확인 중…</string>
     <string name="host_not_installed">온돌샘이 설치되어 있지 않습니다. 의미로 검색하기, 사진 속 글자 읽기, 음성 받아쓰기, 채팅을 쓰려면 설치하세요.</string>
+    <string name="host_not_approved">이 눈소리 빌드는 온돌샘이 모르는 키로 서명돼 있어 먼저 허락을 받아야 합니다. 온돌샘(앱 탭)에서 눈소리를 허용한 뒤 다시 확인하세요.</string>
+    <string name="host_approve">온돌샘에서 허용</string>
     <string name="host_not_allowed">온돌샘이 연결을 거부했습니다. 이 눈소리 빌드의 서명 키를 온돌샘이 신뢰하지 않습니다.</string>
     <string name="host_unreachable">온돌샘이 응답하지 않습니다. 온돌샘을 한 번 연 뒤 다시 확인하세요.</string>
     <string name="host_connected">온돌샘에 연결되었습니다.</string>

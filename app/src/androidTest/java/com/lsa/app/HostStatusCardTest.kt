@@ -22,7 +22,7 @@ class HostStatusCardTest {
         HostStatusCard(
             HostState(status),
             onInstall = { clicks += "install" }, onUpdateApp = { clicks += "updateApp" },
-            onOpen = { clicks += "open" }, onCheck = { clicks += "check" },
+            onOpen = { clicks += "open" }, onCheck = { clicks += "check" }, onApprove = { clicks += "approve" },
         )
     }
 
@@ -45,5 +45,11 @@ class HostStatusCardTest {
         rule.onNodeWithText("Install OndolSaem").performClick()
         rule.onNodeWithText("Check again").performClick()
         assertEquals(listOf("install", "check"), clicks)
+    }
+
+    @Test fun anUnknownKeyAsksForApprovalInOndolSaem() {
+        show(HostState.Status.NOT_APPROVED)
+        rule.onNodeWithText("Allow in OndolSaem").performClick()
+        assertEquals(listOf("approve"), clicks)
     }
 }

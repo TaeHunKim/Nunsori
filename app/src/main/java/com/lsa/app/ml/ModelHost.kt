@@ -53,6 +53,8 @@ data class HostState(
 ) {
     enum class Status {
         UNKNOWN, NOT_INSTALLED, NOT_ALLOWED, UNREACHABLE, CONNECTED,
+        /** Signed with a key OndolSaem does not know: waiting for (or denied) the user's approval in OndolSaem. */
+        NOT_APPROVED,
         /** OndolSaem is older than this app needs: update OndolSaem. */
         HOST_TOO_OLD,
         /** OndolSaem no longer serves this app's SDK level: update Nunsori. */
@@ -203,6 +205,7 @@ class ModelHost(
         fun statusFor(reason: HostUnavailableException.Reason): HostState.Status = when (reason) {
             HostUnavailableException.Reason.NOT_INSTALLED -> HostState.Status.NOT_INSTALLED
             HostUnavailableException.Reason.NOT_ALLOWED -> HostState.Status.NOT_ALLOWED
+            HostUnavailableException.Reason.NOT_APPROVED -> HostState.Status.NOT_APPROVED
             HostUnavailableException.Reason.NO_ANSWER -> HostState.Status.UNREACHABLE
             HostUnavailableException.Reason.HOST_TOO_OLD -> HostState.Status.HOST_TOO_OLD
             HostUnavailableException.Reason.CLIENT_TOO_OLD -> HostState.Status.CLIENT_TOO_OLD
