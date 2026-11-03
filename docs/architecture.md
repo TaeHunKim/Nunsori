@@ -142,6 +142,15 @@ Segments are scored per signal group (VISUAL, TEXT, AUDIO) with a median-spread 
 - New embedding or OCR models: see [models.md](models.md#adding-a-model).
 - Known limits and plans: [roadmap.md](roadmap.md).
 
+## 11. Index API (other apps)
+
+Other apps on the phone (the assistant app Malbotdari, apps the user allowed) use the index through a bound service, so the chat can live in its own app and later apps (a notes app) can reuse the same index. The contract is the `:sdk` module of this repository (`io.github.taehunkim.nunsori.sdk`, AIDL `INunsori`, client `NunsoriClient`); the app depends on the same module.
+
+- `service/IndexService` binds on `io.github.taehunkim.nunsori.action.BIND` and runs every call through `CallerCheck`: apps signed with Nunsori's key pass; any other app needs the user's approval (`Approvals`, per package and certificate, stored as JSON in `SettingsStore.apiApprovalsJson`). The first call of an unknown app records a request, posts a notification and is refused with `NOT_APPROVED`; **Settings › App › Connected apps** (`ui/settings/ConnectedAppsScreen`, route `settings/apps`, also opened by `Nunsori.ACTION_APPROVE`) allows, denies or removes it.
+- `service/IndexApi` is the logic: `tools`/`runTool` serve `search_index` and `read_file` (the chat tools' code) and prepare `move_files`/`delete_files` as a confirmation (the files and a payload) that the calling app shows to the user; `commit` then moves or trashes them with `FileOps` (needs All files access, else error `NEEDS_FILE_ACCESS`). `items`, `thumbnail` (JPEG through a pipe), `readText`, `matchItems` and `people` give what a chat shows and judges.
+- New files: `changesSince(cursor)` returns finished items with `indexedAt` after the cursor (`ItemDao.doneAfter`, oldest first) and the next cursor; cursor 0 returns only the current position. After a pass that indexed files, `IndexingWorker` calls `IndexEvents.notifyChanged`, an explicit broadcast without data (`ACTION_INDEX_CHANGED`) to every app with a receiver for it (the SDK declares `IndexChangedReceiver`); they then ask `changesSince`. A missed hint costs nothing but delay: the cursor still covers the files.
+- `service/OpenItemActivity` (`ACTION_OPEN_ITEM`, no UI) opens one file in the viewer the user picks; other apps never get the file itself.
+
 ## Scheduled tasks
 
 `scheduled_tasks` (schema v6, cascade with `chat_sessions`) holds the tasks; `chat_messages.taskId` links a confirmation card or a run's messages to a task. Time tasks: `TaskAlarms` (AlarmManager exact alarm per task) → `TaskAlarmReceiver` → unique `TaskRunWorker` per task (expedited, foreground `dataSync`) → `TaskManager.run` → `ChatController.runScheduled`. File tasks: `IndexingWorker` calls `TaskManager.onIndexed(passStart)` after a pass; matches are queued on the task and a `TaskRunWorker` is enqueued. `ChatController` serializes user turns and scheduled runs with one mutex. Notifications deep-link to a chat with the `sessionId` extra handled in `MainActivity`/`AppScaffold`. Details: [chat.md](chat.md#scheduled-tasks).

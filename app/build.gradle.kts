@@ -80,6 +80,8 @@ dependencies {
     implementation(libs.androidsvg)
     // AI models run in the OndolSaem app; this is its client SDK (JitPack, or ../ondolsaem as a composite build).
     implementation(libs.ondolsaem.sdk)
+    // The AIDL contract Nunsori serves to other apps (the same module they use as a client SDK).
+    implementation(project(":sdk"))
     implementation(libs.kotlinx.coroutines.android)
     // Room reads its schema bundle with kotlinx.serialization; an older runtime pulled in transitively breaks migration tests.
     implementation(libs.kotlinx.serialization.core)

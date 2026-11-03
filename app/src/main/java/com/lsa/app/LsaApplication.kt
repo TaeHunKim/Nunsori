@@ -68,6 +68,18 @@ class AppContainer(val context: Context) {
     val actions: com.lsa.app.chat.actions.ActionManager by lazy { com.lsa.app.chat.actions.ActionManager(db.actionDao(), fileOps = fileOps) }
     val fileOps: com.lsa.app.chat.actions.FileOps by lazy { com.lsa.app.chat.actions.FileOps(context, db.itemDao(), folders = { indexing.folderSpecs() }) }
     val chat: com.lsa.app.chat.ChatController by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), models, search, settings, appScope, taskManager = taskManager, actions = actions, people = com.lsa.app.chat.PeopleDirectory(db.faceDao())) }
+    val approvals by lazy { com.lsa.app.service.Approvals({ settings.apiApprovalsJson.first() }, settings::setApiApprovalsJson, appScope) }
+    val callerCheck by lazy {
+        com.lsa.app.service.CallerCheck(context, approvals).apply {
+            onRequest = { pkg -> Notifications.approvalRequest(context, pkg, appLabel(pkg)) }
+        }
+    }
+    val indexApi by lazy { com.lsa.app.service.IndexApi(context, db.itemDao(), search, db.faceDao(), fileOps, BuildConfig.VERSION_NAME) }
+
+    /** The name another app shows in the launcher (its package name if it has none). */
+    fun appLabel(pkg: String): String = runCatching {
+        context.packageManager.getApplicationLabel(context.packageManager.getApplicationInfo(pkg, 0)).toString()
+    }.getOrDefault(pkg)
     val search by lazy { SearchEngine(db.itemDao(), { q -> models.embedder()?.use { it.value.embedQuery(q) } }, settings) }
 }
 

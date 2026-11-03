@@ -372,4 +372,18 @@
         <item quantity="other">%d people with one photo hidden</item>
     </plurals>
     <string name="nav_up">Back</string>
+    <string name="channel_apps">Connected apps</string>
+    <string name="notif_app_request_title">%1$s wants to use your index</string>
+    <string name="notif_app_request_text">It asks to search and read your indexed files. Tap to allow or deny.</string>
+    <string name="apps_title">Connected apps</string>
+    <string name="apps_desc">Apps you allow can search and read your indexed files. Moving or deleting files always needs your approval in that app, and files never leave the phone.</string>
+    <string name="apps_own">Apps by the same developer (Malbotdari) connect without asking.</string>
+    <string name="apps_open">Manage connected apps</string>
+    <string name="apps_none">No other app has asked yet.</string>
+    <string name="apps_state_pending">Waiting for your decision</string>
+    <string name="apps_state_allowed">Allowed</string>
+    <string name="apps_state_denied">Denied</string>
+    <string name="apps_allow">Allow</string>
+    <string name="apps_deny">Deny</string>
+    <string name="apps_forget">Remove</string>
 </resources>

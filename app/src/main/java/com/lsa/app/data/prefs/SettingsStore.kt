@@ -35,6 +35,7 @@ class SettingsStore(private val context: Context) {
     private val kFaceModel = stringPreferencesKey("face_model_id")
     private val kFaceGrouping = booleanPreferencesKey("face_grouping")
     private val kShowSmallGroups = booleanPreferencesKey("people_show_small")
+    private val kApiApprovals = stringPreferencesKey("api_approvals")
     private fun kindKey(k: ItemKind) = booleanPreferencesKey("kind_" + k.name.lowercase())
 
     // The model ids below mirror OndolSaem's active models (see ModelHost.refresh); empty / "none" = not available.
@@ -55,6 +56,10 @@ class SettingsStore(private val context: Context) {
     /** Find and group faces when indexing photos (on by default; turning it off deletes the face data). */
     val faceGrouping: Flow<Boolean> = context.dataStore.data.map { it[kFaceGrouping] ?: true }
     suspend fun setFaceGrouping(on: Boolean) { context.dataStore.edit { it[kFaceGrouping] = on } }
+
+    /** Other apps the user allowed or denied to use the index (service/Approvals, JSON). */
+    val apiApprovalsJson: Flow<String> = context.dataStore.data.map { it[kApiApprovals] ?: "" }
+    suspend fun setApiApprovalsJson(json: String) { context.dataStore.edit { it[kApiApprovals] = json } }
     /** People screen: also list groups with a single face. */
     val showSmallGroups: Flow<Boolean> = context.dataStore.data.map { it[kShowSmallGroups] ?: false }
     suspend fun setShowSmallGroups(on: Boolean) { context.dataStore.edit { it[kShowSmallGroups] = on } }

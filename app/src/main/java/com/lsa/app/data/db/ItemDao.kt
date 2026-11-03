@@ -90,6 +90,13 @@ interface ItemDao {
     @Query("SELECT itemId FROM items WHERE status = 'DONE' AND indexedAt >= :since AND kind IN (:kinds)")
     suspend fun doneSince(since: Long, kinds: List<ItemKind>): List<Long>
 
+    /** Other apps' "what is new" (service/IndexApi.changesSince): finished after [after], oldest first. */
+    @Query("SELECT itemId, indexedAt FROM items WHERE status = 'DONE' AND indexedAt > :after AND kind IN (:kinds) ORDER BY indexedAt, itemId LIMIT :limit")
+    suspend fun doneAfter(after: Long, kinds: List<ItemKind>, limit: Int): List<ItemStamp>
+
+    @Query("SELECT COALESCE(MAX(indexedAt), 0) FROM items WHERE status = 'DONE'")
+    suspend fun lastIndexedAt(): Long
+
     /** Cheap fingerprint of table contents, used to invalidate the in-memory search cache. */
     @Query("SELECT COUNT(*) || ':' || COALESCE(MAX(indexedAt), 0) || ':' || (SELECT COUNT(*) FROM segments) FROM items")
     suspend fun stamp(): String

@@ -33,6 +33,10 @@ Model hosting lives in the separate **OndolSaem** app, in its own repository, `T
 
 To change the SDK and Nunsori together, check OndolSaem out next to this repository and add `ondolsaem.dir=../ondolsaem` to `local.properties`. `settings.gradle.kts` then adds it as a Gradle composite build, so the SDK is built from that source and edits there show up in the next Nunsori build. Without the line the published artifact is used.
 
+## Nunsori SDK (for client apps)
+
+`sdk/` is the client library other apps use to reach the index (AIDL `INunsori`, `NunsoriClient`, `IndexChangedReceiver`; version in `sdk/build.gradle.kts`). The app depends on it as `project(":sdk")`. JitPack builds only this module (`jitpack.yml`) from git tags `sdk-vX.Y.Z` and serves it as `com.github.TaeHunKim:Nunsori:<tag>`. A client developed next to this repository substitutes that module with `../nunsori`'s `:sdk` in a composite build (`nunsori.dir=../nunsori`, see Malbotdari's `settings.gradle.kts`). Add methods only at the end of `INunsori.aidl` with a new transaction id and bump `Nunsori.API_VERSION`; tests: `IndexApiTest` (instrumented) and the SDK's unit tests (`./gradlew :sdk:testDebugUnitTest`).
+
 ## Scripts
 
 | Script | Purpose |

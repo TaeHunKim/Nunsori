@@ -68,16 +68,6 @@ class ActionManager(
         }
     }
 
-    /** `3 done` or `2 done, 1 failed: a.jpg (reason)`. */
-    private fun summary(results: List<FileResult>): String {
-        val ok = results.count { it.ok }
-        val failed = results.filter { !it.ok }
-        return buildString {
-            append("$ok done")
-            if (failed.isNotEmpty()) append(", ${failed.size} failed: ").append(failed.take(3).joinToString { "${it.name} (${it.reason})" })
-        }
-    }
-
     suspend fun markDone(actionId: Long, note: String? = null) {
         if (dao.get(actionId)?.status == ActionStatus.PROPOSED) dao.setStatus(actionId, ActionStatus.DONE, note)
     }
@@ -91,6 +81,16 @@ class ActionManager(
     }
 
     companion object {
+        /** `3 done` or `2 done, 1 failed: a.jpg (reason)`. */
+        fun summary(results: List<FileResult>): String {
+            val ok = results.count { it.ok }
+            val failed = results.filter { !it.ok }
+            return buildString {
+                append("$ok done")
+                if (failed.isNotEmpty()) append(", ${failed.size} failed: ").append(failed.take(3).joinToString { "${it.name} (${it.reason})" })
+            }
+        }
+
         fun calendarIntent(e: CalendarEventDraft): Intent = Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI).apply {
             putExtra(CalendarContract.Events.TITLE, e.title)
             putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, e.startMs)

@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -69,7 +70,7 @@ import com.lsa.app.data.db.ItemKind
 import com.lsa.app.ui.common.WarningCard
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onOpenApps: () -> Unit = {}) {
     val container = rememberContainer()
     val vm: SettingsViewModel = viewModel(factory = viewModelFactory { initializer { SettingsViewModel(container) } })
 
@@ -93,7 +94,7 @@ fun SettingsScreen() {
                     0 -> IndexTab(vm)
                     1 -> ModelsTab(vm)
                     2 -> ChatTab(vm)
-                    3 -> AppTab(vm)
+                    3 -> AppTab(vm, onOpenApps)
                     else -> AboutTab()
                 }
             }
@@ -152,8 +153,13 @@ private fun ChatTab(vm: SettingsViewModel) {
 }
 
 @Composable
-private fun AppTab(vm: SettingsViewModel) {
+private fun AppTab(vm: SettingsViewModel, onOpenApps: () -> Unit) {
     val ctx = LocalContext.current
+    // --- Other apps using the index
+    Section(R.string.apps_title, R.string.apps_desc)
+    OutlinedButton(onClick = onOpenApps, modifier = Modifier.testTag("open_apps")) { Text(stringResource(R.string.apps_open)) }
+    HorizontalDivider()
+
     // --- Storage
     Section(R.string.storage_title, null)
     val thumbBytes by vm.thumbBytes.collectAsStateWithLifecycle()

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Merged into every client app: lets it see and bind to Nunsori (Android 11+ package visibility). -->
+    <queries>
+        <package android:name="io.github.taehunkim.nunsori" />
+    </queries>
+    <application>
+        <!-- "The index changed" hints from Nunsori; exported because Nunsori is another app. -->
+        <receiver
+            android:name="io.github.taehunkim.nunsori.sdk.IndexChangedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="io.github.taehunkim.nunsori.action.INDEX_CHANGED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "LocalSearchAnything"
-include(":app")
+include(":app", ":sdk")
 
 // Develop against a sibling OndolSaem checkout (model host + client SDK): set `ondolsaem.dir=../ondolsaem`
 // in local.properties and Gradle builds the SDK from that source instead of the published artifact.

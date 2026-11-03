@@ -16,6 +16,13 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <!-- Find the apps that want "index changed" hints (service/IndexEvents) -->
+    <queries>
+        <intent>
+            <action android:name="io.github.taehunkim.nunsori.action.INDEX_CHANGED" />
+        </intent>
+    </queries>
+
     <application
         android:name=".LsaApplication"
         android:allowBackup="false"
@@ -34,7 +41,35 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Another app sends the user here to allow it (Nunsori.approvalIntent) -->
+            <intent-filter>
+                <action android:name="io.github.taehunkim.nunsori.action.APPROVE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
+
+        <!-- Opens one indexed file for another app (Nunsori.openItemIntent) -->
+        <activity
+            android:name=".service.OpenItemActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="io.github.taehunkim.nunsori.action.OPEN_ITEM" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- The index for other apps (Malbotdari, apps the user allowed): service/IndexService checks every caller -->
+        <service
+            android:name=".service.IndexService"
+            android:exported="true"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="io.github.taehunkim.nunsori.action.BIND" />
+            </intent-filter>
+        </service>
 
         <receiver android:name=".chat.schedule.TaskAlarmReceiver" android:exported="false" />
         <receiver android:name=".chat.schedule.TaskBootReceiver" android:exported="true">

@@ -15,24 +15,28 @@ import com.lsa.app.ui.AppScaffold
 import com.lsa.app.ui.theme.AppTheme
 
 class MainActivity : AppCompatActivity() {
-    /** The chat a notification asked to open; consumed by the UI once it navigated there. */
-    private val openChat = MutableStateFlow<Long?>(null)
+    /** The screen a notification asked to open (a chat, the connected apps); consumed once the UI navigated there. */
+    private val openRoute = MutableStateFlow<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         Log.i("LSA", "MainActivity created")
-        openChat.value = chatOf(intent)
-        setContent { AppTheme { AppScaffold(openChat.collectAsStateWithLifecycle().value) { openChat.value = null } } }
+        openRoute.value = routeOf(intent)
+        setContent { AppTheme { AppScaffold(openRoute.collectAsStateWithLifecycle().value) { openRoute.value = null } } }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        chatOf(intent)?.let { openChat.value = it }
+        routeOf(intent)?.let { openRoute.value = it }
     }
 
-    private fun chatOf(intent: Intent?): Long? = intent?.getLongExtra(Notifications.EXTRA_SESSION, -1)?.takeIf { it > 0 }
+    private fun routeOf(intent: Intent?): String? = when {
+        intent == null -> null
+        intent.action == io.github.taehunkim.nunsori.sdk.Nunsori.ACTION_APPROVE -> com.lsa.app.ui.ROUTE_APPS
+        else -> intent.getLongExtra(Notifications.EXTRA_SESSION, -1).takeIf { it > 0 }?.let { "chat/$it" }
+    }
 
     override fun onStart() {
         super.onStart()

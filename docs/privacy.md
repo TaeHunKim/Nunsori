@@ -25,6 +25,10 @@ The AI models run in the separate app OndolSaem on the same phone. Nunsori sends
 
 Place names for photo locations come from a small dataset bundled in the app (GeoNames, offline); coordinates are never sent anywhere.
 
+## Other apps (Connected apps)
+
+Nunsori offers its index to other apps on the same phone over Binder (see [architecture.md](architecture.md#11-index-api-other-apps)). Apps signed with the same developer key (the assistant app Malbotdari) connect directly; any other app is refused until you allow it in **Settings › App › Connected apps**, where you can also deny or remove it later. A connected app can search, read the indexed text of files, get thumbnails, learn which files are new and see the names you gave to people. It cannot read files themselves (opening one goes through Nunsori to the viewer you choose), and moving or deleting files only happens after you approve a card in that app. Nothing leaves the phone: the other app is bound by its own permissions (Malbotdari has no internet access either).
+
 ## Permissions (`AndroidManifest.xml`)
 
 | Permission | Why |

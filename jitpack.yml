@@ -1,0 +1,5 @@
+# JitPack builds only the client SDK, served as com.github.TaeHunKim:Nunsori:<git tag> (tags sdk-vX.Y.Z)
+jdk:
+  - openjdk21
+install:
+  - ./gradlew :sdk:publishReleasePublicationToMavenLocal

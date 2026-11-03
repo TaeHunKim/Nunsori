@@ -119,6 +119,9 @@ data class ItemSummary(
     val thumbPath: String?,
 )
 
+/** An item id with the time its indexing finished. */
+data class ItemStamp(val itemId: Long, val indexedAt: Long)
+
 /** What sync needs to decide whether a file must be (re)processed. */
 data class ItemState(
     val itemId: Long,

@@ -141,6 +141,8 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         if (!result.stoppedEarly && !ctl.stopRequested) facePass(c, ctl)
         // Scheduled "new file" tasks look at what this pass added (after the models are released).
         runCatching { c.taskManager.onIndexed(passStart) }.onFailure { Log.w(TAG, "scheduled tasks check failed", it) }
+        // Other apps (an assistant chat) ask what is new when told the index changed.
+        if (indexed > 0) runCatching { com.lsa.app.service.IndexEvents.notifyChanged(applicationContext) }
         // Stopped by the thermal gate (not by the user): try again later.
         if (result.stoppedEarly && !ctl.stopRequested) { outcome = AutoOutcome.HOT; return Result.retry() }
         if (indexed > 0) outcome = AutoOutcome.INDEXED

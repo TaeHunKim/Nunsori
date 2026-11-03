@@ -56,20 +56,23 @@ enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVec
     Settings("settings", R.string.nav_settings, Icons.Outlined.Settings),
 }
 
+/** Settings › Connected apps (also opened by an approval request notification). */
+const val ROUTE_APPS = "settings/apps"
+
 @Composable
-fun AppScaffold(openChat: Long? = null, onChatOpened: () -> Unit = {}) {
+fun AppScaffold(openRoute: String? = null, onRouteOpened: () -> Unit = {}) {
     val container = com.lsa.app.rememberContainer()
     val onboardingDone by container.settings.onboardingDone.collectAsStateWithLifecycle(initialValue = null)
     val scope = rememberCoroutineScope()
     when (onboardingDone) {
         null -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize())
         false -> OnboardingScreen { mode, minutes, charging -> scope.launch { container.settings.completeOnboarding(mode, minutes, charging) } }
-        true -> MainScaffold(openChat, onChatOpened)
+        true -> MainScaffold(openRoute, onRouteOpened)
     }
 }
 
 @Composable
-private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
+private fun MainScaffold(openRoute: String?, onRouteOpened: () -> Unit) {
     val nav = rememberNavController()
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -78,10 +81,10 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
     val showResources by com.lsa.app.rememberContainer().settings.showResourceIndicator.collectAsStateWithLifecycle(false)
     val current = Dest.entries.firstOrNull { route == it.route || route.startsWith(it.route + "/") } ?: Dest.Index
 
-    androidx.compose.runtime.LaunchedEffect(openChat) {
-        if (openChat != null) {
-            nav.navigate("chat/$openChat") { launchSingleTop = true }
-            onChatOpened()
+    androidx.compose.runtime.LaunchedEffect(openRoute) {
+        if (openRoute != null) {
+            nav.navigate(openRoute) { launchSingleTop = true }
+            onRouteOpened()
         }
     }
 
@@ -124,6 +127,7 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
                     title = {
                         val personId = if (current == Dest.People && detail) entry?.arguments?.getLong("id") else null
                         if (personId != null) PersonTitle(personId)
+                        else if (route == ROUTE_APPS) Text(stringResource(R.string.apps_title))
                         else Text(stringResource(current.label), maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     },
                     actions = { if (showResources) com.lsa.app.ui.common.ResourceIndicator() },
@@ -160,7 +164,8 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
                 composable("chat/{id}", arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.LongType })) { e ->
                     ChatScreen(e.arguments?.getLong("id") ?: 0L, onOpenSettings = { go(Dest.Settings) })
                 }
-                composable(Dest.Settings.route) { SettingsScreen() }
+                composable(Dest.Settings.route) { SettingsScreen(onOpenApps = { nav.navigate(ROUTE_APPS) }) }
+                composable(ROUTE_APPS) { com.lsa.app.ui.settings.ConnectedAppsScreen() }
             }
         }
     }

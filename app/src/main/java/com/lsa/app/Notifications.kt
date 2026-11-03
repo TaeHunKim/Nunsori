@@ -15,6 +15,8 @@ import java.util.UUID
 object Notifications {
     const val CH_INDEXING = "indexing"
     const val CH_TASKS = "tasks"
+    const val CH_APPS = "apps"
+    private const val ID_APPROVAL_BASE = 30000
     const val ID_INDEXING = 1001
     const val ID_DOWNLOAD = 1002
     const val ID_TASK_RUN = 1003
@@ -27,6 +29,9 @@ object Notifications {
         )
         nm.createNotificationChannel(
             NotificationChannel(CH_TASKS, ctx.getString(R.string.channel_tasks), NotificationManager.IMPORTANCE_DEFAULT),
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CH_APPS, ctx.getString(R.string.channel_apps), NotificationManager.IMPORTANCE_DEFAULT),
         )
     }
 
@@ -59,6 +64,25 @@ object Notifications {
     }
 
     const val EXTRA_SESSION = "sessionId"
+
+    /** Another app asked to use the index: tapping opens Settings › App › Connected apps. */
+    fun approvalRequest(ctx: Context, pkg: String, label: String) {
+        ensureChannels(ctx)
+        val open = PendingIntent.getActivity(
+            ctx, pkg.hashCode(),
+            Intent(ctx, MainActivity::class.java).setAction(io.github.taehunkim.nunsori.sdk.Nunsori.ACTION_APPROVE).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val n = NotificationCompat.Builder(ctx, CH_APPS)
+            .setSmallIcon(R.drawable.ic_stat_index)
+            .setContentTitle(ctx.getString(R.string.notif_app_request_title, label))
+            .setContentText(ctx.getString(R.string.notif_app_request_text))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(ctx.getString(R.string.notif_app_request_text)))
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .build()
+        notify(ctx, ID_APPROVAL_BASE + (pkg.hashCode() and 0xffff), n)
+    }
 
     fun progress(
         ctx: Context, workId: UUID, channel: String, title: String, text: String?,
