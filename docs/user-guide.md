@@ -17,7 +17,6 @@ A three-step wizard appears on the first launch. Everything in it can be changed
 Shows progress ("n / total files"), the file being processed, **Start / Pause**, and a thumbnail grid of indexed files. Indexing continues in the background with a notification, and resumes after the app is killed.
 
 - **Failed files:** a "Failed (n)" chip filters the grid to files that could not be indexed (tap one to see the error); **Retry failed** runs only those files, without resuming the rest of a paused run. Failed files are also retried by every normal run.
-- **Low-power mode:** for manual runs, a switch makes indexing slower but gentler: the CPU only (2 threads, no GPU), a short pause between files, and a stop when the phone gets hot.
 
 ## Search
 

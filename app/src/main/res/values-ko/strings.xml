@@ -211,8 +211,6 @@
     <string name="folder_preset_screenshots">스크린샷</string>
     <string name="folder_preset_downloads">다운로드</string>
     <string name="folder_presets_media_only">"모든 파일 접근"을 허용하지 않으면 이 폴더의 사진·음성·영상만 인덱싱됩니다.</string>
-    <string name="index_low_power">저전력 모드</string>
-    <string name="index_low_power_desc">수동 인덱싱용: 느리지만 CPU만 적은 스레드로 쓰고, 파일 사이에 쉬며, 폰이 뜨거워지면 멈춥니다.</string>
     <string name="resource_unloaded">–</string>
     <string name="resource_models">모델 %1$s</string>
     <string name="resource_usage">RAM %1$d MB · CPU %2$d%%</string>

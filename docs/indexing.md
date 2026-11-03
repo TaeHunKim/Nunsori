@@ -33,9 +33,9 @@ The embedding model accepts 1024 tokens and LiteRT-LM exposes no tokenizer, so l
 
 An exception during extraction marks the item `FAILED` with the message in `items.error`. Every run (`sync`) puts failed items back in the queue; the Index screen lists them behind the "Failed" chip. **Retry failed** (`IndexingController.retryFailed`, worker flag `only_failed`) processes just those files and leaves other pending work paused. Skipped items (`SKIPPED`) are unsupported or too large files and are not retried.
 
-## Low-power mode
+## Priority and heat
 
-A manual-run option (`indexLowPower`): `IndexingWorker` waits 300 ms between files and stops on a thermal status of MODERATE or higher. Since 0.8.0 the models run in OndolSaem, which picks their backend itself; indexing requests are sent with background priority, so searches and chat go first. Automatic runs ignore it.
+Indexing requests go to OndolSaem with background priority, so searches and chat go first; OndolSaem picks the backend (GPU or CPU) itself. Automatic runs stop on a thermal status of MODERATE or higher and retry later; manual runs do not. The low-power switch for manual runs (CPU only, pauses between files) was removed in 0.8.1 because the app no longer chooses the backend; `AppUpgrade` drops its stored value.
 
 ## PDF (`PdfExtractor`, `PdfText`)
 

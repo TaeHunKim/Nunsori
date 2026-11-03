@@ -22,8 +22,6 @@ class IndexViewModel(private val c: AppContainer) : ViewModel() {
     val summaries: StateFlow<List<ItemSummary>> = dao.observeSummaries().state(emptyList())
     /** Failed files, counted from the database (not just the current run). */
     val failedCount = summaries.map { l -> l.count { it.status == com.lsa.app.data.db.ItemStatus.FAILED } }.state(0)
-    val lowPower = c.settings.indexLowPower.state(false)
-    fun setLowPower(on: Boolean) { viewModelScope.launch { c.settings.setIndexLowPower(on) } }
     val progress = c.indexing.progress
     val running = c.indexing.running.state(false)
     val enabledFolderCount = dao.observeFolders().map { f -> f.count { it.enabled } }.state(0)

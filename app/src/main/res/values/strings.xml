@@ -216,8 +216,6 @@
     <string name="folder_preset_screenshots">Screenshots</string>
     <string name="folder_preset_downloads">Downloads</string>
     <string name="folder_presets_media_only">Without "All files access", only photos, audio and video in these folders are indexed.</string>
-    <string name="index_low_power">Low-power mode</string>
-    <string name="index_low_power_desc">For manual runs: slower, but uses the CPU only with fewer threads, pauses between files and stops if the phone gets hot.</string>
     <string name="resource_unloaded">–</string>
     <string name="resource_models">Models %1$s</string>
     <string name="resource_usage">RAM %1$d MB · CPU %2$d%%</string>

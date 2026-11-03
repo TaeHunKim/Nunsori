@@ -9,7 +9,6 @@ import com.lsa.app.LsaApplication
 import com.lsa.app.Notifications
 import com.lsa.app.R
 import com.lsa.app.ui.index.hasAnyStorageAccess
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.withLock
 
@@ -92,9 +91,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         }
         if (auto && ctl.isHot()) { outcome = AutoOutcome.HOT; return Result.retry() }
 
-        // Low-power mode is a manual-run option; automatic runs have their own battery rules.
-        val low = !auto && c.settings.indexLowPower.first()
-        val embLease = try { c.models.embedder(low, background = true) } catch (e: Exception) {
+        val embLease = try { c.models.embedder(background = true) } catch (e: Exception) {
             Log.w(TAG, "model load failed", e)
             outcome = AutoOutcome.LOAD_FAILED
             if (!auto) ctl.update(IndexProgress(error = IndexError.LOAD_FAILED))
@@ -110,17 +107,14 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         val passStart = System.currentTimeMillis()
         var result = IndexProgress()
         try {
-            val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, { c.models.speech(low) }, java.io.File(applicationContext.cacheDir, "audio"),
+            val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, { c.models.speech() }, java.io.File(applicationContext.cacheDir, "audio"),
                 VideoOptions(c.settings.videoDetail.first(), c.settings.videoTranscribe.first()))
             var rounds = 0
             while (true) {
                 val before = plan.done
                 result = c.indexRunner.process(
                     plan, session, keys,
-                    gate = {
-                        if (low) delay(LOW_POWER_PAUSE_MS) // let the CPU cool down between files
-                        !ctl.stopRequested && !((auto || low) && ctl.isHot())
-                    },
+                    gate = { !ctl.stopRequested && !(auto && ctl.isHot()) },
                 ) { p ->
                     ctl.update(p)
                     val now = System.currentTimeMillis()
@@ -153,7 +147,6 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 
     companion object {
         private const val TAG = "LSA.Index"
-        private const val LOW_POWER_PAUSE_MS = 300L
         const val KEY_ONLY_FAILED = "only_failed"
         const val KEY_SOURCE = "source"
         const val SOURCE_AUTO = "auto"

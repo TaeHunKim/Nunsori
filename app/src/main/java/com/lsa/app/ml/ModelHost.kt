@@ -146,10 +146,9 @@ class ModelHost(
 
     /**
      * Null when the host or its embedding model is missing. [background]: indexing (waits behind interactive
-     * requests in the host). [lowPower] is accepted for compatibility; the host picks the backend.
+     * requests in the host). The host picks the backend.
      */
-    @Suppress("UNUSED_PARAMETER")
-    suspend fun embedder(lowPower: Boolean = false, background: Boolean = false): Lease<Embedder>? {
+    suspend fun embedder(background: Boolean = false): Lease<Embedder>? {
         embedderOverride?.let { f -> return f()?.let { e -> Lease(e) { } } }
         val lease = hostLease(Categories.EMBEDDING) ?: return null
         val info = known(Categories.EMBEDDING)
@@ -168,8 +167,7 @@ class ModelHost(
     }
 
     /** Voice activity detection always works when the host is reachable; transcription needs its speech model. */
-    @Suppress("UNUSED_PARAMETER")
-    suspend fun speech(lowPower: Boolean = false): Lease<SpeechTools> {
+    suspend fun speech(): Lease<SpeechTools> {
         speechOverride?.let { return Lease(it()) { } }
         val lease = hostLease(Categories.ASR)
         val can = lease != null && runCatching { client.canTranscribe() }.getOrDefault(false)

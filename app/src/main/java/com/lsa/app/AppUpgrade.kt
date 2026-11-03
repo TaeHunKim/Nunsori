@@ -27,6 +27,8 @@ object AppUpgrade {
             java.io.File(context.cacheDir, "litertlm").deleteRecursively()
             settings.removeModelHostingKeys()
         }
+        // 0.8.1: the low-power indexing switch is gone; drop its stored value.
+        if (from in 1 until 801) settings.removeLowPowerKey()
         settings.setLastVersionCode(current)
     }
 }

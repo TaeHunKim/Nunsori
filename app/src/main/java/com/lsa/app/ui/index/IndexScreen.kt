@@ -121,14 +121,6 @@ fun IndexScreen(onOpenSettings: () -> Unit) {
                 }
                 StatusCard(progress, running, canStart, onStart = ::onStart, onPause = vm::pause)
                 com.lsa.app.ui.onboarding.LastAutoRunLine()
-                val lowPower by vm.lowPower.collectAsStateWithLifecycle()
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.index_low_power), style = MaterialTheme.typography.titleSmall)
-                        Text(stringResource(R.string.index_low_power_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    androidx.compose.material3.Switch(checked = lowPower, onCheckedChange = vm::setLowPower, enabled = !running)
-                }
                 if (failed > 0) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         FilterChip(

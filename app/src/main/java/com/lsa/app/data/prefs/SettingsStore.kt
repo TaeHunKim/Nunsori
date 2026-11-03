@@ -26,7 +26,6 @@ class SettingsStore(private val context: Context) {
     private val kAsr = stringPreferencesKey("asr_model_id")
     private val kChat = stringPreferencesKey("chat_model_id")
     private val kChatPrompt = stringPreferencesKey("chat_custom_prompt")
-    private val kLowPower = booleanPreferencesKey("index_low_power")
     private val kResourceUi = booleanPreferencesKey("show_resource_indicator")
     private val kTaskJudgeFirst = booleanPreferencesKey("task_judge_first")
     private val kLastAutoRun = stringPreferencesKey("last_auto_run")
@@ -42,7 +41,6 @@ class SettingsStore(private val context: Context) {
     /** The user's own instructions, appended to the chat system prompt. */
     val chatCustomPrompt: Flow<String> = context.dataStore.data.map { it[kChatPrompt] ?: "" }
     /** Manual indexing in low-power mode: CPU only, fewer threads, pauses between files, stops when hot. */
-    val indexLowPower: Flow<Boolean> = context.dataStore.data.map { it[kLowPower] ?: false }
     /** Top-bar indicator with backend, memory and CPU use. */
     /** Scheduled file tasks: let the chat model judge every new file (when there are few) instead of relying on the embedding match alone. */
     val taskJudgeFirst: Flow<Boolean> = context.dataStore.data.map { it[kTaskJudgeFirst] ?: true }
@@ -69,7 +67,6 @@ class SettingsStore(private val context: Context) {
     suspend fun setOcrModelId(id: String) { context.dataStore.edit { it[kOcr] = id } }
     suspend fun setChatModelId(id: String) { context.dataStore.edit { it[kChat] = id } }
     suspend fun setChatCustomPrompt(s: String) { context.dataStore.edit { it[kChatPrompt] = s.trim().take(MAX_CUSTOM_PROMPT) } }
-    suspend fun setIndexLowPower(on: Boolean) { context.dataStore.edit { it[kLowPower] = on } }
     suspend fun setLastAutoRun(run: com.lsa.app.indexing.LastAutoRun) { context.dataStore.edit { it[kLastAutoRun] = run.encode() } }
     suspend fun setTaskJudgeFirst(on: Boolean) { context.dataStore.edit { it[kTaskJudgeFirst] = on } }
     suspend fun setShowResourceIndicator(on: Boolean) { context.dataStore.edit { it[kResourceUi] = on } }
@@ -81,6 +78,9 @@ class SettingsStore(private val context: Context) {
     suspend fun setScheduleMinutes(minutes: Int) { context.dataStore.edit { it[kScheduleMinutes] = minutes.coerceIn(0, 24 * 60 - 1) } }
     suspend fun setScheduleChargingOnly(v: Boolean) { context.dataStore.edit { it[kChargingOnly] = v } }
     /** 0.8.0: models moved to OndolSaem; drops the settings that went with them. */
+    /** 0.8.1 removed the low-power indexing option (OndolSaem picks the backend now). */
+    suspend fun removeLowPowerKey() { context.dataStore.edit { it.remove(booleanPreferencesKey("index_low_power")) } }
+
     suspend fun removeModelHostingKeys() {
         context.dataStore.edit { p ->
             listOf("hf_token", "residency_policy").forEach { p.remove(stringPreferencesKey(it)) }
