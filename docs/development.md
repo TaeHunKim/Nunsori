@@ -29,7 +29,7 @@ A release APK cannot be installed over a debug build (different signing key): un
 
 ## OndolSaem SDK
 
-Model hosting lives in the separate **OndolSaem** app, in its own repository, `TaeHunKim/ondolsaem`. Nunsori reaches it through that repository's client SDK, published on JitPack from git tags as `com.github.TaeHunKim:ondolsaem:<tag>` (for example `sdk-v0.2.0`, set in `gradle/libs.versions.toml` as `ondolsaemSdk`). JitPack renames a repository's only artifact to the repository, so the SDK's own coordinates (`com.github.taehunkim.ondolsaem:sdk`) are not what clients use; `settings.gradle.kts` therefore substitutes `com.github.TaeHunKim:ondolsaem` with the checkout's `:sdk` project explicitly when `ondolsaem.dir` is set. Checked 2026-11-03: Nunsori builds and passes its unit tests from the JitPack artifact without `ondolsaem.dir`.
+Model hosting lives in the separate **OndolSaem** app, in its own repository, `TaeHunKim/ondolsaem`. Nunsori reaches it through that repository's client SDK, published on JitPack from git tags as `com.github.TaeHunKim:ondolsaem:<tag>` (for example `sdk-v0.3.0`, set in `gradle/libs.versions.toml` as `ondolsaemSdk`). JitPack renames a repository's only artifact to the repository, so the SDK's own coordinates (`com.github.taehunkim.ondolsaem:sdk`) are not what clients use; `settings.gradle.kts` therefore substitutes `com.github.TaeHunKim:ondolsaem` with the checkout's `:sdk` project explicitly when `ondolsaem.dir` is set. Checked 2026-11-03: Nunsori builds and passes its unit tests from the JitPack artifact without `ondolsaem.dir`.
 
 To change the SDK and Nunsori together, check OndolSaem out next to this repository and add `ondolsaem.dir=../ondolsaem` to `local.properties`. `settings.gradle.kts` then adds it as a Gradle composite build, so the SDK is built from that source and edits there show up in the next Nunsori build. Without the line the published artifact is used.
 
@@ -57,9 +57,10 @@ uv run --with pillow scripts/make-text-fixtures.py
 python3 scripts/make-doc-fixtures.py
 uv run --with reportlab --with pillow --with python-docx --with python-pptx --with openpyxl scripts/make-office-fixtures.py
 scripts/make-audio-fixtures.sh      # videos: three-scene mp4 via ffmpeg
+scripts/fetch-face-fixtures.sh      # photos of five public figures for face grouping
 ```
 
-Push documents, audio and video to `/sdcard/Documents|Recordings|Movies/fixtures`.
+Push documents, audio and video to `/sdcard/Documents|Recordings|Movies/fixtures`. Face photos (`test-fixtures/faces`) go into an indexed photo folder, e.g. `/sdcard/DCIM/Camera` (then a media scan); on the emulator they make five groups (Macron 4 photos, Merkel 3, Moon 3, Obama 3, Swift 2) plus single-photo groups for the other people in them.
 
 ## Debugging
 

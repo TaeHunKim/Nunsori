@@ -32,6 +32,9 @@ class SettingsStore(private val context: Context) {
     private val kSkipMusic = booleanPreferencesKey("skip_music")
     private val kVideoDetail = stringPreferencesKey("video_detail")
     private val kVideoSpeech = booleanPreferencesKey("video_transcribe")
+    private val kFaceModel = stringPreferencesKey("face_model_id")
+    private val kFaceGrouping = booleanPreferencesKey("face_grouping")
+    private val kShowSmallGroups = booleanPreferencesKey("people_show_small")
     private fun kindKey(k: ItemKind) = booleanPreferencesKey("kind_" + k.name.lowercase())
 
     // The model ids below mirror OndolSaem's active models (see ModelHost.refresh); empty / "none" = not available.
@@ -40,13 +43,21 @@ class SettingsStore(private val context: Context) {
     val chatModelId: Flow<String> = context.dataStore.data.map { it[kChat] ?: DEFAULT_CHAT }
     /** The user's own instructions, appended to the chat system prompt. */
     val chatCustomPrompt: Flow<String> = context.dataStore.data.map { it[kChatPrompt] ?: "" }
-    /** Manual indexing in low-power mode: CPU only, fewer threads, pauses between files, stops when hot. */
     /** Top-bar indicator with backend, memory and CPU use. */
     /** Scheduled file tasks: let the chat model judge every new file (when there are few) instead of relying on the embedding match alone. */
     val taskJudgeFirst: Flow<Boolean> = context.dataStore.data.map { it[kTaskJudgeFirst] ?: true }
     val lastAutoRun: Flow<com.lsa.app.indexing.LastAutoRun?> = context.dataStore.data.map { com.lsa.app.indexing.LastAutoRun.decode(it[kLastAutoRun]) }
     val showResourceIndicator: Flow<Boolean> = context.dataStore.data.map { it[kResourceUi] ?: false }
     val asrModelId: Flow<String> = context.dataStore.data.map { it[kAsr] ?: DEFAULT_ASR }
+    /** OndolSaem's face model when it is downloaded (mirrored like the others); empty = none or OndolSaem too old. */
+    val faceModelId: Flow<String> = context.dataStore.data.map { it[kFaceModel] ?: "" }
+    suspend fun setFaceModelId(id: String) { context.dataStore.edit { it[kFaceModel] = id } }
+    /** Find and group faces when indexing photos (on by default; turning it off deletes the face data). */
+    val faceGrouping: Flow<Boolean> = context.dataStore.data.map { it[kFaceGrouping] ?: true }
+    suspend fun setFaceGrouping(on: Boolean) { context.dataStore.edit { it[kFaceGrouping] = on } }
+    /** People screen: also list groups with a single face. */
+    val showSmallGroups: Flow<Boolean> = context.dataStore.data.map { it[kShowSmallGroups] ?: false }
+    suspend fun setShowSmallGroups(on: Boolean) { context.dataStore.edit { it[kShowSmallGroups] = on } }
     val skipMusic: Flow<Boolean> = context.dataStore.data.map { it[kSkipMusic] ?: true }
     val videoDetail: Flow<VideoDetail> = context.dataStore.data.map { parseEnum(it[kVideoDetail], VideoDetail.MEDIUM) }
     val videoTranscribe: Flow<Boolean> = context.dataStore.data.map { it[kVideoSpeech] ?: true }

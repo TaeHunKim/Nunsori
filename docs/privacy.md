@@ -10,6 +10,7 @@ All in the app's private storage (removed on uninstall or "Clear data"):
 - Thumbnails (`ThumbStore`, 360 px) of images, document pages and text cards.
 - No models: since 0.8.0 they are downloaded and kept by the companion app OndolSaem (see below).
 - Chat sessions and messages in the same database (`chat_sessions`, `chat_messages`) and photos attached to a chat under `files/chat/<session>/`; deleting a chat removes them. The chat model runs on the phone; no question or answer is sent anywhere.
+- Faces found in your photos (face grouping, on by default): for each face its position in the photo, a 128-number identity vector and a small crop, plus the groups and the names you give them. These are **biometric data**. They are computed by OndolSaem on the phone (the photo is handed over and nothing is kept there), stored only in Nunsori's private database and never leave the phone. Turning *Group photos by person* off (Settings › Index) deletes all of them at once.
 - Settings (DataStore), including your chat instructions (system prompt text; they are only given to the on-device chat model).
 
 Your original files are only read, never modified.
@@ -42,7 +43,7 @@ Android Auto Backup is disabled, so the index, thumbnails and settings are not c
 
 ## Deleting your data
 
-Remove a folder to drop its items, or clear app data / uninstall to delete everything. Models are deleted in OndolSaem.
+Remove a folder to drop its items, turn face grouping off to delete all face data, or clear app data / uninstall to delete everything. Models are deleted in OndolSaem.
 
 ## Scheduled tasks
 

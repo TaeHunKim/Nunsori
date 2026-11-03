@@ -31,8 +31,10 @@ The model calls tools through LiteRT-LM's tool calling (`automaticToolCalling`).
 
 | Tool | Arguments | Result |
 |---|---|---|
-| `search_index` | `query` (required), `kinds` (`document,image,audio,video`), `date_from`, `date_to` (`YYYY-MM-DD`), `limit` (1 to 10, default 5) | JSON list of `item_id, name, kind, page or time, date, place, snippet`. Same engine as the Search screen: [search.md](search.md) |
+| `search_index` | `query`, `kinds` (`document,image,audio,video`), `date_from`, `date_to` (`YYYY-MM-DD`), `person` (a name from People), `limit` (1 to 10, default 5), `offset` | JSON list of `item_id, name, kind, page or time, date, place, snippet`. Same engine as the Search screen: [search.md](search.md) |
 | `read_file` | `item_id` (required), `page`, `from_sec`, `to_sec`, `offset`, `max_chars` (up to 4000, default 2000) | JSON with name, kind, date, place, pages or duration, `total_chars`, `next_offset` and the `text` slice |
+
+**People.** When face groups have names, the system prompt lists them (up to 30, counted in the context budget, part of the conversation key) and tells the model to pass a mentioned name as `person`. `PeopleDirectory.match` accepts the name exactly (case and spaces ignored), inside longer words ("Mina's", "민수가": the longest known name wins) or a part of exactly one name; otherwise the tool answers with the known names. `move_files` and `delete_files` take `person` instead of `item_ids` (every photo of that person, up to 50 per card; more than that asks the model to split with `search_index` and a date range). A missing `destination` returns an error with an example call, because the small model sometimes leaves it out.
 
 `read_file` reads the **indexed text**, not the original file: document and text chunks (with `[p.N]` markers), transcripts of audio and video (with `[mm:ss]` markers, selectable by time) and OCR text of images. Files without indexed text say so.
 

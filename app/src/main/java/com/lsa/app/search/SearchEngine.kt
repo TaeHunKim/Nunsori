@@ -32,8 +32,12 @@ data class SearchHit(
 enum class MetaMatch { PLACE, NAME }
 
 /** Hard filters applied before scoring. Empty [kinds] means all kinds; dates are epoch milliseconds (taken date, else modified date). */
-data class SearchFilter(val kinds: Set<ItemKind> = emptySet(), val fromMs: Long? = null, val toMs: Long? = null) {
-    val active: Boolean get() = kinds.isNotEmpty() || fromMs != null || toMs != null
+data class SearchFilter(
+    val kinds: Set<ItemKind> = emptySet(), val fromMs: Long? = null, val toMs: Long? = null,
+    /** Only these items (e.g. the photos of one person); null = no restriction. */
+    val items: Set<Long>? = null,
+) {
+    val active: Boolean get() = kinds.isNotEmpty() || fromMs != null || toMs != null || items != null
 }
 
 /** Why a new item was judged to match a query: [strength] is the semantic z-score (or a large value for a word match). */
@@ -87,13 +91,16 @@ class SearchEngine(
         if (q.isEmpty()) {
             // Filters without a query: browse, newest first.
             if (!filter.active) return SearchResult(emptyList(), true)
-            val ids = dao.browseItemIds(kinds, filter.fromMs ?: Long.MIN_VALUE, filter.toMs ?: Long.MAX_VALUE, BROWSE_LIMIT)
+            val ids = if (filter.items != null) {
+                dao.browseAmong(filter.items.toList(), kinds, filter.fromMs ?: Long.MIN_VALUE, filter.toMs ?: Long.MAX_VALUE, BROWSE_LIMIT)
+            } else dao.browseItemIds(kinds, filter.fromMs ?: Long.MIN_VALUE, filter.toMs ?: Long.MAX_VALUE, BROWSE_LIMIT)
             return SearchResult(ids.map { SearchHit(it, 0f, null, null, null, null, 0, false, null) }, true)
         }
         loadCache(settings.embeddingModelId.first())
         // Filter before scoring so the score distributions (see Fusion) are those of the filtered set.
         val allowed: Set<Long>? =
-            if (filter.active) dao.allowedItemIds(kinds, filter.fromMs ?: Long.MIN_VALUE, filter.toMs ?: Long.MAX_VALUE).toHashSet() else null
+            if (filter.active) dao.allowedItemIds(kinds, filter.fromMs ?: Long.MIN_VALUE, filter.toMs ?: Long.MAX_VALUE).toHashSet()
+                .also { a -> filter.items?.let { only -> a.retainAll(only) } } else null
 
         val qVec = queryEmbedder(q)
         val acc = HashMap<Long, Acc>()

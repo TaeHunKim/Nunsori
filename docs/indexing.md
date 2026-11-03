@@ -64,6 +64,16 @@ Immediate mode watches `MediaStore.Files` with a one-shot WorkManager content tr
 
 `SettingsStore.lastAutoRun` records each automatic run (time, source, outcome: indexed N, nothing new, too warm, model missing/failed, no access, no folders, error); Settings › Automatic indexing and the Index screen show it. The system can still delay jobs of battery-optimized apps (Doze, standby buckets, Samsung sleeping apps), so the auto-index options show the battery-optimization card.
 
+## Faces
+
+After the files of a run are processed (and also when there was nothing new), `IndexingWorker` runs the **face pass** (`indexing/faces/FaceIndexer`) when *Group photos by person* is on (`faceGrouping`, default on) and OndolSaem can find faces (`ModelHost.faces()`: OndolSaem API 2 and its `face` model downloaded; the mirrored id is `faceModelId`).
+
+- Photos to scan: `IMAGE` items that are `DONE` and whose `faceKey` differs from `<face model id>|f<FaceIndexer.FACE_KEY_VERSION>`. A photo is decoded at max side 1600, sent as JPEG (background priority) and its faces stored with a 160 px crop (`ThumbStore`, kept by the thumbnail cleanup). A photo that is processed again replaces its faces; a photo that fails is marked scanned and skipped until the face model changes.
+- The pass never touches `pipelineKey` or the search segments, so turning face grouping on again (or a new face model) only scans faces. A changed face model deletes all faces and groups first, because vectors of two models cannot be compared.
+- The same gate as indexing stops it (stop button; heat during automatic runs); the next run continues where it stopped. Progress is shown on the People screen (`FaceIndexer.progress`).
+- **Grouping** (`FaceClusterer.regroup`): every face without a group joins the group whose centroid (normalized mean of its faces) is most similar, if the cosine is at least `SAME_PERSON` = 0.363 (OpenCV's value for SFace; emulator fixtures: same person 0.54 to 0.90, different people at most 0.22), except the group it was taken out of; otherwise it starts a new group. Then groups whose centroids reach the threshold are merged, the most similar pair first: a named group absorbs an unnamed one, two named groups are never merged, and a group is never merged with a group one of its faces was taken out of. Groups left without faces are deleted.
+- Turning face grouping off (Settings) deletes faces, groups, crops and every `faceKey`.
+
 ## Checkpoints and re-processing
 
 - `items.progress` records where to resume (segment ordinal, or audio stage offsets such as `STAGE_B = 10^12`).

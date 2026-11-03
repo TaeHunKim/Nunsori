@@ -151,6 +151,13 @@ interface ItemDao {
     )
     suspend fun browseItemIds(kinds: List<ItemKind>, from: Long, to: Long, limit: Int): List<Long>
 
+    /** [browseItemIds] among [ids] only (the photos of one person). */
+    @Query(
+        """SELECT itemId FROM items WHERE status = 'DONE' AND itemId IN (:ids) AND kind IN (:kinds)
+           AND COALESCE(dateTaken, modifiedAt) BETWEEN :from AND :to ORDER BY COALESCE(dateTaken, modifiedAt) DESC LIMIT :limit""",
+    )
+    suspend fun browseAmong(ids: List<Long>, kinds: List<ItemKind>, from: Long, to: Long, limit: Int): List<Long>
+
     /** Items whose metadata (place, file name, title) contains [pattern]; the caller ranks them. */
     @Query(
         """SELECT itemId, displayName, title, place FROM items WHERE status = 'DONE'
@@ -188,6 +195,7 @@ interface ItemDao {
     entities = [
         ItemEntity::class, SegmentEntity::class, IndexedFolderEntity::class,
         ChatSessionEntity::class, ChatMessageEntity::class, ScheduledTaskEntity::class, PendingActionEntity::class,
+        PersonEntity::class, FaceEntity::class,
     ],
     version = AppDatabase.VERSION,
     exportSchema = true,
@@ -197,9 +205,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chatDao(): ChatDao
     abstract fun taskDao(): ScheduledTaskDao
     abstract fun actionDao(): PendingActionDao
+    abstract fun faceDao(): FaceDao
 
     companion object {
         /** Bump together with a new migration in Migrations.kt (see docs/development.md). */
-        const val VERSION = 7
+        const val VERSION = 8
     }
 }

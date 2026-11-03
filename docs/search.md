@@ -47,6 +47,8 @@ Query is lowercased and split on whitespace; single ASCII letters are dropped, s
 
 Kinds (UI: Documents = text files + PDF/Office, Images, Audio, Video; none selected = all) and a date range on `COALESCE(dateTaken, modifiedAt)` (photos by when they were taken, everything else by modification time). The UI offers presets (any date, today, last 7 days, last 30 days, this year) and a custom range. With filters but an empty query the result is a **browse list**, newest first (up to `BROWSE_LIMIT` = 100). Keyword candidates are limited to 2000 before the filter is applied, so a very common word can crowd out matches in a narrow filter.
 
+**Person** (`SearchFilter.items`, chat only): the photos of one named person, from face grouping; combined with the other filters, and a browse list without a query. The threshold that decides which faces are the same person is in [indexing.md](indexing.md#faces).
+
 ## Metadata (`MetaMatch`)
 
 `items.place` holds searchable place names derived from the photo's GPS position ([indexing.md](indexing.md#images-imageextractor)): city and country in English and Korean plus aliases such as `UAE`, `Middle East 중동`, `Asia 아시아`. "Dubai", "두바이", "UAE" or "중동" therefore find photos taken there without any semantic match. File name and title count too. Matching reuses `KeywordMatcher` (ASCII words match whole words, Korean matches substrings). The score is 1.0 when all words and the phrase match, else `0.5 + 0.5 × matched/total`. The badge shows "Place" or "Name".

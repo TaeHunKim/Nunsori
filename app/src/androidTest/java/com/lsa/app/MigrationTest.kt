@@ -12,6 +12,7 @@ import com.lsa.app.data.db.MIGRATION_3_4
 import com.lsa.app.data.db.MIGRATION_4_5
 import com.lsa.app.data.db.MIGRATION_5_6
 import com.lsa.app.data.db.MIGRATION_6_7
+import com.lsa.app.data.db.MIGRATION_7_8
 import com.lsa.app.ml.embedding.Quant
 import com.lsa.app.ml.embedding.VectorMath
 import org.junit.Assert.assertArrayEquals
@@ -136,6 +137,19 @@ class MigrationTest {
         db.execSQL("INSERT INTO pending_actions (sessionId, kind, status, payload, createdAt) VALUES (1, 'CONTACT', 'PROPOSED', '{}', 1)")
         db.execSQL("DELETE FROM chat_sessions WHERE sessionId = 1")
         db.query("SELECT COUNT(*) FROM pending_actions").use { c -> c.moveToFirst(); assertEquals("actions go with their chat", 0, c.getInt(0)) }
+    }
+
+    @Test fun v7ToV8AddsFacesThatGoWithTheirPhotoAndOutlivePeople() {
+        helper.createDatabase("mig78", 7).apply { execSQL(itemV2); close() }
+        val db = helper.runMigrationsAndValidate("mig78", 8, true, MIGRATION_7_8)
+        db.query("SELECT faceKey FROM items").use { c -> c.moveToFirst(); assertTrue("existing photos are not scanned yet", c.isNull(0)) }
+        db.execSQL("PRAGMA foreign_keys = ON")
+        db.execSQL("INSERT INTO people (name, createdAt, updatedAt) VALUES ('Mina', 1, 1)")
+        db.execSQL("INSERT INTO faces (itemId, `left`, top, `right`, bottom, score, vector, personId) VALUES (1, 0, 0, 1, 1, 0.9, x'00', 1)")
+        db.execSQL("DELETE FROM people WHERE personId = 1")
+        db.query("SELECT personId FROM faces").use { c -> c.moveToFirst(); assertTrue("faces stay, ungrouped", c.isNull(0)) }
+        db.execSQL("DELETE FROM items")
+        db.query("SELECT COUNT(*) FROM faces").use { c -> c.moveToFirst(); assertEquals("faces go with their photo", 0, c.getInt(0)) }
     }
 
     @Test fun v3ToV4AddsChatTablesThatCascadeOnDelete() {

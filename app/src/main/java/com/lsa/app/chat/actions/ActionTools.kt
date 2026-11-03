@@ -65,20 +65,47 @@ private fun filesPayload(items: ItemDao, ids: List<Long>): Pair<org.json.JSONArr
 
 private fun idsOf(args: JSONObject): List<Long> = FilePaths.parseIds(args.opt("item_ids")?.toString().orEmpty())
 
+/**
+ * The files a move/delete is about: `item_ids`, or every photo of `person` (a name from the People screen).
+ * Returns the ids, or an error for the model.
+ */
+private fun targetsOf(args: JSONObject, people: com.lsa.app.chat.PeopleDirectory?): Pair<List<Long>, String?> {
+    val name = args.optString("person").trim()
+    if (name.isEmpty()) {
+        val ids = idsOf(args)
+        return if (ids.isEmpty()) ids to "Error: give item_ids (numbers from search_index) or person." else ids to null
+    }
+    val found = runBlocking { people?.find(name) } ?: return emptyList<Long>() to "Error: people are not available."
+    return when (found) {
+        is com.lsa.app.chat.PeopleDirectory.Lookup.Missing -> emptyList<Long>() to found.error
+        is com.lsa.app.chat.PeopleDirectory.Lookup.Found -> when {
+            found.itemIds.isEmpty() -> emptyList<Long>() to "Error: no photos of ${found.person.name} are indexed."
+            found.itemIds.size > FilePaths.MAX_FILES -> emptyList<Long>() to
+                "Error: ${found.person.name} is in ${found.itemIds.size} photos, more than ${FilePaths.MAX_FILES} per card. Use search_index with person and a date range to split them, then pass item_ids."
+            else -> found.itemIds to null
+        }
+    }
+}
+
 /** Proposes moving indexed files to another folder. The user approves the card; only then are files moved. */
-class MoveFilesTool(private val actions: ActionManager, private val items: ItemDao, private val sessionId: Long) : ChatTool {
+class MoveFilesTool(private val actions: ActionManager, private val items: ItemDao, private val sessionId: Long, private val people: com.lsa.app.chat.PeopleDirectory? = null) : ChatTool {
     override val name = ChatToolNames.MOVE
     override val description =
-        "Propose moving indexed files (by item_id from search_index) to a folder. The user sees a card listing the files and approves it; " +
+        "Propose moving indexed files (by item_id from search_index, or all photos of a person) to a folder. The user sees a card listing the files and approves it; " +
             "only then are they moved. Never claim they are moved. Up to ${FilePaths.MAX_FILES} files."
     override val parameters = """{"type":"object","properties":{
         "item_ids":{"type":"string","description":"Comma separated item_id numbers from search_index."},
+        "person":{"type":"string","description":"Instead of item_ids: every photo of this person (name from the People screen)."},
         "destination":{"type":"string","description":"Folder relative to the phone's storage, e.g. Pictures/Wedding (created if missing)."}},
-        "required":["item_ids","destination"]}"""
+        "required":["destination"]}"""
 
     override fun execute(args: JSONObject): String {
-        val ids = idsOf(args)
-        if (ids.isEmpty()) return "Error: item_ids is required (numbers from search_index)."
+        val (ids, error) = targetsOf(args, people)
+        if (error != null) return error
+        if (args.optString("destination").isBlank()) {
+            return "Error: destination is missing. Call move_files again with the folder the user named, e.g. " +
+                (if (args.optString("person").isNotBlank()) """{"person":"${args.optString("person")}","destination":"Pictures/Family"}""" else """{"item_ids":"12,15","destination":"Pictures/Family"}""") + "."
+        }
         val dest = FilePaths.safeDestination(args.optString("destination"))
             ?: return "Error: destination must be a folder like Pictures/Wedding (not absolute, hidden or inside Android/)."
         val (files, missing) = filesPayload(items, ids)
@@ -88,19 +115,19 @@ class MoveFilesTool(private val actions: ActionManager, private val items: ItemD
 }
 
 /** Proposes deleting indexed files: to the trash by default, permanently only when [permanent] is set or chosen on the card. */
-class DeleteFilesTool(private val actions: ActionManager, private val items: ItemDao, private val sessionId: Long) : ChatTool {
+class DeleteFilesTool(private val actions: ActionManager, private val items: ItemDao, private val sessionId: Long, private val people: com.lsa.app.chat.PeopleDirectory? = null) : ChatTool {
     override val name = ChatToolNames.DELETE
     override val description =
-        "Propose deleting indexed files (by item_id from search_index). By default they go to the trash. The user sees a card listing the files " +
+        "Propose deleting indexed files (by item_id from search_index, or all photos of a person). By default they go to the trash. The user sees a card listing the files " +
             "and approves it; only then anything happens. Never claim they are deleted. Up to ${FilePaths.MAX_FILES} files."
     override val parameters = """{"type":"object","properties":{
         "item_ids":{"type":"string","description":"Comma separated item_id numbers from search_index."},
-        "permanent":{"type":"boolean","description":"True only if the user explicitly asked to delete permanently instead of using the trash."}},
-        "required":["item_ids"]}"""
+        "person":{"type":"string","description":"Instead of item_ids: every photo of this person (name from the People screen)."},
+        "permanent":{"type":"boolean","description":"True only if the user explicitly asked to delete permanently instead of using the trash."}}}"""
 
     override fun execute(args: JSONObject): String {
-        val ids = idsOf(args)
-        if (ids.isEmpty()) return "Error: item_ids is required (numbers from search_index)."
+        val (ids, error) = targetsOf(args, people)
+        if (error != null) return error
         val (files, missing) = filesPayload(items, ids)
         if (missing.isNotEmpty()) return "Error: unknown item_id ${missing.joinToString()}; use ids from search_index."
         return runBlocking { actions.propose(sessionId, ActionKind.DELETE_FILES, JSONObject().put("permanent", args.optBoolean("permanent", false)).put("files", files)) }

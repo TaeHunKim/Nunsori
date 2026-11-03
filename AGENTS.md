@@ -36,7 +36,7 @@
 
 ## 앱 구조 (요약)
 이미지·텍스트·문서(PDF/Office)·음성·영상을 인덱싱하고 시맨틱 + 키워드로 검색한다. 모델은 동반 앱 OndolSaem(별도 레포)이 받고 실행한다. 눈소리는 `ml/ModelHost`(SDK 클라이언트)로만 접근하며 INTERNET 권한이 없다. 문자열은 `values/strings.xml`(en)과 `values-ko/strings.xml`(ko)의 키가 같아야 한다(`StringsParityTest`).
-- 데이터 `data/db`(`items` + `segments`, int8 벡터), 소스 `data/media`, 파이프라인 `indexing`(`IndexRunner.sync()`/`process()`, `pipelineKey`로 종류별 재처리), 검색 `search`(그룹별 상대 점수 + 키워드), 자동 인덱싱 `AutoIndexScheduler`, 모델 접근 `ml/ModelHost`(OndolSaem 클라이언트).
+- 데이터 `data/db`(`items` + `segments`, int8 벡터; 얼굴은 `faces` + `people`), 소스 `data/media`, 파이프라인 `indexing`(`IndexRunner.sync()`/`process()`, `pipelineKey`로 종류별 재처리), 검색 `search`(그룹별 상대 점수 + 키워드), 자동 인덱싱 `AutoIndexScheduler`, 모델 접근 `ml/ModelHost`(OndolSaem 클라이언트).
 - 채팅: `chat/`(`ChatController`, `ChatTools`: search_index·read_file, `ContextBudget`), `chat/schedule/`(예약 작업: 알람·워커·파일 트리거), `ml/llm/`(`ChatModel` 인터페이스, 실행은 OndolSaem), `ui/chat/`. 웹 검색·fetch 도구는 후순위(roadmap). 자세히: `docs/chat.md`.
 - 자세히: `docs/architecture.md`, `docs/indexing.md`, `docs/search.md`, `docs/models.md`.
 
@@ -49,10 +49,11 @@
 ## 조사 결과(Phase 0, 실측)
 - EmbeddingGemma 2 **740M만 오디오** 지원. `EmbeddingEngineConfig(audioBackend=…)`가 있어야 하고, 입력은 **WAV 바이트(16kHz mono)**. 한 입력은 **1024토큰 ≈ 40초**까지(30초 창 + 5초 겹침 사용).
 - `InputData.Image` 여러 장 리스트는 **벡터 1개**를 돌려준다(프레임별 평균과 코사인 0.90, 순서 무관). 클립당 최대 8장, 프레임당 `visionTokensPerImage=70`.
+- 얼굴(온돌샘 `face`, ML Kit 검출 + SFace 128차원): 공인 5명 사진 14장에서 같은 사람 코사인 0.54~0.90, 다른 사람 최대 0.22. 같은 사람 판정 0.363(OpenCV 권장). 단체 사진의 얼굴도 모두 검출. 에뮬레이터 CPU에서 사진당 25~190ms.
 - sherpa-onnx(SenseVoice int8 + Silero VAD)는 에뮬레이터에서 실시간의 ~2% 속도, 한국어·영어 인식 양호. 모델은 GitHub 릴리스 tar.bz2(163MB)라 OndolSaem이 받아 푼다. (Phase 0 측정은 모두 지금 OndolSaem 안에서 돌아가는 엔진 기준)
 
 ## 실제 모델 E2E (에뮬레이터)
-- 테스트 파일은 커밋하지 않는다. 생성: `scripts/fetch-photo-fixtures.sh`, `uv run --with pillow scripts/make-text-fixtures.py`, `python3 scripts/make-doc-fixtures.py`, `uv run --with reportlab --with pillow --with python-docx --with python-pptx --with openpyxl scripts/make-office-fixtures.py`, `scripts/make-audio-fixtures.sh`(+ 영상은 ffmpeg로 장면 3개 mp4).
+- 테스트 파일은 커밋하지 않는다. 생성: `scripts/fetch-photo-fixtures.sh`, `scripts/fetch-face-fixtures.sh`(인물), `uv run --with pillow scripts/make-text-fixtures.py`, `python3 scripts/make-doc-fixtures.py`, `uv run --with reportlab --with pillow --with python-docx --with python-pptx --with openpyxl scripts/make-office-fixtures.py`, `scripts/make-audio-fixtures.sh`(+ 영상은 ffmpeg로 장면 3개 mp4).
 - `scripts/e2e-setup.sh`(UI 구동 설정)는 `adb uiautomator`가 막히면 못 쓴다. 그 경우 mobile-mcp로 직접 진행. 검색은 `scripts/ui-search.sh "질의"`(영어) / mobile-mcp 입력 후 `scripts/search-result.sh`(한국어)로 결과 파일명을 확인.
 - 주의: `./gradlew connectedDebugAndroidTest`는 끝나고 앱을 제거한다(모델은 OndolSaem에 있어 남는다. OndolSaem의 계측 테스트는 OndolSaem을 지워 모델도 사라짐). 계측 테스트는 기기의 앱 설정에 의존하지 않게 작성한다.
 - 에뮬레이터는 CPU 추론. 실기기는 GPU 우선, 실패 시 CPU 폴백.

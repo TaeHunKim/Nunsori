@@ -32,6 +32,15 @@ Tips: describe content in natural language for photos and scenes; use distinctiv
 
 Automatic indexing shows when it last ran and what it did (or why it did nothing). Immediate mode also checks hourly, in case the system delayed the instant trigger; for dependable timing exclude the app from battery optimization (the same card appears under the options).
 
+## People
+
+Faces are found when photos are indexed (Settings › Index › *Group photos by person*, on by default; needs OndolSaem 0.3.0 or newer with its *Faces* model downloaded). The **People** menu lists the groups: one per person, with a face crop and the number of photos. Groups with a single photo are hidden until you switch *Show people with one photo* on.
+
+- Tap a group to see its photos (tap a photo to open it), give it a name and save. Giving a name that another group already has offers to **merge** the two; *Merge* also lets you pick the other group from a list.
+- Tap a face in the row of faces to use it as the cover or to say **Not this person**: the face leaves the group and is never put back into it.
+- In the chat, use the names: "show me photos of Mina from last summer", "move all photos of Mina to Pictures/Mina" (a card lists the files; nothing moves before you approve it).
+- Turning face grouping off deletes every face, group and name. Turning it on again scans only the faces of the photos already indexed; the search index is kept.
+
 ## Chat
 
 ![Chat](images/chat.png)

@@ -52,12 +52,13 @@ flowchart TD
 | `indexing/places` | `PlaceFinder`: offline GPS to place name (GeoNames cities, English and Korean) |
 | `indexing/audio` | `AudioExtractor`, `AudioDecoder`, `Pcm` (window planning), `SpeechTools` |
 | `indexing/video` | `VideoExtractor`, `VideoClips` |
+| `indexing/faces` | `FaceIndexer` (face pass after indexing, crops, off/on), `FaceClusterer` (grouping, merging) |
 | `chat/actions` | `ActionManager` (proposals, approve/dismiss, intents), `ActionPayloads` (validation), `ActionTools` (`add_calendar_event`, `add_contact`, `move_files`, `delete_files`), `FileOps` (move, trash, delete + index update) |
 | `chat/schedule` | `TaskManager` (propose, confirm, run, file matching), `Schedule` (next run), `TaskAlarms` + receivers + `TaskRunWorker` |
 | `ml`, `ml/embedding`, `ml/ocr`, `ml/llm` | `ModelHost` (OndolSaem client: leases, remote engines, model-id mirroring), interfaces `Embedder`, `OcrEngine`, `ChatModel` (`SpeechTools` is in `indexing/audio`) |
-| `chat` | `ChatController` (turns, context, attachments), `ChatTools` (`search_index`, `read_file`), `ContextBudget`: [chat.md](chat.md) |
+| `chat` | `ChatController` (turns, context, attachments), `ChatTools` (`search_index`, `read_file`), `PeopleDirectory` (names for the `person` arguments), `ContextBudget`: [chat.md](chat.md) |
 | `search` | `SearchEngine`, `Fusion`, `KeywordMatcher` |
-| `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`), screens (`index`, `search`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
+| `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`), screens (`index`, `search`, `people`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
 
 ## 4. Data model
 
@@ -71,6 +72,8 @@ Defined in `data/db/Entities.kt`.
 **`segments`** (what is searched): `itemId`, `type`, `ordinal`, `startMs/endMs` (audio, video), `page`, `text`, `embedding`, `thumbPath`.
 
 **`indexed_folders`**: `relativePath`, `enabled`, `recursive`.
+
+**`people`** (`name` or null, `coverFaceId`, timestamps) and **`faces`** (`itemId` with cascade delete, box in 0..1, `score`, int8 128-d `vector`, `personId` set to null when its person is deleted, `blockedPersonId` = the group the user took it out of, `thumbPath` of the crop), added in v8 together with `items.faceKey` (face model key a photo was scanned with; null = not scanned). See [indexing.md](indexing.md#faces).
 
 **`chat_sessions`** (`title`, `enabledTools`, `autoSearch`, timestamps) and **`chat_messages`** (`sessionId` with cascade delete, `role` USER/ASSISTANT/TOOL, `text`, `toolName`, `toolArgs`, `attachments`, `createdAt`), added in v4.
 
@@ -87,7 +90,7 @@ Defined in `data/db/Entities.kt`.
 
 **Vector format.** int8, stored as `[scale: float32][int8 × dim]` (`Quant`), 768 dims. Dot products are done in memory over all vectors.
 
-**Migrations.** The schema is at **v4** (`AppDatabase.VERSION`; v3 added `items.place`, v4 the chat tables). `Migrations.kt` holds `MIGRATION_1_2`, `MIGRATION_2_3`, `MIGRATION_3_4` and the ordered `ALL_MIGRATIONS` list that `LsaApplication` registers. There is no destructive fallback on upgrade; only a downgrade (older build over a newer one) rebuilds the index, because it is derived data. Derived data that can be recomputed without a schema change is handled by `pipelineKey` instead. Policy: [development.md](development.md#schema-and-version-changes).
+**Migrations.** The schema is at **v8** (`AppDatabase.VERSION`; v3 added `items.place`, v4 the chat tables, v5 pinned chats, v6 scheduled tasks, v7 action cards, v8 faces and people). `Migrations.kt` holds one `Migration` per step and the ordered `ALL_MIGRATIONS` list that `LsaApplication` registers. There is no destructive fallback on upgrade; only a downgrade (older build over a newer one) rebuilds the index, because it is derived data. Derived data that can be recomputed without a schema change is handled by `pipelineKey` instead. Policy: [development.md](development.md#schema-and-version-changes).
 
 **App upgrades.** `AppUpgrade.run` (called from `LsaApplication`) compares the stored `last_version_code` with `BuildConfig.VERSION_CODE` and runs per-release steps for settings or file-layout changes. Auto Backup is disabled (`allowBackup="false"`): the index is derived and a restored database would not match missing thumbnails and models.
 

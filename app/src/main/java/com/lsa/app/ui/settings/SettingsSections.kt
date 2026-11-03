@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -132,6 +133,24 @@ fun KindsSection(vm: SettingsViewModel) {
                     Switch(checked = speech, onCheckedChange = vm::setVideoTranscribe)
                 }
             }
+        }
+        if (ItemKind.IMAGE in kinds) {
+            val faces by vm.faceGrouping.collectAsStateWithLifecycle()
+            var confirmOff by remember { mutableStateOf(false) }
+            Row(Modifier.fillMaxWidth().padding(start = 36.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.face_grouping))
+                    Text(stringResource(R.string.face_grouping_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = faces, onCheckedChange = { on -> if (on) vm.setFaceGrouping(true) else confirmOff = true }, modifier = Modifier.testTag("face_grouping"))
+            }
+            if (confirmOff) androidx.compose.material3.AlertDialog(
+                onDismissRequest = { confirmOff = false },
+                title = { Text(stringResource(R.string.face_grouping_off_title)) },
+                text = { Text(stringResource(R.string.face_grouping_off_text)) },
+                confirmButton = { androidx.compose.material3.TextButton(onClick = { confirmOff = false; vm.setFaceGrouping(false) }) { Text(stringResource(R.string.face_grouping_off_confirm)) } },
+                dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmOff = false }) { Text(stringResource(R.string.action_cancel)) } },
+            )
         }
         val needsFiles = kinds.any { it != ItemKind.IMAGE && it in KindSupport.implemented && it != ItemKind.AUDIO && it != ItemKind.VIDEO }
         if (needsFiles && !allFiles) {

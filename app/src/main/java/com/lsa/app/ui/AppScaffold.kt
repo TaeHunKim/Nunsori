@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DrawerValue
@@ -48,6 +49,7 @@ import kotlinx.coroutines.launch
 enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVector) {
     Index("index", R.string.nav_index, Icons.Outlined.PhotoLibrary),
     Search("search", R.string.nav_search, Icons.Outlined.Search),
+    People("people", R.string.nav_people, Icons.Outlined.People),
     Chat("chat", R.string.nav_chat, Icons.Outlined.ChatBubbleOutline),
     Settings("settings", R.string.nav_settings, Icons.Outlined.Settings),
 }
@@ -127,6 +129,16 @@ private fun MainScaffold(openChat: Long?, onChatOpened: () -> Unit) {
                 composable(Dest.Index.route) { IndexScreen(onOpenSettings = { go(Dest.Settings) }) }
                 composable(Dest.Search.route) {
                     SearchScreen(onOpenSettings = { go(Dest.Settings) }, onOpenChat = { id -> nav.navigate("chat/$id") })
+                }
+                composable(Dest.People.route) {
+                    com.lsa.app.ui.people.PeopleScreen(onOpen = { id -> nav.navigate("people/$id") }, onOpenSettings = { go(Dest.Settings) })
+                }
+                composable("people/{id}", arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.LongType })) { e ->
+                    com.lsa.app.ui.people.PersonScreen(
+                        e.arguments?.getLong("id") ?: 0L,
+                        onOpenPerson = { other -> nav.navigate("people/$other") { popUpTo(Dest.People.route) } },
+                        onGone = { nav.popBackStack(Dest.People.route, inclusive = false) },
+                    )
                 }
                 composable(Dest.Chat.route) { ChatListScreen(onOpen = { id -> nav.navigate("chat/$id") }) }
                 composable("chat/{id}", arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.LongType })) { e ->

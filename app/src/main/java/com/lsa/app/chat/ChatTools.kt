@@ -55,20 +55,21 @@ private fun dateOf(s: ItemSummary, takenOrModified: Long?): String? =
 private const val MAX_OFFSET = 90
 
 /** Lets the model search the index the way the Search screen does. */
-class SearchIndexTool(private val search: SearchEngine, private val dao: ItemDao) : ChatTool {
+class SearchIndexTool(private val search: SearchEngine, private val dao: ItemDao, private val people: PeopleDirectory? = null) : ChatTool {
     override val name = ChatToolNames.SEARCH
     override val description =
         "Search the user's indexed files (photos, documents, audio, video) by meaning and keywords. " +
             "Returns the best matching files with their item_id; use read_file to read one. " +
             "The query is optional when kinds or a date range is given: then it lists the files of that kind/period, newest first " +
-            "(use offset to get the next ones)."
+            "(use offset to get the next ones). With person, only photos that show that person (a name from the People screen)."
     override val parameters = """{"type":"object","properties":{
         "query":{"type":"string","description":"What to look for: words, a description, a place or a file name. Leave out to list by kinds/dates only."},
         "kinds":{"type":"string","description":"Optional comma separated filter: document, image, audio, video."},
         "date_from":{"type":"string","description":"Optional start date, YYYY-MM-DD."},
         "date_to":{"type":"string","description":"Optional end date, YYYY-MM-DD."},
         "limit":{"type":"integer","description":"Number of results, 1 to 10 (default 5)."},
-        "offset":{"type":"integer","description":"Skip this many results, to page through a long list (default 0)."}}}"""
+        "offset":{"type":"integer","description":"Skip this many results, to page through a long list (default 0)."},
+        "person":{"type":"string","description":"Optional: only photos of this person, by the name given in the People screen."}}}"""
 
     override fun execute(args: JSONObject): String = runBlocking {
         val query = args.optString("query").trim()
@@ -88,8 +89,13 @@ class SearchIndexTool(private val search: SearchEngine, private val dao: ItemDao
         }.getOrNull()
         val limit = args.optInt("limit", 5).coerceIn(1, 10)
         val offset = args.optInt("offset", 0).coerceIn(0, MAX_OFFSET)
-        val filter = SearchFilter(kinds, day("date_from", false), day("date_to", true))
-        if (query.isEmpty() && !filter.active) return@runBlocking "Error: give a query, or kinds / date_from / date_to to list files."
+        val personName = args.optString("person").trim()
+        val only: Set<Long>? = if (personName.isEmpty()) null else when (val p = people?.find(personName) ?: PeopleDirectory.Lookup.Missing("Error: people are not available.")) {
+            is PeopleDirectory.Lookup.Found -> p.itemIds.toSet()
+            is PeopleDirectory.Lookup.Missing -> return@runBlocking p.error
+        }
+        val filter = SearchFilter(kinds, day("date_from", false), day("date_to", true), only)
+        if (query.isEmpty() && !filter.active) return@runBlocking "Error: give a query, or kinds / date_from / date_to / person to list files."
         val all = search.search(query, filter, offset + limit).hits
         val result = all.drop(offset).take(limit)
         val summaries = dao.summaries(result.map { it.itemId }).associateBy { it.itemId }

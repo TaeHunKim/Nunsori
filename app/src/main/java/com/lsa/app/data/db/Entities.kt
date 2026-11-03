@@ -69,6 +69,8 @@ data class ItemEntity(
     val indexedAt: Long,
     /** Searchable place names (city and country in English and Korean) derived from [latitude]/[longitude]; null when unknown. */
     val place: String? = null,
+    /** Face model key the faces of this photo were found with (`<face model id>|f<version>`); null = not scanned. */
+    val faceKey: String? = null,
 )
 
 /** One searchable unit of an item: a chunk of text, a page, an audio window, a video clip, ... */

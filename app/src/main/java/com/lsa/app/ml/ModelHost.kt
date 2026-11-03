@@ -92,6 +92,7 @@ class ModelHost(
     var chatOverride: (suspend () -> ChatModel?)? = null
     var ocrOverride: (suspend () -> OcrEngine)? = null
     var speechOverride: (suspend () -> SpeechTools)? = null
+    var faceOverride: (suspend () -> com.lsa.app.ml.faces.FaceDetector?)? = null
     var contextTokensOverride: Int? = null
 
     /** Context window of the chat model as set in OndolSaem (prompts are trimmed to it). */
@@ -129,6 +130,8 @@ class ModelHost(
         s.models[Categories.OCR]?.let { put(settings.ocrModelId, if (it.ready) it.id else "", settings::setOcrModelId) }
         s.models[Categories.ASR]?.let { put(settings.asrModelId, if (it.ready) it.id else "none", settings::setAsrModelId) }
         s.models[Categories.LLM]?.let { put(settings.chatModelId, it.id, settings::setChatModelId) }
+        // OndolSaem before 0.3.0 (API 1) has no face category: no face model.
+        put(settings.faceModelId, s.models[Categories.FACE]?.takeIf { it.ready }?.id ?: "", settings::setFaceModelId)
     }
 
     /** The cached model of [category], refreshing first when the host has not been asked yet. */
@@ -174,6 +177,19 @@ class ModelHost(
         val lease = hostLease(Categories.ASR)
         val can = lease != null && runCatching { client.canTranscribe() }.getOrDefault(false)
         return Lease(RemoteSpeechTools(client, can)) { lease?.close() }
+    }
+
+    /**
+     * Face detection + identity vectors (OndolSaem API 2). Null when OndolSaem is older than 0.3.0, unreachable, or
+     * its face model is not downloaded. Background priority (indexing).
+     */
+    suspend fun faces(): Lease<com.lsa.app.ml.faces.FaceDetector>? {
+        faceOverride?.let { f -> return f()?.let { d -> Lease(d) { } } }
+        if (!runCatching { client.supports(OndolSaem.Api.V2) }.getOrDefault(false)) return null
+        val lease = hostLease(Categories.FACE) ?: return null
+        val info = known(Categories.FACE)
+        if (info == null || !info.ready) { lease.close(); return null }
+        return Lease(RemoteFaceDetector(client, info.id)) { lease.close() }
     }
 
     /** Null when the host or its chat model is missing. Loading the model can take a while (the call waits). */
@@ -278,4 +294,10 @@ private class RemoteChatModel(private val client: OndolSaemClient, info: ModelIn
 
     override fun reset() { scope.launch { runCatching { client.resetChat() } } }
     override fun close() {}
+}
+
+/** Faces through OndolSaem (background priority). */
+private class RemoteFaceDetector(private val client: OndolSaemClient, override val modelId: String) : com.lsa.app.ml.faces.FaceDetector {
+    override suspend fun detect(jpeg: ByteArray): List<com.lsa.app.ml.faces.Face> =
+        client.detectFaces(jpeg, OndolSaem.PRIORITY_BACKGROUND).map { com.lsa.app.ml.faces.Face(it.left, it.top, it.right, it.bottom, it.score, it.vector) }
 }

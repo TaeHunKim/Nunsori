@@ -124,5 +124,25 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+/** 0.9.0: faces and people (face grouping), items.faceKey (which photos were scanned for faces). */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `items` ADD COLUMN `faceKey` TEXT")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `people` (`personId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT, " +
+                "`coverFaceId` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `faces` (`faceId` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `itemId` INTEGER NOT NULL, " +
+                "`left` REAL NOT NULL, `top` REAL NOT NULL, `right` REAL NOT NULL, `bottom` REAL NOT NULL, `score` REAL NOT NULL, " +
+                "`vector` BLOB NOT NULL, `personId` INTEGER, `blockedPersonId` INTEGER, `thumbPath` TEXT, " +
+                "FOREIGN KEY(`itemId`) REFERENCES `items`(`itemId`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                "FOREIGN KEY(`personId`) REFERENCES `people`(`personId`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_faces_itemId` ON `faces` (`itemId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_faces_personId` ON `faces` (`personId`)")
+    }
+}
+
 /** Every migration, in order. Register new ones here only; the chain test in MigrationTest walks all exported schemas. */
-val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)

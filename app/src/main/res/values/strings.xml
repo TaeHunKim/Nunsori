@@ -339,4 +339,34 @@
     <string name="host_update">Update OndolSaem</string>
     <string name="host_update_app">Update Nunsori</string>
     <string name="host_version">OndolSaem %1$s · API %2$d</string>
+    <string name="nav_people">People</string>
+    <string name="people_off">Face grouping is off. Turn it on in Settings › Indexing to group your photos by person.</string>
+    <string name="people_open_settings">Open settings</string>
+    <string name="people_host_too_old">Finding faces needs OndolSaem 0.3.0 or newer. Update OndolSaem, then index again.</string>
+    <string name="people_no_model">Download the face model (Faces) in OndolSaem, then index again.</string>
+    <string name="people_scanning">Finding faces: %1$d of %2$d photos</string>
+    <string name="people_show_small">Show people with one photo</string>
+    <string name="people_empty">No people yet. Faces are found when photos are indexed.</string>
+    <string name="people_unnamed">Unnamed</string>
+    <string name="people_name">Name</string>
+    <string name="people_merge">Merge</string>
+    <string name="people_merge_pick">Merge with which group?</string>
+    <string name="people_merge_same_name_title">“%1$s” already exists</string>
+    <string name="people_merge_same_name_text">Another group has this name. Merge the two groups into one person?</string>
+    <string name="people_faces_hint">Tap a face to make it the cover or take it out of this group.</string>
+    <string name="people_set_cover">Use as cover</string>
+    <string name="people_not_this_person">Not this person</string>
+    <string name="face_grouping">Group photos by person</string>
+    <string name="face_grouping_desc">Finds faces when photos are indexed and groups them by person (People). Face data stays on this phone.</string>
+    <string name="face_grouping_off_title">Turn off face grouping?</string>
+    <string name="face_grouping_off_text">All faces, groups and names are deleted. Turning it on again finds the faces of your photos again (the rest of the index is kept).</string>
+    <string name="face_grouping_off_confirm">Turn off and delete</string>
+    <plurals name="people_photos">
+        <item quantity="one">%d photo</item>
+        <item quantity="other">%d photos</item>
+    </plurals>
+    <plurals name="people_small_hidden">
+        <item quantity="one">%d person with one photo hidden</item>
+        <item quantity="other">%d people with one photo hidden</item>
+    </plurals>
 </resources>

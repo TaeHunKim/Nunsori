@@ -266,6 +266,36 @@ class ChatTest {
         assertEquals("offset pages past the list", "No matching files.", SearchIndexTool(search, db.itemDao()).execute(JSONObject().put("kinds", "document").put("offset", 5)))
     }
 
+    /** Faces of a named person in [itemIds] (face grouping), for the `person` arguments. */
+    private suspend fun person(name: String, vararg itemIds: Long): Long {
+        val pid = db.faceDao().insertPerson(com.lsa.app.data.db.PersonEntity(name = name, createdAt = 1, updatedAt = 1))
+        db.faceDao().insertFaces(itemIds.map { com.lsa.app.data.db.FaceEntity(itemId = it, left = 0f, top = 0f, right = 1f, bottom = 1f, score = 1f, vector = byteArrayOf(0, 0, 0, 0, 1), personId = pid, thumbPath = null) })
+        return pid
+    }
+
+    @Test fun personArgumentsFindAndMoveTheirPhotos() = runBlocking {
+        val withMina = addItem("beach.jpg", ItemKind.IMAGE, seg(SegmentType.OCR_TEXT, 0, "sunny beach"))
+        val other = addItem("beach2.jpg", ItemKind.IMAGE, seg(SegmentType.OCR_TEXT, 0, "sunny beach again"))
+        val party = addItem("party.jpg", ItemKind.IMAGE, seg(SegmentType.OCR_TEXT, 0, "birthday"))
+        person("Mina", withMina, party)
+        val people = com.lsa.app.chat.PeopleDirectory(db.faceDao())
+        val search = SearchIndexTool(search, db.itemDao(), people)
+        val listed = JSONArray(search.execute(JSONObject().put("person", "mina")))
+        assertEquals("only Mina's photos", setOf(withMina, party), (0 until listed.length()).map { listed.getJSONObject(it).getLong("item_id") }.toSet())
+        val beach = JSONArray(search.execute(JSONObject().put("query", "beach").put("person", "Mina's")))
+        assertEquals("query and person together", listOf(withMina), (0 until beach.length()).map { beach.getJSONObject(it).getLong("item_id") })
+        assertTrue(search.execute(JSONObject().put("person", "Obama")).contains("Known people: Mina"))
+        assertTrue("other photo exists", other > 0)
+
+        val session = db.chatDao().insertSession(com.lsa.app.data.db.ChatSessionEntity(title = "t", enabledTools = "move_files", autoSearch = false, createdAt = 1, updatedAt = 1))
+        val move = com.lsa.app.chat.actions.MoveFilesTool(actionManager, db.itemDao(), session, people)
+        val result = JSONObject(move.execute(JSONObject().put("person", "Mina").put("destination", "Pictures/Mina")))
+        val payload = JSONObject(db.actionDao().get(result.getLong("action_id"))!!.payload)
+        assertEquals("Pictures/Mina", payload.getString("destination"))
+        assertEquals(2, payload.getJSONArray("files").length())
+        assertTrue(move.execute(JSONObject().put("destination", "Pictures/X")).startsWith("Error"))
+    }
+
     @Test fun readToolPagesThroughLongText() = runBlocking {
         val long = "abcdefghij".repeat(100) // 1000 chars
         val id = addItem("long.txt", ItemKind.TEXT, seg(SegmentType.TEXT_CHUNK, 0, long))

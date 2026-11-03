@@ -50,6 +50,7 @@ class AppContainer(val context: Context) {
     val places by lazy { PlaceFinder.fromAssets(context) }
     val indexRunner by lazy { IndexRunner(db.itemDao(), source, places = places) }
     val indexing by lazy { IndexingController(context, db.itemDao(), indexRunner, settings) }
+    val faces by lazy { com.lsa.app.indexing.faces.FaceIndexer(context, db.faceDao(), thumbs, models, settings) }
     val autoIndex = AutoIndexScheduler(
         context, settings, appScope,
         catchUpSignals = combine(
@@ -66,7 +67,7 @@ class AppContainer(val context: Context) {
     }
     val actions: com.lsa.app.chat.actions.ActionManager by lazy { com.lsa.app.chat.actions.ActionManager(db.actionDao(), fileOps = fileOps) }
     val fileOps: com.lsa.app.chat.actions.FileOps by lazy { com.lsa.app.chat.actions.FileOps(context, db.itemDao(), folders = { indexing.folderSpecs() }) }
-    val chat: com.lsa.app.chat.ChatController by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), models, search, settings, appScope, taskManager = taskManager, actions = actions) }
+    val chat: com.lsa.app.chat.ChatController by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), models, search, settings, appScope, taskManager = taskManager, actions = actions, people = com.lsa.app.chat.PeopleDirectory(db.faceDao())) }
     val search by lazy { SearchEngine(db.itemDao(), { q -> models.embedder()?.use { it.value.embedQuery(q) } }, settings) }
 }
 

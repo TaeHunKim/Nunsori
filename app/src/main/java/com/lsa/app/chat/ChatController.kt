@@ -75,6 +75,8 @@ class ChatController(
     private val clock: () -> Long = System::currentTimeMillis,
     private val taskManager: TaskManager? = null,
     private val actions: ActionManager? = null,
+    /** Named people from face grouping (search_index / move_files / delete_files `person`). */
+    private val people: PeopleDirectory? = null,
 ) {
     private val _run = MutableStateFlow<ChatRun?>(null)
     val run: StateFlow<ChatRun?> = _run.asStateFlow()
@@ -201,17 +203,20 @@ class ChatController(
                 // History = stored user/assistant turns before this one, trimmed to the context budget.
                 val stored = chat.messages(sessionId).dropLast(1).filter { it.role != ChatRole.TOOL }
                     .map { ChatTurn(if (it.role == ChatRole.USER) TurnRole.USER else TurnRole.ASSISTANT, it.text) }
+                val tools = if (task != null) scheduledTools(session) else enabledTools(session)
+                // named people go into the system prompt when the model can search by person
+                val names = if (tools.any { it.name == ChatToolNames.SEARCH }) runCatching { people?.names() }.getOrNull().orEmpty().take(MAX_NAMES) else emptyList()
                 val budget = (contextTokens * ContextBudget.HISTORY_SHARE).toInt() - ContextBudget.estimateTokens(modelText) - SYSTEM_TOKENS -
-                    ContextBudget.estimateTokens(custom)
+                    ContextBudget.estimateTokens(custom) - ContextBudget.estimateTokens(names.joinToString())
                 val history = ContextBudget.trim(stored, budget.coerceAtLeast(0))
 
-                val tools = if (task != null) scheduledTools(session) else enabledTools(session)
                 // the custom prompt is part of the key: a changed prompt starts a fresh conversation state
                 // and so is the date: the system prompt names today, so a new day must not reuse yesterday's state
-                val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}|${todayString()}"
+                // ... and so are the known names
+                val key = "$sessionId|${tools.joinToString { it.name }}|${custom.hashCode()}|${todayString()}|${names.hashCode()}"
                 _run.value = ChatRun(sessionId, ChatPhase.GENERATING, trimmed = history.dropped > 0)
                 var toolCalls = 0
-                model.reply(key, systemPrompt(custom, tools.any { it.name == ChatToolNames.CALENDAR }, tools.any { it.name == ChatToolNames.MOVE }), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
+                model.reply(key, systemPrompt(custom, tools.any { it.name == ChatToolNames.CALENDAR }, tools.any { it.name == ChatToolNames.MOVE }, names), history.turns, ChatTurn(TurnRole.USER, modelText, images), tools).collect { e ->
                     when (e) {
                         is ChatEvent.Token -> {
                             answer.append(e.text)
@@ -262,10 +267,10 @@ class ChatController(
     private fun scheduledTools(session: ChatSessionEntity): List<ChatTool> {
         val on = session.enabledTools.split(',').toSet()
         return buildList {
-            add(SearchIndexTool(search, items)); add(ReadFileTool(items))
+            add(SearchIndexTool(search, items, people)); add(ReadFileTool(items))
             if (actions != null) {
                 if (ChatToolNames.CALENDAR in on) { add(AddCalendarEventTool(actions, session.sessionId)); add(AddContactTool(actions, session.sessionId)) }
-                if (ChatToolNames.MOVE in on) { add(MoveFilesTool(actions, items, session.sessionId)); add(DeleteFilesTool(actions, items, session.sessionId)) }
+                if (ChatToolNames.MOVE in on) { add(MoveFilesTool(actions, items, session.sessionId, people)); add(DeleteFilesTool(actions, items, session.sessionId, people)) }
             }
         }
     }
@@ -281,7 +286,7 @@ class ChatController(
     private fun enabledTools(session: ChatSessionEntity): List<ChatTool> {
         val on = session.enabledTools.split(',').toSet()
         return buildList {
-            if (ChatToolNames.SEARCH in on) add(SearchIndexTool(search, items))
+            if (ChatToolNames.SEARCH in on) add(SearchIndexTool(search, items, people))
             if (ChatToolNames.READ in on) add(ReadFileTool(items))
             if (ChatToolNames.SCHEDULE in on && taskManager != null) {
                 add(ScheduleTaskTool(taskManager, session.sessionId))
@@ -294,8 +299,8 @@ class ChatController(
                 add(AddContactTool(actions, session.sessionId))
             }
             if (ChatToolNames.MOVE in on && actions != null) {
-                add(MoveFilesTool(actions, items, session.sessionId))
-                add(DeleteFilesTool(actions, items, session.sessionId))
+                add(MoveFilesTool(actions, items, session.sessionId, people))
+                add(DeleteFilesTool(actions, items, session.sessionId, people))
             }
         }
     }
@@ -340,7 +345,7 @@ class ChatController(
         return "${fmt.format(Date(clock()))}, ${tz.id}"
     }
 
-    private fun systemPrompt(custom: String, withActions: Boolean, withFiles: Boolean): String {
+    private fun systemPrompt(custom: String, withActions: Boolean, withFiles: Boolean, people: List<String> = emptyList()): String {
         return "You are the assistant of a private, on-device file search app. Today is ${todayString()} " +
             "(time zone ${TimeZone.getDefault().id}); work out words like today, yesterday or a year ago from it, " +
             "and give search_index date_from/date_to as YYYY-MM-DD (a query is optional when you filter by date or kind, e.g. to list yesterday's photos). " +
@@ -348,6 +353,8 @@ class ChatController(
             "call schedule_task with the instruction written so it can run on its own (for a file task, query lists the user's own words first and then 2 to 5 concrete words a matching file would contain, separated by |, e.g. \"schedule|wedding invitation|invitation|appointment\"; never the whole instruction); it only takes effect after the user confirms the card shown in the chat, so tell them to confirm it. To change an existing task the user asks about, use list_scheduled_tasks and update_scheduled_task instead of creating a new one. " +
             (if (withActions) "When a file shows an event or a person worth saving (an invitation, ticket, appointment, business card) and the user wants it in their calendar or contacts, call add_calendar_event or add_contact with the details; the user approves a card first, so never say it is already added. " else "") +
             (if (withFiles) "To move or delete files the user asks about, first find them with search_index and then call move_files or delete_files with their item_ids (never guess ids); the user approves a card first, deleting goes to the trash unless they ask for permanent deletion, and you must not say the files are already moved or deleted. " else "") +
+            (if (people.isEmpty()) "" else "People the user named in their photos: ${people.joinToString()}. When the user mentions one of them, pass that name as person to search_index" +
+                (if (withFiles) ", move_files or delete_files (person instead of item_ids moves or deletes every photo of that person)" else "") + ". ") +
             "Answer from the user's own files when the question is about them: use the search_index tool to find files and read_file to read them, " +
             "if those tools are available. Name the files (and page or time) your answer is based on. " +
             "If nothing relevant is found, say so instead of guessing. Keep answers concise and reply in the language the user writes in." +
@@ -358,6 +365,8 @@ class ChatController(
         private const val TAG = "LSA.Chat"
         const val NO_MODEL = "no_model"
         const val MAX_TOOL_CALLS = 8
+        /** Named people listed in the system prompt at most (the 4K default window). */
+        private const val MAX_NAMES = 30
         private const val MAX_STORED_RESULT = 4000
         private const val ATTACHMENT_CHARS = 3000
         private const val AUTO_SEARCH_RESULTS = 3

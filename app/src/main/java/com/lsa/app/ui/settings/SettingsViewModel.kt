@@ -51,7 +51,7 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     val thumbBytes: StateFlow<Long> = _thumbBytes.asStateFlow()
     fun refreshThumbBytes() = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { _thumbBytes.value = c.thumbs.sizeBytes() }
     fun clearThumbs() = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-        c.thumbs.clear(); dao.clearThumbPaths(); _thumbBytes.value = 0
+        c.thumbs.clear(); dao.clearThumbPaths(); c.db.faceDao().clearFaceThumbs(); _thumbBytes.value = 0
     }
 
     fun refreshPhotoFolders() = viewModelScope.launch { _photoFolders.value = c.mediaRepo.listFolders() }
@@ -62,6 +62,14 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     val videoTranscribe = c.settings.videoTranscribe.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     fun setVideoDetail(d: com.lsa.app.indexing.video.VideoDetail) = viewModelScope.launch { c.settings.setVideoDetail(d) }
     fun setVideoTranscribe(v: Boolean) = viewModelScope.launch { c.settings.setVideoTranscribe(v) }
+
+    val faceGrouping = c.settings.faceGrouping.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    /** Off: deletes all face data now. On: the next indexing run scans the faces of the photos already indexed. */
+    fun setFaceGrouping(on: Boolean) = viewModelScope.launch {
+        c.settings.setFaceGrouping(on)
+        if (on) c.indexing.start() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.faces.deleteAll() }
+    }
 
     val autoMode = c.settings.autoMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lsa.app.indexing.AutoIndexMode.MANUAL)
     val scheduleMinutes = c.settings.scheduleMinutes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_SCHEDULE_MINUTES)

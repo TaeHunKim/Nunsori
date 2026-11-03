@@ -83,10 +83,11 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             val failed = full.todo.filter { it.existing?.status == com.lsa.app.data.db.ItemStatus.FAILED }
             com.lsa.app.indexing.IndexPlan(total = failed.size, done = 0, todo = failed)
         }
-        c.thumbs.cleanup(c.db.itemDao().thumbPaths().toSet()) // previews of deleted files
+        c.thumbs.cleanup(c.db.itemDao().thumbPaths().toSet() + c.db.faceDao().allThumbs()) // previews of deleted files
         Log.i(TAG, "sync: total=${plan.total} todo=${plan.todo.size} auto=$auto")
         if (plan.todo.isEmpty()) {
             ctl.update(IndexProgress(total = plan.total, done = plan.done, finished = true))
+            facePass(c, ctl)
             return Result.success()
         }
         if (auto && ctl.isHot()) { outcome = AutoOutcome.HOT; return Result.retry() }
@@ -137,12 +138,19 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         } finally {
             ocrLease.close(); embLease.close()
         }
+        if (!result.stoppedEarly && !ctl.stopRequested) facePass(c, ctl)
         // Scheduled "new file" tasks look at what this pass added (after the models are released).
         runCatching { c.taskManager.onIndexed(passStart) }.onFailure { Log.w(TAG, "scheduled tasks check failed", it) }
         // Stopped by the thermal gate (not by the user): try again later.
         if (result.stoppedEarly && !ctl.stopRequested) { outcome = AutoOutcome.HOT; return Result.retry() }
         if (indexed > 0) outcome = AutoOutcome.INDEXED
         return Result.success()
+    }
+
+    /** Faces of photos not scanned yet (new photos, or all of them after face grouping was turned on again). */
+    private suspend fun facePass(c: com.lsa.app.AppContainer, ctl: com.lsa.app.indexing.IndexingController) {
+        runCatching { c.faces.pass { !ctl.stopRequested && !(auto && ctl.isHot()) } }
+            .onFailure { Log.w(TAG, "face pass failed", it) }
     }
 
     companion object {
