@@ -27,6 +27,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -40,8 +41,6 @@ import androidx.navigation.compose.rememberNavController
 import com.lsa.app.R
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lsa.app.ui.chat.ChatListScreen
-import com.lsa.app.ui.chat.ChatScreen
 import com.lsa.app.ui.index.IndexScreen
 import com.lsa.app.ui.onboarding.OnboardingScreen
 import com.lsa.app.ui.search.SearchScreen
@@ -52,6 +51,7 @@ enum class Dest(val route: String, @StringRes val label: Int, val icon: ImageVec
     Index("index", R.string.nav_index, Icons.Outlined.PhotoLibrary),
     Search("search", R.string.nav_search, Icons.Outlined.Search),
     People("people", R.string.nav_people, Icons.Outlined.People),
+    /** Not a screen: opens the Malbotdari app (the chat moved there in 0.10.0). */
     Chat("chat", R.string.nav_chat, Icons.Outlined.ChatBubbleOutline),
     Settings("settings", R.string.nav_settings, Icons.Outlined.Settings),
 }
@@ -88,7 +88,18 @@ private fun MainScaffold(openRoute: String?, onRouteOpened: () -> Unit) {
         }
     }
 
-    // a detail screen (one chat, one person) gets an up arrow to its list instead of the menu
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val malbotMissingState = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var malbotMissing by malbotMissingState
+    if (malbotMissing) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { malbotMissing = false },
+        title = { Text(stringResource(R.string.malbot_title)) },
+        text = { Text(stringResource(R.string.malbot_needed)) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { com.lsa.app.service.Malbotdari.openReleases(ctx); malbotMissing = false }) { Text(stringResource(R.string.malbot_get)) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { malbotMissing = false }) { Text(stringResource(R.string.action_cancel)) } },
+    )
+
+    // a detail screen (one person, the connected apps) gets an up arrow to its list instead of the menu
     val detail = route.contains('/')
 
     fun go(d: Dest) {
@@ -114,7 +125,10 @@ private fun MainScaffold(openRoute: String?, onRouteOpened: () -> Unit) {
                         selected = d == current,
                         label = { Text(stringResource(d.label)) },
                         icon = { Icon(d.icon, contentDescription = null) },
-                        onClick = { go(d); scope.launch { drawer.close() } },
+                        onClick = {
+                            if (d == Dest.Chat) { if (!com.lsa.app.service.Malbotdari.open(ctx)) malbotMissing = true } else go(d)
+                            scope.launch { drawer.close() }
+                        },
                         modifier = Modifier.padding(horizontal = 12.dp),
                     )
                 }
@@ -148,7 +162,7 @@ private fun MainScaffold(openRoute: String?, onRouteOpened: () -> Unit) {
             NavHost(nav, startDestination = Dest.Index.route, modifier = Modifier.padding(padding).consumeWindowInsets(padding)) {
                 composable(Dest.Index.route) { IndexScreen(onOpenSettings = { go(Dest.Settings) }) }
                 composable(Dest.Search.route) {
-                    SearchScreen(onOpenSettings = { go(Dest.Settings) }, onOpenChat = { id -> nav.navigate("chat/$id") })
+                    SearchScreen(onOpenSettings = { go(Dest.Settings) })
                 }
                 composable(Dest.People.route) {
                     com.lsa.app.ui.people.PeopleScreen(onOpen = { id -> nav.navigate("people/$id") }, onOpenSettings = { go(Dest.Settings) })
@@ -159,10 +173,6 @@ private fun MainScaffold(openRoute: String?, onRouteOpened: () -> Unit) {
                         onOpenPerson = { other -> nav.navigate("people/$other") { popUpTo(Dest.People.route) } },
                         onGone = { nav.popBackStack(Dest.People.route, inclusive = false) },
                     )
-                }
-                composable(Dest.Chat.route) { ChatListScreen(onOpen = { id -> nav.navigate("chat/$id") }) }
-                composable("chat/{id}", arguments = listOf(androidx.navigation.navArgument("id") { type = androidx.navigation.NavType.LongType })) { e ->
-                    ChatScreen(e.arguments?.getLong("id") ?: 0L, onOpenSettings = { go(Dest.Settings) })
                 }
                 composable(Dest.Settings.route) { SettingsScreen(onOpenApps = { nav.navigate(ROUTE_APPS) }) }
                 composable(ROUTE_APPS) { com.lsa.app.ui.settings.ConnectedAppsScreen() }

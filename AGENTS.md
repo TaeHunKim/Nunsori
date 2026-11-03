@@ -1,5 +1,5 @@
 # Nunsori / 눈소리 (Local Search Anything, Android)
-온디바이스 멀티모달 임베딩 + 시맨틱 검색 + 로컬 LLM RAG 앱. 앱 이름 Nunsori(눈소리), applicationId `io.github.taehunkim.nunsori`, 코드 패키지·namespace `com.lsa.app`(둘은 별개; 스크립트는 `scripts/env.sh`의 `APP_ID`/`APP_ACTIVITY` 사용), Kotlin + Compose, minSdk 29 / target 36 / compile 37.
+온디바이스 멀티모달 임베딩 + 시맨틱 검색 앱(채팅은 동반 앱 말벗다리). 앱 이름 Nunsori(눈소리), applicationId `io.github.taehunkim.nunsori`, 코드 패키지·namespace `com.lsa.app`(둘은 별개; 스크립트는 `scripts/env.sh`의 `APP_ID`/`APP_ACTIVITY` 사용), Kotlin + Compose, minSdk 29 / target 36 / compile 37.
 
 ## 문서 유지 규칙 (코드 구현 시 항상 적용)
 코드를 구현·수정할 때는 **같은 작업 안에서 관련 문서도 함께 갱신**하고, 코드와 문서를 같은 커밋에 넣는다. 갱신이 필요 없다고 판단하면 이유를 한 줄로 남긴다.
@@ -37,7 +37,7 @@
 ## 앱 구조 (요약)
 이미지·텍스트·문서(PDF/Office)·음성·영상을 인덱싱하고 시맨틱 + 키워드로 검색한다. 모델은 동반 앱 OndolSaem(별도 레포)이 받고 실행한다. 눈소리는 `ml/ModelHost`(SDK 클라이언트)로만 접근하며 INTERNET 권한이 없다. 문자열은 `values/strings.xml`(en)과 `values-ko/strings.xml`(ko)의 키가 같아야 한다(`StringsParityTest`).
 - 데이터 `data/db`(`items` + `segments`, int8 벡터; 얼굴은 `faces` + `people`), 소스 `data/media`, 파이프라인 `indexing`(`IndexRunner.sync()`/`process()`, `pipelineKey`로 종류별 재처리), 검색 `search`(그룹별 상대 점수 + 키워드), 자동 인덱싱 `AutoIndexScheduler`, 모델 접근 `ml/ModelHost`(OndolSaem 클라이언트).
-- 채팅: `chat/`(`ChatController`, `ChatTools`: search_index·read_file, `ContextBudget`), `chat/schedule/`(예약 작업: 알람·워커·파일 트리거), `ml/llm/`(`ChatModel` 인터페이스, 실행은 OndolSaem), `ui/chat/`. 웹 검색·fetch 도구는 후순위(roadmap). 자세히: `docs/chat.md`.
+- 채팅은 0.10.0부터 별도 레포 `TaeHunKim/malbotdari`(앱 Malbotdari/말벗다리, 형제 폴더 `../malbotdari`). 눈소리는 인덱스를 다른 앱에 서비스로 연다: `:sdk` 모듈(AIDL `INunsori`, `NunsoriClient`), `service/`(`IndexService`·`IndexApi`·`CallerCheck`+`Approvals`·`IndexEvents` 인덱스 변경 힌트), `service/tools/`(search_index·read_file·move/delete 준비와 `FileOps`). 같은 키로 서명된 앱은 바로, 그 외는 설정 › 앱 › 연결된 앱에서 승인. 자세히: `docs/architecture.md` 11절.
 - 자세히: `docs/architecture.md`, `docs/indexing.md`, `docs/search.md`, `docs/models.md`.
 
 ## OndolSaem (모델 호스트)

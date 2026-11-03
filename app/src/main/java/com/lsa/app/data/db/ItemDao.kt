@@ -86,10 +86,6 @@ interface ItemDao {
     @Query("SELECT COUNT(*) FROM items WHERE status = 'DONE' AND embeddingModelId != :modelId")
     fun observeStaleCount(modelId: String): Flow<Int>
 
-    /** Files whose indexing finished at or after [since] (used to decide which new files a scheduled task should see). */
-    @Query("SELECT itemId FROM items WHERE status = 'DONE' AND indexedAt >= :since AND kind IN (:kinds)")
-    suspend fun doneSince(since: Long, kinds: List<ItemKind>): List<Long>
-
     /** Other apps' "what is new" (service/IndexApi.changesSince): finished after [after], oldest first. */
     @Query("SELECT itemId, indexedAt FROM items WHERE status = 'DONE' AND indexedAt > :after AND kind IN (:kinds) ORDER BY indexedAt, itemId LIMIT :limit")
     suspend fun doneAfter(after: Long, kinds: List<ItemKind>, limit: Int): List<ItemStamp>
@@ -201,7 +197,6 @@ interface ItemDao {
 @Database(
     entities = [
         ItemEntity::class, SegmentEntity::class, IndexedFolderEntity::class,
-        ChatSessionEntity::class, ChatMessageEntity::class, ScheduledTaskEntity::class, PendingActionEntity::class,
         PersonEntity::class, FaceEntity::class,
     ],
     version = AppDatabase.VERSION,
@@ -209,13 +204,10 @@ interface ItemDao {
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun itemDao(): ItemDao
-    abstract fun chatDao(): ChatDao
-    abstract fun taskDao(): ScheduledTaskDao
-    abstract fun actionDao(): PendingActionDao
     abstract fun faceDao(): FaceDao
 
     companion object {
         /** Bump together with a new migration in Migrations.kt (see docs/development.md). */
-        const val VERSION = 8
+        const val VERSION = 9
     }
 }

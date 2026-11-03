@@ -152,6 +152,27 @@ class MigrationTest {
         db.query("SELECT COUNT(*) FROM faces").use { c -> c.moveToFirst(); assertEquals("faces go with their photo", 0, c.getInt(0)) }
     }
 
+    @Test fun v8ToV9DropsTheChatAndKeepsTheIndexAndPeople() {
+        helper.createDatabase("mig89", 8).apply {
+            execSQL(itemV2)
+            execSQL("INSERT INTO people (name, createdAt, updatedAt) VALUES ('Mina', 1, 1)")
+            execSQL("INSERT INTO chat_sessions (title, enabledTools, autoSearch, pinned, createdAt, updatedAt) VALUES ('t', '', 0, 0, 1, 1)")
+            execSQL("INSERT INTO scheduled_tasks (sessionId, `trigger`, status, instruction, `repeat`, onceAtMs, intervalMinutes, atMinuteOfDay, weekdayMask, fileQuery, fileKinds, pendingItemIds, nextRunAt, lastRunAt, lastResult, lastError, createdAt, activatedAt) VALUES (1, 'TIME', 'ACTIVE', 'x', 'DAILY', NULL, 0, 540, 0, '', '', '', 5, NULL, NULL, NULL, 1, 1)")
+            close()
+        }
+        val dropped = ArrayList<Long>()
+        com.lsa.app.data.db.onChatTasksDropped = { dropped += it }
+        try {
+            val db = helper.runMigrationsAndValidate("mig89", 9, true, com.lsa.app.data.db.MIGRATION_8_9)
+            db.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('chat_sessions', 'chat_messages', 'scheduled_tasks', 'pending_actions')").use { c ->
+                assertEquals("the chat tables are gone", 0, c.count)
+            }
+            db.query("SELECT COUNT(*) FROM items").use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
+            db.query("SELECT name FROM people").use { c -> c.moveToFirst(); assertEquals("Mina", c.getString(0)) }
+            assertEquals("the task's alarm is cancelled", listOf(1L), dropped)
+        } finally { com.lsa.app.data.db.onChatTasksDropped = null }
+    }
+
     @Test fun v3ToV4AddsChatTablesThatCascadeOnDelete() {
         helper.createDatabase("mig34", 3).apply { execSQL(itemV2); close() }
         val db = helper.runMigrationsAndValidate("mig34", 4, true, MIGRATION_3_4)

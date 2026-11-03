@@ -1,6 +1,5 @@
-package com.lsa.app.chat
+package com.lsa.app.service.tools
 
-import com.lsa.app.chat.actions.FilePaths
 import com.lsa.app.data.media.FolderSpec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

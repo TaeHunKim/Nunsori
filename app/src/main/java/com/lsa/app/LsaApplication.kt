@@ -32,9 +32,12 @@ class AppContainer(val context: Context) {
     /** Lives as long as the process; used for background housekeeping (model unloading, schedule updates). */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    val db: AppDatabase by lazy { Room.databaseBuilder(context, AppDatabase::class.java, "lsa.db").addMigrations(*ALL_MIGRATIONS)
+    val db: AppDatabase by lazy {
+        com.lsa.app.data.db.onChatTasksDropped = { ids -> AppUpgrade.cancelChatAlarms(context, ids) }
+        Room.databaseBuilder(context, AppDatabase::class.java, "lsa.db").addMigrations(*ALL_MIGRATIONS)
             // The index is derived data: after a downgrade (older build installed over a newer one) rebuilding beats crashing.
-            .fallbackToDestructiveMigrationOnDowngrade(true).build() }
+            .fallbackToDestructiveMigrationOnDowngrade(true).build()
+    }
     val settings = SettingsStore(context)
     val mediaRepo = MediaStoreRepository(context).also { repo -> appScope.launch { settings.skipMusic.collect { repo.skipMusic = it } } }
     val thumbs = ThumbStore(context)
@@ -61,13 +64,7 @@ class AppContainer(val context: Context) {
             combine(settings.ocrModelId, settings.asrModelId) { ocr, asr -> "$ocr|$asr" },
         ) { folders, model, kinds, others -> listOf(folders, model, kinds, others) },
     )
-    val taskAlarms by lazy { com.lsa.app.chat.schedule.TaskAlarms(context) }
-    val taskManager: com.lsa.app.chat.schedule.TaskManager by lazy {
-        com.lsa.app.chat.schedule.TaskManager(context, db.taskDao(), db.chatDao(), db.itemDao(), search, taskAlarms, { chat }, judgeFirst = { settings.taskJudgeFirst.first() }, actionDao = db.actionDao())
-    }
-    val actions: com.lsa.app.chat.actions.ActionManager by lazy { com.lsa.app.chat.actions.ActionManager(db.actionDao(), fileOps = fileOps) }
-    val fileOps: com.lsa.app.chat.actions.FileOps by lazy { com.lsa.app.chat.actions.FileOps(context, db.itemDao(), folders = { indexing.folderSpecs() }) }
-    val chat: com.lsa.app.chat.ChatController by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), models, search, settings, appScope, taskManager = taskManager, actions = actions, people = com.lsa.app.chat.PeopleDirectory(db.faceDao())) }
+    val fileOps: com.lsa.app.service.tools.FileOps by lazy { com.lsa.app.service.tools.FileOps(context, db.itemDao(), folders = { indexing.folderSpecs() }) }
     val approvals by lazy { com.lsa.app.service.Approvals({ settings.apiApprovalsJson.first() }, settings::setApiApprovalsJson, appScope) }
     val callerCheck by lazy {
         com.lsa.app.service.CallerCheck(context, approvals).apply {
@@ -92,7 +89,6 @@ class LsaApplication : Application() {
         container = AppContainer(this)
         Notifications.ensureChannels(this)
         container.autoIndex.start()
-        container.appScope.launch { runCatching { container.taskManager.rearmAll() } }
         container.appScope.launch {
             AppUpgrade.run(this@LsaApplication, container.settings, container.db.itemDao(), BuildConfig.VERSION_CODE)
             // Mirror OndolSaem's active models into the settings (a change there re-indexes what it affects).

@@ -1,4 +1,4 @@
-package com.lsa.app.chat.actions
+package com.lsa.app.service.tools
 
 import android.content.ContentValues
 import android.content.Context
@@ -57,7 +57,7 @@ object FilePaths {
 }
 
 /**
- * Moves, trashes and deletes indexed files after the user approved a card. Needs "All files access" (Android 11+);
+ * Moves, trashes and deletes indexed files after the user approved a card in the calling app. Needs "All files access" (Android 11+);
  * the index is updated at once so search does not show files that are gone. Plain files go to an app trash folder
  * ([FilePaths.TRASH_DIR], hidden from the index and the gallery); MediaStore files use the system trash.
  */
@@ -150,7 +150,7 @@ class FileOps(
     }
 
     companion object {
-        private const val TAG = "LSA.Actions"
+        private const val TAG = "LSA.FileOps"
         const val NEEDS_ACCESS = "needs_all_files_access"
     }
 }

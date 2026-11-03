@@ -24,10 +24,7 @@ class SettingsStore(private val context: Context) {
     private val kOnboarding = booleanPreferencesKey("onboarding_done")
     private val kLastVersion = intPreferencesKey("last_version_code")
     private val kAsr = stringPreferencesKey("asr_model_id")
-    private val kChat = stringPreferencesKey("chat_model_id")
-    private val kChatPrompt = stringPreferencesKey("chat_custom_prompt")
     private val kResourceUi = booleanPreferencesKey("show_resource_indicator")
-    private val kTaskJudgeFirst = booleanPreferencesKey("task_judge_first")
     private val kLastAutoRun = stringPreferencesKey("last_auto_run")
     private val kSkipMusic = booleanPreferencesKey("skip_music")
     private val kVideoDetail = stringPreferencesKey("video_detail")
@@ -41,12 +38,7 @@ class SettingsStore(private val context: Context) {
     // The model ids below mirror OndolSaem's active models (see ModelHost.refresh); empty / "none" = not available.
     val embeddingModelId: Flow<String> = context.dataStore.data.map { it[kEmbedding] ?: DEFAULT_EMBEDDING }
     val ocrModelId: Flow<String> = context.dataStore.data.map { it[kOcr] ?: DEFAULT_OCR }
-    val chatModelId: Flow<String> = context.dataStore.data.map { it[kChat] ?: DEFAULT_CHAT }
-    /** The user's own instructions, appended to the chat system prompt. */
-    val chatCustomPrompt: Flow<String> = context.dataStore.data.map { it[kChatPrompt] ?: "" }
     /** Top-bar indicator with backend, memory and CPU use. */
-    /** Scheduled file tasks: let the chat model judge every new file (when there are few) instead of relying on the embedding match alone. */
-    val taskJudgeFirst: Flow<Boolean> = context.dataStore.data.map { it[kTaskJudgeFirst] ?: true }
     val lastAutoRun: Flow<com.lsa.app.indexing.LastAutoRun?> = context.dataStore.data.map { com.lsa.app.indexing.LastAutoRun.decode(it[kLastAutoRun]) }
     val showResourceIndicator: Flow<Boolean> = context.dataStore.data.map { it[kResourceUi] ?: false }
     val asrModelId: Flow<String> = context.dataStore.data.map { it[kAsr] ?: DEFAULT_ASR }
@@ -81,10 +73,7 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setEmbeddingModelId(id: String) { context.dataStore.edit { it[kEmbedding] = id } }
     suspend fun setOcrModelId(id: String) { context.dataStore.edit { it[kOcr] = id } }
-    suspend fun setChatModelId(id: String) { context.dataStore.edit { it[kChat] = id } }
-    suspend fun setChatCustomPrompt(s: String) { context.dataStore.edit { it[kChatPrompt] = s.trim().take(MAX_CUSTOM_PROMPT) } }
     suspend fun setLastAutoRun(run: com.lsa.app.indexing.LastAutoRun) { context.dataStore.edit { it[kLastAutoRun] = run.encode() } }
-    suspend fun setTaskJudgeFirst(on: Boolean) { context.dataStore.edit { it[kTaskJudgeFirst] = on } }
     suspend fun setShowResourceIndicator(on: Boolean) { context.dataStore.edit { it[kResourceUi] = on } }
     suspend fun setAsrModelId(id: String) { context.dataStore.edit { it[kAsr] = id } }
     suspend fun setSkipMusic(v: Boolean) { context.dataStore.edit { it[kSkipMusic] = v } }
@@ -101,6 +90,14 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { p ->
             listOf("hf_token", "residency_policy").forEach { p.remove(stringPreferencesKey(it)) }
             p.remove(intPreferencesKey("chat_context_tokens"))
+        }
+    }
+
+    /** 0.10.0: the chat moved to the Malbotdari app; drops its settings. */
+    suspend fun removeChatKeys() {
+        context.dataStore.edit { p ->
+            listOf("chat_model_id", "chat_custom_prompt").forEach { p.remove(stringPreferencesKey(it)) }
+            p.remove(booleanPreferencesKey("task_judge_first"))
         }
     }
 
@@ -122,11 +119,9 @@ class SettingsStore(private val context: Context) {
     suspend fun clearOnboardingForTest() { context.dataStore.edit { it.remove(kOnboarding) } }
 
     companion object {
-        const val MAX_CUSTOM_PROMPT = 2000
         const val DEFAULT_EMBEDDING = "eg2-440m"
         const val DEFAULT_OCR = "mlkit-ko"
         const val DEFAULT_ASR = "asr-sensevoice"
-        const val DEFAULT_CHAT = "chat-gemma4-e2b"
         const val DEFAULT_SCHEDULE_MINUTES = 3 * 60
 
         inline fun <reified E : Enum<E>> parseEnum(raw: String?, default: E): E =

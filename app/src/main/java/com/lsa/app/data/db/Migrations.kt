@@ -144,5 +144,25 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
+/**
+ * Called by [MIGRATION_8_9] with the ids of the scheduled chat tasks it drops, so their alarms can be cancelled
+ * (the container sets it before opening the database).
+ */
+@Volatile var onChatTasksDropped: ((List<Long>) -> Unit)? = null
+
+/**
+ * 0.10.0: the chat moved to the Malbotdari app. Its tables go (the user chose not to carry chats over); the index,
+ * folders and people stay.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val ids = ArrayList<Long>()
+        runCatching { db.query("SELECT taskId FROM scheduled_tasks").use { c -> while (c.moveToNext()) ids += c.getLong(0) } }
+        // children first: messages, tasks and cards reference the sessions
+        listOf("pending_actions", "scheduled_tasks", "chat_messages", "chat_sessions").forEach { db.execSQL("DROP TABLE IF EXISTS `$it`") }
+        if (ids.isNotEmpty()) runCatching { onChatTasksDropped?.invoke(ids) }
+    }
+}
+
 /** Every migration, in order. Register new ones here only; the chain test in MigrationTest walks all exported schemas. */
-val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)

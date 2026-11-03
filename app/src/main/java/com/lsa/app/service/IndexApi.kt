@@ -4,17 +4,15 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.ParcelFileDescriptor
-import com.lsa.app.chat.PeopleDirectory
-import com.lsa.app.chat.ReadFileTool
-import com.lsa.app.chat.SearchIndexTool
-import com.lsa.app.chat.actions.ActionManager
-import com.lsa.app.chat.actions.DeleteFilesTool
-import com.lsa.app.chat.actions.FileActionPrep
-import com.lsa.app.chat.actions.FileOps
-import com.lsa.app.chat.actions.FilePrep
-import com.lsa.app.chat.actions.MoveFilesTool
-import com.lsa.app.chat.kindName
-import com.lsa.app.chat.schedule.TaskManager
+import com.lsa.app.service.tools.FileActionPrep
+import com.lsa.app.service.tools.FileActionTools
+import com.lsa.app.service.tools.FileOps
+import com.lsa.app.service.tools.FilePrep
+import com.lsa.app.service.tools.PeopleDirectory
+import com.lsa.app.service.tools.ReadFileTool
+import com.lsa.app.service.tools.SearchIndexTool
+import com.lsa.app.service.tools.kindName
+import com.lsa.app.service.tools.parseKinds
 import com.lsa.app.data.db.FaceDao
 import com.lsa.app.data.db.ItemDao
 import com.lsa.app.data.db.ItemKind
@@ -34,7 +32,7 @@ import kotlin.concurrent.thread
 
 /**
  * What other apps may do with the index (the INunsori service, see docs/architecture.md, "Index API"): search and
- * read like the chat tools, prepare file moves/deletes that the user confirms in the calling app, and learn which
+ * read (service/tools), prepare file moves/deletes that the user confirms in the calling app, and learn which
  * files are new. Plain logic so tests can call it without Binder.
  */
 class IndexApi(
@@ -58,8 +56,8 @@ class IndexApi(
     fun tools(): String = JSONArray().apply {
         put(spec(searchTool.name, searchTool.description, searchTool.parameters, false))
         put(spec(readTool.name, readTool.description, readTool.parameters, false))
-        put(spec(MOVE, MoveFilesTool.MOVE_DESCRIPTION, MoveFilesTool.MOVE_PARAMETERS, true))
-        put(spec(DELETE, DeleteFilesTool.DELETE_DESCRIPTION, DeleteFilesTool.DELETE_PARAMETERS, true))
+        put(spec(MOVE, FileActionTools.MOVE_DESCRIPTION, FileActionTools.MOVE_PARAMETERS, true))
+        put(spec(DELETE, FileActionTools.DELETE_DESCRIPTION, FileActionTools.DELETE_PARAMETERS, true))
     }.toString()
 
     private fun spec(name: String, description: String, parameters: String, confirm: Boolean) =
@@ -106,7 +104,7 @@ class IndexApi(
                 else -> throw NunsoriErrors.encode(Nunsori.Errors.BAD_INPUT, "unknown action $name")
             }
         }
-        return JSONObject().put("ok", results.any { it.ok }).put("note", ActionManager.summary(results)).toString()
+        return JSONObject().put("ok", results.any { it.ok }).put("note", FileActionTools.summary(results)).toString()
     }
 
     fun items(ids: LongArray): String = runBlocking {
@@ -132,7 +130,7 @@ class IndexApi(
         val s = items.summaries(listOf(id)).firstOrNull() ?: return@runBlocking null
         val side = maxPx.coerceIn(32, MAX_THUMB)
         runCatching {
-            val stored = s.thumbPath?.let(::File)?.takeIf { it.exists() }
+            val stored = s.thumbPath?.let { File(context.filesDir, "thumbs/$it") }?.takeIf { it.exists() }
             val bmp = when {
                 stored != null -> BitmapFactory.decodeFile(stored.path, BitmapFactory.Options().apply { inSampleSize = sample(stored, side) })
                 s.kind == ItemKind.IMAGE -> BitmapLoader.decode(context, Uri.parse(s.uri), side)
@@ -156,7 +154,7 @@ class IndexApi(
 
     fun changesSince(cursor: Long, kinds: String, limit: Int): String = runBlocking {
         if (cursor <= 0) return@runBlocking JSONObject().put("ids", JSONArray()).put("cursor", items.lastIndexedAt()).toString()
-        val k = TaskManager.parseKinds(kinds).ifEmpty { ItemKind.entries.toSet() }.toList()
+        val k = parseKinds(kinds).ifEmpty { ItemKind.entries.toSet() }.toList()
         val rows = items.doneAfter(cursor, k, limit.coerceIn(1, MAX_CHANGES))
         // the cursor only moves past kinds the caller asked for; other kinds finishing later are not skipped since
         // the cursor is a time, so the next call still sees everything newer
@@ -165,7 +163,7 @@ class IndexApi(
     }
 
     fun matchItems(query: String, ids: LongArray, kinds: String): LongArray = runBlocking {
-        search.matchItems(query, ids.toSet(), TaskManager.parseKinds(kinds)).keys.toLongArray()
+        search.matchItems(query, ids.toSet(), parseKinds(kinds)).keys.toLongArray()
     }
 
     fun people(): String = runBlocking { JSONArray(people.names()).toString() }

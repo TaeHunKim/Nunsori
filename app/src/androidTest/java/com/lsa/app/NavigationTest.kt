@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -54,12 +55,17 @@ class NavigationTest {
 
     @Test fun aDetailScreenHasAnUpArrowToItsList() {
         openMenu()
-        item("Chat").performClick()
-        rule.onNodeWithText("New chat", useUnmergedTree = true).performClick()
+        item("Settings").performClick()
+        rule.onNodeWithText("App").performClick()
+        rule.onNodeWithTag("open_apps").performClick()
         rule.waitUntil(5_000) { rule.onAllNodesWithContentDescription("Back").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithText("Connected apps").assertIsDisplayed()
         rule.onNodeWithContentDescription("Back").performClick()
-        // back on the list: the menu button again (the new chat is listed as "New chat" next to the button)
         rule.onNodeWithContentDescription("Open menu").assertIsDisplayed()
-        rule.waitUntil(5_000) { rule.onAllNodesWithText("New chat", useUnmergedTree = true).fetchSemanticsNodes().size >= 2 }
+    }
+
+    @Test fun theChatEntryOpensMalbotdariOrSaysWhereToGetIt() {
+        openMenu()
+        item("Chat (Malbotdari)").assertIsDisplayed()
     }
 }

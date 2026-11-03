@@ -105,7 +105,6 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         }
         val ocrLease = c.models.ocr()
         var lastNotify = 0L
-        val passStart = System.currentTimeMillis()
         var result = IndexProgress()
         try {
             val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, { c.models.speech() }, java.io.File(applicationContext.cacheDir, "audio"),
@@ -139,9 +138,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             ocrLease.close(); embLease.close()
         }
         if (!result.stoppedEarly && !ctl.stopRequested) facePass(c, ctl)
-        // Scheduled "new file" tasks look at what this pass added (after the models are released).
-        runCatching { c.taskManager.onIndexed(passStart) }.onFailure { Log.w(TAG, "scheduled tasks check failed", it) }
-        // Other apps (an assistant chat) ask what is new when told the index changed.
+        // Other apps (Malbotdari's scheduled file tasks) ask what is new when told the index changed.
         if (indexed > 0) runCatching { com.lsa.app.service.IndexEvents.notifyChanged(applicationContext) }
         // Stopped by the thermal gate (not by the user): try again later.
         if (result.stoppedEarly && !ctl.stopRequested) { outcome = AutoOutcome.HOT; return Result.retry() }

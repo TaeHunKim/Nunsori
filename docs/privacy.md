@@ -9,9 +9,9 @@ All in the app's private storage (removed on uninstall or "Clear data"):
 - Room database `lsa.db`: file names, paths, metadata (EXIF date and location of photos), extracted text (OCR, document text, transcripts) and embedding vectors.
 - Thumbnails (`ThumbStore`, 360 px) of images, document pages and text cards.
 - No models: since 0.8.0 they are downloaded and kept by the companion app OndolSaem (see below).
-- Chat sessions and messages in the same database (`chat_sessions`, `chat_messages`) and photos attached to a chat under `files/chat/<session>/`; deleting a chat removes them. The chat model runs on the phone; no question or answer is sent anywhere.
+- No chats: since 0.10.0 the chat is the companion app Malbotdari (upgrading deletes the chats, tasks and cards stored by earlier versions, and the photos attached to them).
 - Faces found in your photos (face grouping, on by default): for each face its position in the photo, a 128-number identity vector and a small crop, plus the groups and the names you give them. These are **biometric data**. They are computed by OndolSaem on the phone (the photo is handed over and nothing is kept there), stored only in Nunsori's private database and never leave the phone. Turning *Group photos by person* off (Settings › Index) deletes all of them at once.
-- Settings (DataStore), including your chat instructions (system prompt text; they are only given to the on-device chat model).
+- Settings (DataStore), including which other apps you allowed to use the index.
 
 Your original files are only read, never modified.
 
@@ -36,10 +36,8 @@ Nunsori offers its index to other apps on the same phone over Binder (see [archi
 | `READ_MEDIA_IMAGES/AUDIO/VIDEO` (`READ_EXTERNAL_STORAGE` up to API 32) | Index photos, audio, video |
 | `ACCESS_MEDIA_LOCATION` | Read photo location from EXIF |
 | `MANAGE_EXTERNAL_STORAGE` (All files access) | Read text files and documents, which MediaStore does not list reliably; optional, only needed for those kinds |
-| `POST_NOTIFICATIONS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` | Progress notification, long indexing runs and scheduled-task runs, and scheduled-task results |
-| `SCHEDULE_EXACT_ALARM` | Run time-based chat tasks at the chosen time (the user grants it in system settings) |
-| `RECEIVE_BOOT_COMPLETED` | Set the task alarms again after a restart |
-| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Ask (never silently) to leave battery optimization so alarms are not delayed; Google Play restricts this permission, which matters only if the app is ever published there |
+| `POST_NOTIFICATIONS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` | Progress notification and long indexing runs; a notification when another app asks to use the index |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Ask (never silently) to leave battery optimization so automatic indexing is not delayed; Google Play restricts this permission, which matters only if the app is ever published there |
 
 ## Backup
 
@@ -49,10 +47,6 @@ Android Auto Backup is disabled, so the index, thumbnails and settings are not c
 
 Remove a folder to drop its items, turn face grouping off to delete all face data, or clear app data / uninstall to delete everything. Models are deleted in OndolSaem.
 
-## Scheduled tasks
+## File actions for other apps
 
-Tasks, their schedule and their results live in the same private database as the chats (`scheduled_tasks`, `chat_messages`) and are deleted with the chat. Notifications show the beginning of an answer on the lock screen according to the system notification settings. Nothing is sent anywhere: tasks run on-device with the same models (in OndolSaem).
-
-Action cards (`pending_actions`) keep the proposed event or contact fields in the same database until the chat is deleted. The app has no calendar or contacts permission: approving a card only opens the system calendar or contacts app with the fields filled in, and you save there.
-
-File actions change files only after you approve a card in the chat, and only files that are in the index: deleting goes to the system trash or to the hidden folder `.LSA_Trash` unless you choose *Delete permanently*. They use the existing "All files access"; no new permission is requested.
+Moving or deleting files happens only after you approve a card in the app that asked (Malbotdari), and only for files that are in the index: deleting goes to the system trash or to the hidden folder `.LSA_Trash` unless you choose *Delete permanently* there. They use the existing "All files access"; no new permission is requested.

@@ -36,7 +36,6 @@ private val USED = listOf(
     Categories.EMBEDDING to R.string.host_cat_embedding,
     Categories.OCR to R.string.host_cat_ocr,
     Categories.ASR to R.string.host_cat_asr,
-    Categories.LLM to R.string.host_cat_llm,
     Categories.FACE to R.string.host_cat_face,
 )
 

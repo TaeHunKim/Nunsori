@@ -8,22 +8,14 @@ import com.lsa.app.indexing.audio.Cue
 import com.lsa.app.indexing.audio.Span
 import com.lsa.app.indexing.audio.SpeechTools
 import com.lsa.app.ml.embedding.Embedder
-import com.lsa.app.ml.llm.ChatEvent
-import com.lsa.app.ml.llm.ChatModel
-import com.lsa.app.ml.llm.ChatTool
-import com.lsa.app.ml.llm.ChatTurn
-import com.lsa.app.ml.llm.TurnRole
 import com.lsa.app.ml.ocr.OcrEngine
 import io.github.taehunkim.ondolsaem.ModelInfo
-import io.github.taehunkim.ondolsaem.sdk.ChatStreamEvent
-import io.github.taehunkim.ondolsaem.sdk.HistoryTurn
 import io.github.taehunkim.ondolsaem.sdk.HostCallException
 import io.github.taehunkim.ondolsaem.sdk.HostLease
 import io.github.taehunkim.ondolsaem.sdk.HostUnavailableException
 import io.github.taehunkim.ondolsaem.sdk.OndolSaem
 import io.github.taehunkim.ondolsaem.sdk.OndolSaem.Categories
 import io.github.taehunkim.ondolsaem.sdk.OndolSaemClient
-import io.github.taehunkim.ondolsaem.sdk.ToolSpec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +26,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 
 /** A borrowed resource. Closing it returns the resource; the resource itself is NOT closed. */
@@ -67,10 +58,10 @@ data class HostState(
 
 /**
  * Nunsori's access to AI models. The models live in the separate OndolSaem app (download, loading, memory); this
- * class hands out [Lease]s on remote [Embedder] / [OcrEngine] / [SpeechTools] / [ChatModel] proxies, so the code
+ * class hands out [Lease]s on remote [Embedder] / [OcrEngine] / [SpeechTools] proxies, so the code
  * above those interfaces is the same as when the models ran in this app.
  *
- * The ids of the host's active models are mirrored into [SettingsStore] (embedding, OCR, speech, chat): the index's
+ * The ids of the host's active models are mirrored into [SettingsStore] (embedding, OCR, speech, faces): the index's
  * pipeline keys are built from them, so a model change in the host re-indexes what it affects.
  */
 class ModelHost(
@@ -85,20 +76,12 @@ class ModelHost(
 
     /** For the resource indicator: "OndolSaem" while bound, else null. */
     val embedderBackend: Flow<String?> = client.connected.map { if (it) BACKEND else null }
-    val chatBackend: Flow<String?> get() = embedderBackend
 
     /** Test hooks: when set, used instead of the host (instrumented tests run without OndolSaem). */
     var embedderOverride: (suspend () -> Embedder?)? = null
-    var chatOverride: (suspend () -> ChatModel?)? = null
     var ocrOverride: (suspend () -> OcrEngine)? = null
     var speechOverride: (suspend () -> SpeechTools)? = null
     var faceOverride: (suspend () -> com.lsa.app.ml.faces.FaceDetector?)? = null
-    var contextTokensOverride: Int? = null
-
-    /** Context window of the chat model as set in OndolSaem (prompts are trimmed to it). */
-    fun chatContextTokens(): Int = contextTokensOverride
-        ?: _state.value.model(Categories.LLM)?.contextTokens?.takeIf { it > 0 } ?: DEFAULT_CONTEXT_TOKENS
-
     init {
         scope.launch { client.modelChanges.collect { refresh() } }
     }
@@ -129,7 +112,6 @@ class ModelHost(
         s.models[Categories.EMBEDDING]?.let { put(settings.embeddingModelId, if (it.ready) it.id else "", settings::setEmbeddingModelId) }
         s.models[Categories.OCR]?.let { put(settings.ocrModelId, if (it.ready) it.id else "", settings::setOcrModelId) }
         s.models[Categories.ASR]?.let { put(settings.asrModelId, if (it.ready) it.id else "none", settings::setAsrModelId) }
-        s.models[Categories.LLM]?.let { put(settings.chatModelId, it.id, settings::setChatModelId) }
         // OndolSaem before 0.3.0 (API 1) has no face category: no face model.
         put(settings.faceModelId, s.models[Categories.FACE]?.takeIf { it.ready }?.id ?: "", settings::setFaceModelId)
     }
@@ -192,18 +174,6 @@ class ModelHost(
         return Lease(RemoteFaceDetector(client, info.id)) { lease.close() }
     }
 
-    /** Null when the host or its chat model is missing. Loading the model can take a while (the call waits). */
-    suspend fun chat(): Lease<ChatModel>? {
-        chatOverride?.let { f -> return f()?.let { m -> Lease(m) { } } }
-        val lease = hostLease(Categories.LLM) ?: return null
-        val info = known(Categories.LLM)
-        if (info == null || !info.ready) { lease.close(); return null }
-        return Lease(RemoteChatModel(client, info, scope)) { lease.close() }
-    }
-
-    /** The chat history was edited: drop the host's cached conversation. */
-    suspend fun closeChat() { runCatching { client.resetChat() } }
-
     /** Memory is managed by the host. */
     suspend fun trim() {}
     suspend fun closeAll() {}
@@ -211,8 +181,6 @@ class ModelHost(
     companion object {
         private const val TAG = "LSA.ModelHost"
         const val BACKEND = "OndolSaem"
-        /** Assumed when OndolSaem did not report a context size. */
-        const val DEFAULT_CONTEXT_TOKENS = 4096
         /** Where to get the host app. */
         const val INSTALL_URL = "https://github.com/taehunkim/ondolsaem/releases"
         /** Where to get a newer Nunsori. */
@@ -268,32 +236,6 @@ private class RemoteSpeechTools(private val client: OndolSaemClient, override va
         if (!canTranscribe) return
         client.transcribe(pcm, fromMs) { s, e, t -> onCue(Cue(s, e, t)) }
     }
-}
-
-private class RemoteChatModel(private val client: OndolSaemClient, info: ModelInfo, private val scope: CoroutineScope) : ChatModel {
-    override val supportsImages: Boolean = info.vision
-    override val backend: String = ModelHost.BACKEND
-
-    override fun reply(conversationKey: String, system: String, history: List<ChatTurn>, user: ChatTurn, tools: List<ChatTool>): Flow<ChatEvent> {
-        val byName = tools.associateBy { it.name }
-        return client.chat(
-            conversationKey, system,
-            history.map { HistoryTurn(it.role == TurnRole.USER, it.text) },
-            user.text, if (supportsImages) user.images else emptyList(),
-            tools.map { ToolSpec(it.name, it.description, it.parameters) },
-        ) { name, args ->
-            val tool = byName[name] ?: return@chat "Error: unknown tool $name"
-            tool.execute(runCatching { JSONObject(args) }.getOrElse { JSONObject() })
-        }.map { ev ->
-            when (ev) {
-                is ChatStreamEvent.Token -> ChatEvent.Token(ev.text)
-                is ChatStreamEvent.ToolRan -> ChatEvent.ToolRan(ev.name, ev.argsJson, ev.result)
-            }
-        }
-    }
-
-    override fun reset() { scope.launch { runCatching { client.resetChat() } } }
-    override fun close() {}
 }
 
 /** Faces through OndolSaem (background priority). */

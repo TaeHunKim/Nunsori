@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.lsa.app.chat.actions.FileOps
+import com.lsa.app.service.tools.FileOps
 import com.lsa.app.data.db.AppDatabase
 import com.lsa.app.data.db.ItemEntity
 import com.lsa.app.data.db.ItemKind

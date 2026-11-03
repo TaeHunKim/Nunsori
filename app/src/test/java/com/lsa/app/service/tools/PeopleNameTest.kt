@@ -1,4 +1,4 @@
-package com.lsa.app.chat
+package com.lsa.app.service.tools
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

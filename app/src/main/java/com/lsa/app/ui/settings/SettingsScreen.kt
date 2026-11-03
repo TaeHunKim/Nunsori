@@ -79,7 +79,7 @@ fun SettingsScreen(onOpenApps: () -> Unit = {}) {
         vm.refreshThumbBytes()
     }
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = listOf(R.string.settings_tab_index, R.string.settings_tab_models, R.string.settings_tab_chat, R.string.settings_tab_app, R.string.settings_tab_about)
+    val tabs = listOf(R.string.settings_tab_index, R.string.settings_tab_models, R.string.settings_tab_app, R.string.settings_tab_about)
     Column(Modifier.fillMaxSize()) {
         PrimaryTabRow(selectedTabIndex = tab) {
             tabs.forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(label), maxLines = 1) }) }
@@ -93,8 +93,7 @@ fun SettingsScreen(onOpenApps: () -> Unit = {}) {
                 when (tab) {
                     0 -> IndexTab(vm)
                     1 -> ModelsTab(vm)
-                    2 -> ChatTab(vm)
-                    3 -> AppTab(vm, onOpenApps)
+                    2 -> AppTab(vm, onOpenApps)
                     else -> AboutTab()
                 }
             }
@@ -121,35 +120,6 @@ private fun IndexTab(vm: SettingsViewModel) {
 @Composable
 private fun ModelsTab(vm: SettingsViewModel) {
     OndolSaemSection()
-}
-
-@Composable
-private fun ChatTab(vm: SettingsViewModel) {
-        val savedPrompt by vm.chatCustomPrompt.collectAsStateWithLifecycle()
-        var prompt by remember(savedPrompt) { mutableStateOf(savedPrompt) }
-        Text(stringResource(R.string.chat_prompt_title), style = MaterialTheme.typography.titleSmall)
-        Text(stringResource(R.string.chat_prompt_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = prompt, onValueChange = { prompt = it.take(com.lsa.app.data.prefs.SettingsStore.MAX_CUSTOM_PROMPT) },
-            minLines = 3, maxLines = 8, modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.chat_prompt_hint)) },
-            supportingText = { Text("${prompt.length} / ${com.lsa.app.data.prefs.SettingsStore.MAX_CUSTOM_PROMPT}") },
-        )
-        OutlinedButton(onClick = { vm.saveChatPrompt(prompt) }, enabled = prompt.trim() != savedPrompt) { Text(stringResource(R.string.btn_save)) }
-        HorizontalDivider()
-
-        // --- Scheduled tasks
-        Section(R.string.bg_title, R.string.bg_desc)
-        BackgroundAccessCards()
-        Text(stringResource(R.string.task_file_disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        val judgeFirst by vm.taskJudgeFirst.collectAsStateWithLifecycle()
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_judge_first_title), style = MaterialTheme.typography.titleSmall)
-                Text(stringResource(R.string.settings_judge_first_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            androidx.compose.material3.Switch(checked = judgeFirst, onCheckedChange = vm::setTaskJudgeFirst)
-        }
 }
 
 @Composable

@@ -225,15 +225,6 @@ fun openFile(ctx: Context, uri: Uri, name: String) {
     openImage(ctx, uri, mime ?: "*/*")
 }
 
-/** Share plain text (the Markdown source of a chat message). */
-fun shareText(ctx: Context, text: String) {
-    val send = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, text)
-    }
-    launch(ctx, Intent.createChooser(send, null))
-}
-
 private fun launch(ctx: Context, intent: Intent) {
     try { ctx.startActivity(intent) } catch (_: ActivityNotFoundException) {
         Toast.makeText(ctx, R.string.no_app_found, Toast.LENGTH_SHORT).show()

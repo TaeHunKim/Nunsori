@@ -4,7 +4,7 @@ Code package and Gradle `namespace` `com.lsa.app` (Kotlin, Jetpack Compose); the
 
 ## 1. Goals and principles
 
-- **On-device only.** Embedding, OCR, speech recognition and chat run on the phone. Nunsori has no network permission ([privacy](privacy.md)).
+- **On-device only.** Embedding, OCR, speech recognition and face recognition run on the phone (the chat is the companion app Malbotdari, [section 11](#11-index-api-other-apps)). Nunsori has no network permission ([privacy](privacy.md)).
 - **Models live in the companion app OndolSaem.** It downloads them, keeps them in memory and serves them over a bound service (SDK `com.github.TaeHunKim:ondolsaem` on JitPack); `ml/ModelHost` is the only place that talks to it ([models](models.md)).
 - **One data model for every file type.** A file is an `item`; what is searched is a `segment`. New file types only add extractors and segment types.
 - **Resumable.** Work is committed per file and checkpointed per segment batch, so a killed process resumes where it stopped.
@@ -30,13 +30,11 @@ flowchart TD
     X --> TH[ThumbStore: thumbnails]
     SE --> DB
     SE --> EMB
-    CHAT[ChatController] --> SE
-    CHAT --> LLM[ChatModel: LLM in OndolSaem]
-    CHAT --> DB
+    API[IndexService: other apps] --> SE
+    API --> DB
     RES[ModelHost] -.leases.-> EMB
     RES -.leases.-> OCR
     RES -.leases.-> ASR
-    RES -.leases.-> LLM
 ```
 
 ## 3. Package map
@@ -53,12 +51,11 @@ flowchart TD
 | `indexing/audio` | `AudioExtractor`, `AudioDecoder`, `Pcm` (window planning), `SpeechTools` |
 | `indexing/video` | `VideoExtractor`, `VideoClips` |
 | `indexing/faces` | `FaceIndexer` (face pass after indexing, crops, off/on), `FaceClusterer` (grouping, merging) |
-| `chat/actions` | `ActionManager` (proposals, approve/dismiss, intents), `ActionPayloads` (validation), `ActionTools` (`add_calendar_event`, `add_contact`, `move_files`, `delete_files`), `FileOps` (move, trash, delete + index update) |
-| `chat/schedule` | `TaskManager` (propose, confirm, run, file matching), `Schedule` (next run), `TaskAlarms` + receivers + `TaskRunWorker` |
-| `ml`, `ml/embedding`, `ml/ocr`, `ml/llm` | `ModelHost` (OndolSaem client: leases, remote engines, model-id mirroring), interfaces `Embedder`, `OcrEngine`, `ChatModel` (`SpeechTools` is in `indexing/audio`) |
-| `chat` | `ChatController` (turns, context, attachments), `ChatTools` (`search_index`, `read_file`), `PeopleDirectory` (names for the `person` arguments), `ContextBudget`: [chat.md](chat.md) |
+| `ml`, `ml/embedding`, `ml/ocr`, `ml/faces` | `ModelHost` (OndolSaem client: leases, remote engines, model-id mirroring), interfaces `Embedder`, `OcrEngine`, `FaceDetector` (`SpeechTools` is in `indexing/audio`) |
+| `service` | The index for other apps: `IndexService` (bound service), `IndexApi`, `CallerCheck` + `Approvals`, `IndexEvents` (index-changed hints), `OpenItemActivity`, `Malbotdari` (opening the chat app) |
+| `service/tools` | `SearchIndexTool`, `ReadFileTool` (`search_index`, `read_file`), `FileActionPrep` + `FileActionTools` (`move_files`, `delete_files`), `FileOps` (move, trash, delete + index update), `PeopleDirectory` (names for the `person` arguments) |
 | `search` | `SearchEngine`, `Fusion`, `KeywordMatcher` |
-| `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`; drawer menu on the lists, an up arrow to the list on detail routes such as `chat/{id}` and `people/{id}`), screens (`index`, `search`, `people`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
+| `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`; drawer menu on the lists, an up arrow to the list on detail routes such as `people/{id}` and `settings/apps`; the Chat entry opens Malbotdari), screens (`index`, `search`, `people`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
 
 ## 4. Data model
 
@@ -75,7 +72,7 @@ Defined in `data/db/Entities.kt`.
 
 **`people`** (`name` or null, `coverFaceId`, timestamps) and **`faces`** (`itemId` with cascade delete, box in 0..1, `score`, int8 128-d `vector`, `personId` set to null when its person is deleted, `blockedPersonId` = the group the user took it out of, `thumbPath` of the crop), added in v8 together with `items.faceKey` (face model key a photo was scanned with; null = not scanned). See [indexing.md](indexing.md#faces).
 
-**`chat_sessions`** (`title`, `enabledTools`, `autoSearch`, timestamps) and **`chat_messages`** (`sessionId` with cascade delete, `role` USER/ASSISTANT/TOOL, `text`, `toolName`, `toolArgs`, `attachments`, `createdAt`), added in v4.
+The chat tables (`chat_sessions`, `chat_messages`, `scheduled_tasks`, `pending_actions`, v4 to v7) were dropped in v9 when the chat moved to Malbotdari.
 
 | `SegmentType` | Produced by | Signal group |
 |---|---|---|
@@ -90,7 +87,7 @@ Defined in `data/db/Entities.kt`.
 
 **Vector format.** int8, stored as `[scale: float32][int8 × dim]` (`Quant`), 768 dims. Dot products are done in memory over all vectors.
 
-**Migrations.** The schema is at **v8** (`AppDatabase.VERSION`; v3 added `items.place`, v4 the chat tables, v5 pinned chats, v6 scheduled tasks, v7 action cards, v8 faces and people). `Migrations.kt` holds one `Migration` per step and the ordered `ALL_MIGRATIONS` list that `LsaApplication` registers. There is no destructive fallback on upgrade; only a downgrade (older build over a newer one) rebuilds the index, because it is derived data. Derived data that can be recomputed without a schema change is handled by `pipelineKey` instead. Policy: [development.md](development.md#schema-and-version-changes).
+**Migrations.** The schema is at **v9** (`AppDatabase.VERSION`; v3 added `items.place`, v4 the chat tables, v5 pinned chats, v6 scheduled tasks, v7 action cards, v8 faces and people, v9 dropped the chat tables; `MIGRATION_8_9` reports the dropped task ids so `AppUpgrade.cancelChatAlarms` cancels their alarms). `Migrations.kt` holds one `Migration` per step and the ordered `ALL_MIGRATIONS` list that `LsaApplication` registers. There is no destructive fallback on upgrade; only a downgrade (older build over a newer one) rebuilds the index, because it is derived data. Derived data that can be recomputed without a schema change is handled by `pipelineKey` instead. Policy: [development.md](development.md#schema-and-version-changes).
 
 **App upgrades.** `AppUpgrade.run` (called from `LsaApplication`) compares the stored `last_version_code` with `BuildConfig.VERSION_CODE` and runs per-release steps for settings or file-layout changes. Auto Backup is disabled (`allowBackup="false"`): the index is derived and a restored database would not match missing thumbnails and models.
 
@@ -116,7 +113,7 @@ Automatic runs cannot start foreground services from the background on recent An
 
 ## 7. Model lifetime
 
-Models are loaded and unloaded by OndolSaem, with a residency policy per category set there (keep loaded, unload right after use, or after 1 to 15 minutes). `ModelHost.embedder()/ocr()/speech()/chat()` return a `Lease` that also holds a lease in OndolSaem, so a model stays loaded while Nunsori uses it: an indexing pass holds the embedder and OCR leases for the whole pass, and a chat turn holds the embedder (when search or auto search is on) and the chat model from start to finish. When OndolSaem is not installed, refuses the connection or has no model for a category, the lease is null and the screens show a hint (`HostState`). The optional resource indicator (`ui/common/ResourceIndicator.kt`) shows whether OndolSaem is connected plus this process's memory and CPU; the models' memory is on OndolSaem's dashboard. Log tag `LSA.ModelHost`.
+Models are loaded and unloaded by OndolSaem, with a residency policy per category set there (keep loaded, unload right after use, or after 1 to 15 minutes). `ModelHost.embedder()/ocr()/speech()/faces()` return a `Lease` that also holds a lease in OndolSaem, so a model stays loaded while Nunsori uses it: an indexing pass holds the embedder and OCR leases for the whole pass; a search (also one from another app's `search_index`) holds the embedder while it runs. When OndolSaem is not installed, refuses the connection or has no model for a category, the lease is null and the screens show a hint (`HostState`). The optional resource indicator (`ui/common/ResourceIndicator.kt`) shows whether OndolSaem is connected plus this process's memory and CPU; the models' memory is on OndolSaem's dashboard. Log tag `LSA.ModelHost`.
 
 ## 8. Search (summary)
 
@@ -147,12 +144,6 @@ Segments are scored per signal group (VISUAL, TEXT, AUDIO) with a median-spread 
 Other apps on the phone (the assistant app Malbotdari, apps the user allowed) use the index through a bound service, so the chat can live in its own app and later apps (a notes app) can reuse the same index. The contract is the `:sdk` module of this repository (`io.github.taehunkim.nunsori.sdk`, AIDL `INunsori`, client `NunsoriClient`); the app depends on the same module.
 
 - `service/IndexService` binds on `io.github.taehunkim.nunsori.action.BIND` and runs every call through `CallerCheck`: apps signed with Nunsori's key pass; any other app needs the user's approval (`Approvals`, per package and certificate, stored as JSON in `SettingsStore.apiApprovalsJson`). The first call of an unknown app records a request, posts a notification and is refused with `NOT_APPROVED`; **Settings › App › Connected apps** (`ui/settings/ConnectedAppsScreen`, route `settings/apps`, also opened by `Nunsori.ACTION_APPROVE`) allows, denies or removes it.
-- `service/IndexApi` is the logic: `tools`/`runTool` serve `search_index` and `read_file` (the chat tools' code) and prepare `move_files`/`delete_files` as a confirmation (the files and a payload) that the calling app shows to the user; `commit` then moves or trashes them with `FileOps` (needs All files access, else error `NEEDS_FILE_ACCESS`). `items`, `thumbnail` (JPEG through a pipe), `readText`, `matchItems` and `people` give what a chat shows and judges.
+- `service/IndexApi` is the logic: `tools`/`runTool` serve `search_index` and `read_file` (`service/tools`) and prepare `move_files`/`delete_files` as a confirmation (the files and a payload) that the calling app shows to the user; `commit` then moves or trashes them with `FileOps` (needs All files access, else error `NEEDS_FILE_ACCESS`). `items`, `thumbnail` (JPEG through a pipe), `readText`, `matchItems` and `people` give what a chat shows and judges.
 - New files: `changesSince(cursor)` returns finished items with `indexedAt` after the cursor (`ItemDao.doneAfter`, oldest first) and the next cursor; cursor 0 returns only the current position. After a pass that indexed files, `IndexingWorker` calls `IndexEvents.notifyChanged`, an explicit broadcast without data (`ACTION_INDEX_CHANGED`) to every app with a receiver for it (the SDK declares `IndexChangedReceiver`); they then ask `changesSince`. A missed hint costs nothing but delay: the cursor still covers the files.
 - `service/OpenItemActivity` (`ACTION_OPEN_ITEM`, no UI) opens one file in the viewer the user picks; other apps never get the file itself.
-
-## Scheduled tasks
-
-`scheduled_tasks` (schema v6, cascade with `chat_sessions`) holds the tasks; `chat_messages.taskId` links a confirmation card or a run's messages to a task. Time tasks: `TaskAlarms` (AlarmManager exact alarm per task) → `TaskAlarmReceiver` → unique `TaskRunWorker` per task (expedited, foreground `dataSync`) → `TaskManager.run` → `ChatController.runScheduled`. File tasks: `IndexingWorker` calls `TaskManager.onIndexed(passStart)` after a pass; matches are queued on the task and a `TaskRunWorker` is enqueued. `ChatController` serializes user turns and scheduled runs with one mutex. Notifications deep-link to a chat with the `sessionId` extra handled in `MainActivity`/`AppScaffold`. Details: [chat.md](chat.md#scheduled-tasks).
-
-`pending_actions` (schema v7, cascade with `chat_sessions`) holds action-card proposals (`kind` CALENDAR_EVENT, CONTACT, MOVE_FILES or DELETE_FILES, `status` PROPOSED, DONE, DISMISSED or FAILED, `payload` JSON); `chat_messages.actionId` links the tool message to its card. Approval happens in `ChatViewModel.approveAction`, which starts the intent; nothing is executed by the model itself. Details: [chat.md](chat.md#action-cards-calendar-and-contacts).

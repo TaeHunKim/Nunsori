@@ -1,11 +1,10 @@
-package com.lsa.app.chat
+package com.lsa.app.service.tools
 
 import com.lsa.app.data.db.ItemDao
 import com.lsa.app.data.db.ItemKind
 import com.lsa.app.data.db.ItemSummary
 import com.lsa.app.data.db.SegmentEntity
 import com.lsa.app.data.db.SegmentType
-import com.lsa.app.ml.llm.ChatTool
 import com.lsa.app.search.SearchEngine
 import com.lsa.app.search.SearchFilter
 import kotlinx.coroutines.runBlocking
@@ -17,23 +16,20 @@ import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
 
-object ChatToolNames {
+/** A tool other apps offer to their chat model (service/IndexApi): what the model sees and how it runs here. */
+interface IndexTool {
+    val name: String
+    val description: String
+    /** JSON schema of the arguments. */
+    val parameters: String
+    fun execute(args: JSONObject): String
+}
+
+object ToolNames {
     const val SEARCH = "search_index"
     const val READ = "read_file"
-    /** The tool switch that covers schedule_task, list_scheduled_tasks and cancel_scheduled_task. */
-    const val SCHEDULE = "schedule_task"
-    const val LIST_TASKS = "list_scheduled_tasks"
-    const val CANCEL_TASK = "cancel_scheduled_task"
-    const val UPDATE_TASK = "update_scheduled_task"
-    /** add_calendar_event is the switch for the calendar and contact tools (action cards the user approves). */
-    const val CALENDAR = "add_calendar_event"
-    const val CONTACT = "add_contact"
-    /** move_files is the switch for the move and delete tools (action cards the user approves). */
     const val MOVE = "move_files"
     const val DELETE = "delete_files"
-    val ALL = listOf(SEARCH, READ, SCHEDULE, CALENDAR, MOVE)
-    /** Tools whose result carries an `action_id` (a card in the chat). */
-    val ACTION_TOOLS = setOf(CALENDAR, CONTACT, MOVE, DELETE)
 }
 
 /** Kind names the model uses; "document" covers text files and PDF/Office. */
@@ -54,9 +50,9 @@ private fun dateOf(s: ItemSummary, takenOrModified: Long?): String? =
 /** Browse lists stop at 100 files (SearchEngine.BROWSE_LIMIT), so offset + limit must stay within it. */
 private const val MAX_OFFSET = 90
 
-/** Lets the model search the index the way the Search screen does. */
-class SearchIndexTool(private val search: SearchEngine, private val dao: ItemDao, private val people: PeopleDirectory? = null) : ChatTool {
-    override val name = ChatToolNames.SEARCH
+/** Lets another app's chat model search the index the way the Search screen does. */
+class SearchIndexTool(private val search: SearchEngine, private val dao: ItemDao, private val people: PeopleDirectory? = null) : IndexTool {
+    override val name = ToolNames.SEARCH
     override val description =
         "Search the user's indexed files (photos, documents, audio, video) by meaning and keywords. " +
             "Returns the best matching files with their item_id; use read_file to read one. " +
@@ -121,8 +117,8 @@ class SearchIndexTool(private val search: SearchEngine, private val dao: ItemDao
 }
 
 /** Reads the indexed text of one file (pages, transcript lines, OCR text) in slices. */
-class ReadFileTool(private val dao: ItemDao) : ChatTool {
-    override val name = ChatToolNames.READ
+class ReadFileTool(private val dao: ItemDao) : IndexTool {
+    override val name = ToolNames.READ
     override val description =
         "Read the indexed text of a file found with search_index: document text (optionally one page), a transcript of audio or video " +
             "(optionally a time range) or the text recognized in an image. Long files are read in slices; continue with next_offset."
@@ -184,3 +180,15 @@ class ReadFileTool(private val dao: ItemDao) : ChatTool {
         }
     }
 }
+
+/** Kind filter names (document, image, audio, video, and synonyms) to item kinds. */
+fun parseKinds(s: String): Set<ItemKind> = s.split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.flatMap { k ->
+    when (k) {
+        "document", "documents", "text" -> listOf(ItemKind.TEXT, ItemKind.DOC)
+        "doc" -> listOf(ItemKind.DOC)
+        "image", "images", "photo", "photos" -> listOf(ItemKind.IMAGE)
+        "audio" -> listOf(ItemKind.AUDIO)
+        "video", "videos" -> listOf(ItemKind.VIDEO)
+        else -> runCatching { listOf(ItemKind.valueOf(k.uppercase())) }.getOrDefault(emptyList())
+    }
+}.toSet()

@@ -8,10 +8,11 @@ An Android app that indexes the files on your phone with on-device multimodal em
 
 <p>
 <img src="docs/images/demo-search.gif" width="260" alt="Files are indexed on the phone, then found by meaning ('italian food' finds a pizza photo)">
-<img src="docs/images/demo-contact-task.gif" width="260" alt="A scheduled task adds a contact from a business-card photo and opens the Contacts app">
 </p>
 
-*Left: files are indexed on the phone and found by meaning. Right: a scheduled chat task turns a new business-card photo into a contact (you confirm in the Contacts app).*
+*Files are indexed on the phone and found by meaning.*
+
+The assistant chat that answers from these files is the companion app [Malbotdari / 말벗다리](https://github.com/TaeHunKim/malbotdari) (since 0.10.0): it uses this index through Nunsori's SDK.
 
 ## Features
 
@@ -22,9 +23,9 @@ An Android app that indexes the files on your phone with on-device multimodal em
 | Documents | PDF pages (text, OCR fallback, page image); docx/pptx/xlsx and ODF as text + text card image | Meaning, keywords, page |
 | Audio | Speech transcript (SenseVoice); audio clip embeddings (740M model) | Spoken words, sound, time |
 | Video | Scene clips (up to 8 frames each) + speech transcript | Visual content, speech, time |
-| People | Faces in photos (detected and recognized by OndolSaem), grouped by person on the phone | People menu (name, merge, "not this person"), chat: "move all photos of Mina to Pictures/Mina" |
+| People | Faces in photos (detected and recognized by OndolSaem), grouped by person on the phone | People menu (name, merge, "not this person"); in Malbotdari: "move all photos of Mina to Pictures/Mina" |
 
-Also: a chat that answers from your files with an on-device Gemma 4 model (it searches the index and reads files itself, per-chat history with pinning, scheduled tasks that run later or when matching files are indexed and post to the chat, approval cards that open your calendar or contacts app prefilled or move/trash files, Markdown answers with copy/share and file thumbnails, your own instructions, "Ask in chat" from search results), a failed-file list with retry, an optional resource indicator (GPU/CPU, memory), hybrid ranking (meaning + exact words + photo place names such as "Dubai"), filters by file kind and date, share/open results, automatic indexing (manual, immediate, scheduled, idle), English and Korean UI, dark mode, and an index other apps can use with your permission (Settings › App › Connected apps). Choosing models and how long they stay in memory happens in OndolSaem.
+Also: an index other apps can use with your permission (search, read, move/trash after your approval there; Settings › App › Connected apps), "Ask in chat" from search results (opens Malbotdari with the files attached), a failed-file list with retry, an optional resource indicator (GPU/CPU, memory), hybrid ranking (meaning + exact words + photo place names such as "Dubai"), filters by file kind and date, share/open results, automatic indexing (manual, immediate, scheduled, idle), English and Korean UI, dark mode. Choosing models and how long they stay in memory happens in OndolSaem.
 
 ## How it works
 
@@ -32,7 +33,7 @@ Files become *segments* (a chunk, a page, a clip) with an int8 embedding, stored
 
 ## Requirements
 
-Android 10+ (minSdk 29) and the **OndolSaem** app (models are downloaded there):  EmbeddingGemma 2 440M (388 MB) or 740M (adds audio), a chat model (Gemma 4 E2B 2.6 GB, E4B 3.7 GB or Qwen2.5 1.5B 1.6 GB), SenseVoice (163 MB) for speech. Text and documents need "All files access".
+Android 10+ (minSdk 29) and the **OndolSaem** app (models are downloaded there):  EmbeddingGemma 2 440M (388 MB) or 740M (adds audio), SenseVoice (163 MB) for speech, and the face model for People. For the chat: Malbotdari with a chat model in OndolSaem. Text and documents need "All files access".
 
 ## Quick start
 

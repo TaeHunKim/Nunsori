@@ -9,19 +9,16 @@ Since 0.8.0 Nunsori **does not download or run models itself**. The companion ap
 | `embedding` | Image, text, audio and video vectors; search queries | EmbeddingGemma 2 440M (`eg2-440m`); 740M (`eg2-740m`) also embeds audio |
 | `ocr` | Text in photos and scanned PDF pages | ML Kit Korean + Latin (`mlkit-ko`, built into OndolSaem) |
 | `asr` | Speech detection (VAD, always available) and transcripts of audio and video | SenseVoice (`asr-sensevoice`) |
-| `llm` | Chat and scheduled tasks | Gemma 4 E2B (`chat-gemma4-e2b`) |
 | `face` (OndolSaem 0.3.0, API 2) | Faces in photos for People: box + 128-d identity vector | ML Kit face detection + SFace (`face-sface`); with an older OndolSaem the People screen asks to update it, and the OndolSaem card (Settings › Models, first-run wizard) says "needs OndolSaem 0.3.0" in its *Faces* row |
 
 ## How it fits
 
-- `ModelHost` hands out `Lease`s on remote implementations of the existing interfaces (`Embedder`, `OcrEngine`, `SpeechTools`, `ChatModel`), so indexing, search and chat code is unchanged. Each lease also holds a host lease, which keeps the model loaded in OndolSaem while Nunsori uses it (an indexing pass, a chat turn).
-- Indexing calls are sent with background priority, search queries and chat with interactive priority; OndolSaem serves interactive requests first.
-- Chat tools (`search_index`, `read_file`, ...) still run in Nunsori: OndolSaem's chat model calls them back through the SDK.
+- `ModelHost` hands out `Lease`s on remote implementations of the existing interfaces (`Embedder`, `OcrEngine`, `SpeechTools`, `FaceDetector`), so indexing and search code is unchanged. Each lease also holds a host lease, which keeps the model loaded in OndolSaem while Nunsori uses it (an indexing pass, a search). The chat model (`llm`) is used by Malbotdari, not by Nunsori (since 0.10.0).
+- Indexing calls are sent with background priority, search queries with interactive priority; OndolSaem serves interactive requests first.
 - Large inputs (images, WAV, PCM files) are passed as file descriptors.
-- The ids of OndolSaem's active models are mirrored into Nunsori's settings (`embedding_model_id`, `ocr_model_id`, `asr_model_id`, `chat_model_id`) by `ModelHost.refresh()`: at app start, before every indexing pass, on OndolSaem's model-change callback and on its `MODEL_CHANGED` broadcast (which also reaches Nunsori when it is not running). The ids are part of `pipelineKey`, so a model change in OndolSaem re-indexes exactly the affected items. Ids are the same as before 0.8.0, so upgrading does not re-index.
+- The ids of OndolSaem's active models are mirrored into Nunsori's settings (`embedding_model_id`, `ocr_model_id`, `asr_model_id`, `face_model_id`) by `ModelHost.refresh()`: at app start, before every indexing pass, on OndolSaem's model-change callback and on its `MODEL_CHANGED` broadcast (which also reaches Nunsori when it is not running). The ids are part of `pipelineKey`, so a model change in OndolSaem re-indexes exactly the affected items. Ids are the same as before 0.8.0, so upgrading does not re-index.
 - Every embedding result carries the model id; a mismatch (model changed mid-run) fails the call and triggers a refresh.
 - Versions: the SDK exchanges API levels with OndolSaem on every connection. When OndolSaem is too old for this Nunsori, or no longer serves its level, `ModelHost` reports `HOST_TOO_OLD` / `CLIENT_TOO_OLD` and Settings › Models (and the first-run wizard) asks to update OndolSaem or Nunsori; when connected it shows OndolSaem's version and level. A Nunsori build signed with a key OndolSaem does not know (`NOT_APPROVED`, OndolSaem 0.2.0+) says so and offers *Allow in OndolSaem*, which opens OndolSaem's approval list; after the user allows it there, *Check again* connects.
-- The chat context size is set in OndolSaem and reported to Nunsori (`ModelInfo.contextTokens`), which trims prompts to it.
 
 ## Measured behaviour (Phase 0, emulator)
 

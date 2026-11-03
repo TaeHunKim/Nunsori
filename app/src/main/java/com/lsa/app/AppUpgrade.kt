@@ -29,6 +29,32 @@ object AppUpgrade {
         }
         // 0.8.1: the low-power indexing switch is gone; drop its stored value.
         if (from in 1 until 801) settings.removeLowPowerKey()
+        // 0.10.0: the chat moved to the Malbotdari app. Its tables are dropped by MIGRATION_8_9 (which also cancels the
+        // task alarms); here: queued task runs, the chat settings, the photos attached to chats, the task channel.
+        if (from in 1 until 1000) {
+            runCatching { androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag(LEGACY_TASK_WORKER) }
+            settings.removeChatKeys()
+            java.io.File(context.filesDir, "chat").deleteRecursively()
+            runCatching { context.getSystemService(android.app.NotificationManager::class.java).deleteNotificationChannel("tasks") }
+        }
         settings.setLastVersionCode(current)
+    }
+
+    /** Worker class of the scheduled chat tasks before 0.10.0 (WorkManager tags every request with its class name). */
+    const val LEGACY_TASK_WORKER = "com.lsa.app.chat.schedule.TaskRunWorker"
+
+    /** Cancels the exact alarms of the chat tasks dropped in 0.10.0 (same PendingIntent as the old TaskAlarms). */
+    fun cancelChatAlarms(context: android.content.Context, taskIds: List<Long>) {
+        val am = context.getSystemService(android.app.AlarmManager::class.java)
+        for (id in taskIds) {
+            val intent = android.content.Intent("com.lsa.app.TASK_FIRE")
+                .setComponent(android.content.ComponentName(context.packageName, "com.lsa.app.chat.schedule.TaskAlarmReceiver"))
+                .putExtra("taskId", id)
+            val pi = android.app.PendingIntent.getBroadcast(
+                context, id.toInt(), intent, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_NO_CREATE,
+            ) ?: continue
+            am.cancel(pi); pi.cancel()
+        }
+        Log.i(TAG, "cancelled the alarms of ${taskIds.size} dropped chat task(s)")
     }
 }

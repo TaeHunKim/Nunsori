@@ -35,7 +35,7 @@ An exception during extraction marks the item `FAILED` with the message in `item
 
 ## Priority and heat
 
-Indexing requests go to OndolSaem with background priority, so searches and chat go first; OndolSaem picks the backend (GPU or CPU) itself. Automatic runs stop on a thermal status of MODERATE or higher and retry later; manual runs do not. The low-power switch for manual runs (CPU only, pauses between files) was removed in 0.8.1 because the app no longer chooses the backend; `AppUpgrade` drops its stored value.
+Indexing requests go to OndolSaem with background priority, so searches (and other apps' chat) go first; OndolSaem picks the backend (GPU or CPU) itself. Automatic runs stop on a thermal status of MODERATE or higher and retry later; manual runs do not. The low-power switch for manual runs (CPU only, pauses between files) was removed in 0.8.1 because the app no longer chooses the backend; `AppUpgrade` drops its stored value.
 
 ## PDF (`PdfExtractor`, `PdfText`)
 
@@ -86,4 +86,4 @@ Deleted files are pruned, moved files updated in place, changed files (size or m
 
 ## After a pass: scheduled file tasks
 
-When a pass finishes, `IndexingWorker` calls `TaskManager.onIndexed(passStart)` with the time the pass began: items that reached `DONE` with `indexedAt >= passStart` are the "new files" for chat tasks that wait for matching files (see [chat.md](chat.md#scheduled-tasks)). Tasks therefore fire after indexing, not when a file is created.
+When a pass indexed files, `IndexingWorker` calls `IndexEvents.notifyChanged`: apps that listen (Malbotdari's scheduled file tasks) then ask `changesSince` for the items that reached `DONE` after their cursor (`indexedAt`), see [architecture.md](architecture.md#11-index-api-other-apps). Such tasks therefore fire after indexing, not when a file is created.

@@ -213,7 +213,7 @@ class SearchEngine(
      * Decides, for each of [itemIds] on its own, whether it matches [query] (used by scheduled "new file" tasks).
      * Unlike [search] it never compares an item with the best existing file: a semantic match must stand out from the
      * typical similarity of the whole index (z-score per signal group) and a keyword match needs all words (or the exact
-     * phrase) in the file's text, name, title or place. It is meant as a recall-oriented pre-filter; the chat model checks the rest.
+     * phrase) in the file's text, name, title or place. It is meant as a recall-oriented pre-filter; the calling app's chat model checks the rest.
      */
     suspend fun matchItems(query: String, itemIds: Set<Long>, kinds: Set<ItemKind> = emptySet()): Map<Long, ItemMatch> {
         if (itemIds.isEmpty()) return emptyMap()

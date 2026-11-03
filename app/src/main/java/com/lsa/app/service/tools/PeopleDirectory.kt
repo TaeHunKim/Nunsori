@@ -1,9 +1,9 @@
-package com.lsa.app.chat
+package com.lsa.app.service.tools
 
 import com.lsa.app.data.db.FaceDao
 import com.lsa.app.data.db.PersonEntity
 
-/** Named people from face grouping, as the chat tools see them: names and the photos each person is in. */
+/** Named people from face grouping, as the index tools see them: names and the photos each person is in. */
 class PeopleDirectory(private val dao: FaceDao) {
     sealed interface Lookup {
         data class Found(val person: PersonEntity, val itemIds: List<Long>) : Lookup

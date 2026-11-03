@@ -15,7 +15,7 @@ import com.lsa.app.ui.AppScaffold
 import com.lsa.app.ui.theme.AppTheme
 
 class MainActivity : AppCompatActivity() {
-    /** The screen a notification asked to open (a chat, the connected apps); consumed once the UI navigated there. */
+    /** The screen a notification asked to open (the connected apps); consumed once the UI navigated there. */
     private val openRoute = MutableStateFlow<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
     private fun routeOf(intent: Intent?): String? = when {
         intent == null -> null
         intent.action == io.github.taehunkim.nunsori.sdk.Nunsori.ACTION_APPROVE -> com.lsa.app.ui.ROUTE_APPS
-        else -> intent.getLongExtra(Notifications.EXTRA_SESSION, -1).takeIf { it > 0 }?.let { "chat/$it" }
+        else -> null
     }
 
     override fun onStart() {

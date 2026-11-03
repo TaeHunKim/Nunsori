@@ -11,7 +11,7 @@ Setup: [getting-started.md](getting-started.md). Design: [architecture.md](archi
 | Level | Command | Notes |
 |---|---|---|
 | Unit | `./gradlew assembleDebug testDebugUnitTest` | Chunkers, fusion, keyword matching, DB logic |
-| Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. `ChatTest` runs the chat controller and tools against a fake `ChatModel` (`ModelHost.chatOverride`). `ModelHostTest` talks to the real OndolSaem when it is installed on the device (connection, model-id mirroring, a real embedding, `HOST_TOO_OLD` from a client that asks for a newer level; skipped otherwise). `HostStatusCardTest` checks the message and button for each connection state without OndolSaem. It uninstalls Nunsori at the end; models live in OndolSaem and stay. Write tests that do not depend on the app's settings. |
+| Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. `IndexApiTest` covers the index API for other apps (and one real bind to the service), `FileOpsTest` the prepared and committed moves/deletes. `ModelHostTest` talks to the real OndolSaem when it is installed on the device (connection, model-id mirroring, a real embedding, `HOST_TOO_OLD` from a client that asks for a newer level; skipped otherwise). `HostStatusCardTest` checks the message and button for each connection state without OndolSaem. It uninstalls Nunsori at the end; models live in OndolSaem and stay. Write tests that do not depend on the app's settings. |
 | Real-model E2E | manual, emulator | Install OndolSaem and download the models there, index fixtures, query. Drive the UI with mobile-mcp; `adb uiautomator` is blocked while mobile-mcp is attached, so `scripts/e2e-setup.sh` may not work. |
 
 ## Release build
@@ -92,4 +92,4 @@ Never use `fallbackToDestructiveMigration` for upgrades. Changes that only affec
 
 Commit only code, scripts and docs: no models, test media, databases or build output (see `.gitignore`). Update docs with code ([CONTRIBUTING.md](../CONTRIBUTING.md)).
 
-The current schema is v6 (`MIGRATION_5_6` adds `scheduled_tasks` and `chat_messages.taskId`; covered by `MigrationTest.v5ToV6AddsScheduledTasksThatCascadeWithTheirChat`). Scheduled-task logic is tested in `ChatTest` (fake alarms, clock, battery and model) and `ScheduleTest` (unit, next-run math).
+The current schema is v9 (`MIGRATION_8_9` drops the chat tables and reports the dropped task ids so their alarms are cancelled; covered by `MigrationTest.v8ToV9DropsTheChatAndKeepsTheIndexAndPeople`). The chat and its tests live in Malbotdari since 0.10.0.

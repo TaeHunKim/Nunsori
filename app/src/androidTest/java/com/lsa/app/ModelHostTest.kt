@@ -52,7 +52,6 @@ class ModelHostTest {
         assertEquals(if (emb!!.ready) emb.id else "", settings.embeddingModelId.first())
         val asr = s.models.getValue(Categories.ASR)
         assertEquals(if (asr.ready) asr.id else "none", settings.asrModelId.first())
-        assertEquals(s.models.getValue(Categories.LLM).id, settings.chatModelId.first())
     }
 
     @Test fun aHostBelowTheNeededLevelIsReportedAsTooOld() = runBlocking {

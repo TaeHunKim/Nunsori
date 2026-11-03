@@ -11,13 +11,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <!-- Scheduled chat tasks: exact alarms, re-arming after a reboot, and asking to leave battery optimization -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Asking to leave battery optimization, so automatic indexing is not delayed for hours -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-    <!-- Find the apps that want "index changed" hints (service/IndexEvents) -->
+    <!-- Find the apps that want "index changed" hints (service/IndexEvents), and the chat app Malbotdari -->
     <queries>
+        <package android:name="io.github.taehunkim.malbotdari" />
         <intent>
             <action android:name="io.github.taehunkim.nunsori.action.INDEX_CHANGED" />
         </intent>
@@ -70,16 +69,6 @@
                 <action android:name="io.github.taehunkim.nunsori.action.BIND" />
             </intent-filter>
         </service>
-
-        <receiver android:name=".chat.schedule.TaskAlarmReceiver" android:exported="false" />
-        <receiver android:name=".chat.schedule.TaskBootReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
-            </intent-filter>
-        </receiver>
 
         <!-- Lets other apps read plain files we share (documents outside MediaStore) -->
         <provider

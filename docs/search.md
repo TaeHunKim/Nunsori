@@ -14,12 +14,12 @@ Code: `search/SearchEngine.kt`, `search/Fusion.kt`.
 
 ## Matching new files for scheduled tasks
 
-`SearchEngine.matchItems(query, itemIds, kinds)` answers "does this new file match?" for chat tasks that wait for files ([chat.md](chat.md#scheduled-tasks)). It must not use the ranking above, because relative scores always crown something (the least bad file), and an existing better file hides a new good one. Instead, per item:
+`SearchEngine.matchItems(query, itemIds, kinds)` answers "does this new file match?" for scheduled tasks that wait for files; other apps call it through the index API (`matchItems`, used by Malbotdari's file tasks). It must not use the ranking above, because relative scores always crown something (the least bad file), and an existing better file hides a new good one. Instead, per item:
 
 - **Keywords:** all query words (or the exact phrase) in the file's text, name, title or place.
 - **Meaning:** per signal group, the raw similarity of the item's best segment must be at least `Z_MIN` (2.5) standard deviations above the mean similarity of the whole index (restricted to the task's kinds) and above the group's `minTop`. With fewer than `MIN_BASELINE` (20) vectors there is no distribution, so a fixed floor is used instead (visual 0.20, text 0.65, audio 0.55).
 
-A query may be several `|`-separated alternatives (any one can match; at most 6). It is a recall-oriented pre-filter; the chat model then checks the candidates, and for small batches the setting *judge new files* (`taskJudgeFirst`) lets it see every new file with text regardless of this pre-filter. The thresholds are starting values to tune with real files.
+A query may be several `|`-separated alternatives (any one can match; at most 6). It is a recall-oriented pre-filter; the calling app's chat model then checks the candidates (in Malbotdari, for small batches, the setting *judge new files* lets it see every new file with text regardless of this pre-filter). The thresholds are starting values to tune with real files.
 
 ## Why relative scores
 
@@ -47,7 +47,7 @@ Query is lowercased and split on whitespace; single ASCII letters are dropped, s
 
 Kinds (UI: Documents = text files + PDF/Office, Images, Audio, Video; none selected = all) and a date range on `COALESCE(dateTaken, modifiedAt)` (photos by when they were taken, everything else by modification time). The UI offers presets (any date, today, last 7 days, last 30 days, this year) and a custom range. With filters but an empty query the result is a **browse list**, newest first (up to `BROWSE_LIMIT` = 100). Keyword candidates are limited to 2000 before the filter is applied, so a very common word can crowd out matches in a narrow filter.
 
-**Person** (`SearchFilter.items`, chat only): the photos of one named person, from face grouping; combined with the other filters, and a browse list without a query. The threshold that decides which faces are the same person is in [indexing.md](indexing.md#faces).
+**Person** (`SearchFilter.items`, `search_index` for other apps only): the photos of one named person, from face grouping; combined with the other filters, and a browse list without a query. The threshold that decides which faces are the same person is in [indexing.md](indexing.md#faces).
 
 ## Metadata (`MetaMatch`)
 

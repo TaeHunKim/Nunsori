@@ -5,16 +5,9 @@ import android.net.Uri
 import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.lsa.app.chat.ChatToolNames
-import com.lsa.app.chat.actions.ActionManager
-import com.lsa.app.chat.actions.ApprovalResult
-import com.lsa.app.chat.actions.DeleteFilesTool
-import com.lsa.app.chat.actions.FileOps
-import com.lsa.app.chat.actions.MoveFilesTool
-import com.lsa.app.data.db.ActionKind
-import com.lsa.app.data.db.ActionStatus
+import com.lsa.app.service.IndexApi
+import com.lsa.app.service.tools.FileOps
 import com.lsa.app.data.db.AppDatabase
-import com.lsa.app.data.db.ChatSessionEntity
 import com.lsa.app.data.db.ItemEntity
 import com.lsa.app.data.db.ItemKind
 import com.lsa.app.data.db.ItemStatus
@@ -41,15 +34,14 @@ class FileOpsTest {
     private var access = true
     private var indexed = listOf(FolderSpec("Documents/", true))
     private lateinit var ops: FileOps
-    private lateinit var actions: ActionManager
-    private var session = 0L
+    /** Moves and deletes as other apps ask for them: prepared, confirmed by the user there, then committed. */
+    private lateinit var api: IndexApi
 
     @Before fun setUp() = runBlocking {
         db = Room.inMemoryDatabaseBuilder(ctx, AppDatabase::class.java).build()
         root = File(ctx.cacheDir, "fileops-root").also { it.deleteRecursively(); it.mkdirs() }
         ops = FileOps(ctx, db.itemDao(), folders = { indexed }, root = root, allowed = { access })
-        actions = ActionManager(db.actionDao(), ops)
-        session = db.chatDao().insertSession(ChatSessionEntity(title = "t", enabledTools = "", autoSearch = false, createdAt = 1, updatedAt = 1))
+        api = IndexApi(ctx, db.itemDao(), com.lsa.app.search.SearchEngine(db.itemDao(), { null }, com.lsa.app.data.prefs.SettingsStore(ctx)), db.faceDao(), ops, "test")
     }
 
     @After fun tearDown() { db.close(); root.deleteRecursively() }
@@ -116,47 +108,44 @@ class FileOpsTest {
         assertTrue(File(root, "Documents/a.txt").exists())
     }
 
-    @Test fun aMoveCardMovesOnlyAfterApprovalAndOnlyOnce() = runBlocking {
+    private fun prepare(tool: String, args: JSONObject): String =
+        io.github.taehunkim.nunsori.sdk.NunsoriClient.parseConfirmation(api.runTool(tool, args.toString()))!!.payload
+
+    private fun commit(tool: String, payload: String) = JSONObject(api.commit(tool, payload))
+
+    @Test fun aMoveIsPreparedFirstAndCarriedOutOnCommit() = runBlocking {
         val id = addFile("Documents", "a.txt")
-        val res = MoveFilesTool(actions, db.itemDao(), session).execute(JSONObject().put("item_ids", "$id").put("destination", "Documents/Done"))
-        val actionId = JSONObject(res).getLong("action_id")
-        assertTrue("proposing moves nothing", File(root, "Documents/a.txt").exists())
-        assertEquals(ActionKind.MOVE_FILES, db.actionDao().get(actionId)!!.kind)
-        assertTrue(actions.approve(actionId) is ApprovalResult.Done)
+        val payload = prepare("move_files", JSONObject().put("item_ids", "$id").put("destination", "Documents/Done"))
+        assertTrue("preparing moves nothing", File(root, "Documents/a.txt").exists())
+        assertTrue(commit("move_files", payload).getBoolean("ok"))
         assertTrue(File(root, "Documents/Done/a.txt").exists())
-        assertEquals(ActionStatus.DONE, db.actionDao().get(actionId)!!.status)
-        assertTrue(actions.approve(actionId) is ApprovalResult.Failed)
+        assertFalse("a second commit finds the file already there", commit("move_files", payload).getBoolean("ok"))
     }
 
-    @Test fun aDeleteCardGoesToTheTrashUnlessPermanentIsChosen() = runBlocking {
+    @Test fun aDeleteGoesToTheTrashUnlessPermanentIsChosen() = runBlocking {
         val a = addFile("Documents", "a.txt"); val b = addFile("Documents", "b.txt")
-        val tool = DeleteFilesTool(actions, db.itemDao(), session)
-        val c1 = JSONObject(tool.execute(JSONObject().put("item_ids", "$a"))).getLong("action_id")
-        val c2 = JSONObject(tool.execute(JSONObject().put("item_ids", "$b"))).getLong("action_id")
-        assertTrue(actions.approve(c1) is ApprovalResult.Done)
+        assertTrue(commit("delete_files", prepare("delete_files", JSONObject().put("item_ids", "$a"))).getBoolean("ok"))
         assertEquals("trashed, still recoverable", 1, File(root, ".LSA_Trash").listFiles { f -> f.name.endsWith("a.txt") }!!.size)
-        assertTrue(actions.approve(c2, permanent = true) is ApprovalResult.Done)
+        val p = JSONObject(prepare("delete_files", JSONObject().put("item_ids", "$b"))).put("permanent", true)
+        assertTrue(commit("delete_files", p.toString()).getBoolean("ok"))
         assertTrue("permanent leaves nothing in the trash", File(root, ".LSA_Trash").listFiles { f -> f.name.endsWith("b.txt") }!!.isEmpty())
     }
 
-    @Test fun anApprovalWithoutAccessKeepsTheCardOpen() = runBlocking {
+    @Test fun aCommitWithoutAccessChangesNothingAndSaysWhy() = runBlocking {
         val id = addFile("Documents", "a.txt")
-        val actionId = JSONObject(MoveFilesTool(actions, db.itemDao(), session).execute(JSONObject().put("item_ids", "$id").put("destination", "X"))).getLong("action_id")
+        val payload = prepare("move_files", JSONObject().put("item_ids", "$id").put("destination", "X"))
         access = false
-        val r = actions.approve(actionId)
-        assertTrue(r is ApprovalResult.Failed && r.reason == FileOps.NEEDS_ACCESS)
-        assertEquals(ActionStatus.PROPOSED, db.actionDao().get(actionId)!!.status)
+        assertEquals(io.github.taehunkim.nunsori.sdk.Nunsori.Errors.NEEDS_FILE_ACCESS, commit("move_files", payload).getInt("error"))
+        assertTrue(File(root, "Documents/a.txt").exists())
         access = true
-        assertTrue(actions.approve(actionId) is ApprovalResult.Done)
+        assertTrue(commit("move_files", payload).getBoolean("ok"))
     }
 
     @Test fun toolsRejectUnknownIdsAndBadArguments() = runBlocking {
-        val move = MoveFilesTool(actions, db.itemDao(), session)
-        assertTrue(move.execute(JSONObject().put("item_ids", "999").put("destination", "X")).startsWith("Error"))
-        assertTrue(move.execute(JSONObject().put("item_ids", "").put("destination", "X")).startsWith("Error"))
+        assertTrue(api.runTool("move_files", JSONObject().put("item_ids", "999").put("destination", "X").toString()).startsWith("Error"))
+        assertTrue(api.runTool("move_files", JSONObject().put("item_ids", "").put("destination", "X").toString()).startsWith("Error"))
         val id = addFile("Documents", "a.txt")
-        assertTrue(move.execute(JSONObject().put("item_ids", "$id").put("destination", "../x")).startsWith("Error"))
-        assertEquals(ChatToolNames.MOVE, move.name)
+        assertTrue(api.runTool("move_files", JSONObject().put("item_ids", "$id").put("destination", "../x").toString()).startsWith("Error"))
     }
 
     /** A real MediaStore image owned by this test app: moving changes RELATIVE_PATH (id kept), trashing uses the system trash. */

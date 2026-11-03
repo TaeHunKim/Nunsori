@@ -75,7 +75,7 @@ import com.lsa.app.ui.common.WarningCard
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(onOpenSettings: () -> Unit, onOpenChat: (Long) -> Unit = {}) {
+fun SearchScreen(onOpenSettings: () -> Unit) {
     val container = rememberContainer()
     val vm: SearchViewModel = viewModel(factory = viewModelFactory { initializer { SearchViewModel(container) } })
     val state by vm.state.collectAsStateWithLifecycle()
@@ -84,7 +84,6 @@ fun SearchScreen(onOpenSettings: () -> Unit, onOpenChat: (Long) -> Unit = {}) {
     val ctx = LocalContext.current
     val selecting = selected.isNotEmpty()
     var askChat by remember { mutableStateOf(false) }
-    val chatScope = androidx.compose.runtime.rememberCoroutineScope()
     // New results invalidate the selection.
     LaunchedEffect(state) { selected = emptySet() }
     BackHandler(enabled = selecting) { selected = emptySet() }
@@ -184,26 +183,19 @@ fun SearchScreen(onOpenSettings: () -> Unit, onOpenChat: (Long) -> Unit = {}) {
         }
     }
     if (askChat) {
-        val sessions by container.db.chatDao().observeSessions().collectAsStateWithLifecycle(emptyList())
-        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { askChat = false }) {
-            Column(Modifier.padding(bottom = 24.dp)) {
-                Text(stringResource(R.string.chat_ask_choose), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(16.dp))
-                fun go(sessionId: Long) {
-                    container.chat.queueAttachments(sessionId, (state as? SearchUi.Done)?.hits?.map { it.hit.itemId }?.filter { it in selected }.orEmpty())
-                    askChat = false; selected = emptySet(); onOpenChat(sessionId)
-                }
-                Text(
-                    stringResource(R.string.chat_new), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth().clickable { chatScope.launch { go(container.chat.newSession()) } }.padding(16.dp),
-                )
-                sessions.forEach { s ->
-                    Text(
-                        s.title.ifEmpty { stringResource(R.string.chat_untitled) }, style = MaterialTheme.typography.bodyLarge, maxLines = 1,
-                        modifier = Modifier.fillMaxWidth().clickable { go(s.sessionId) }.padding(16.dp),
-                    )
-                }
-            }
+        // the chat lives in the Malbotdari app: hand it the selected files, or say where to get it
+        val ids = (state as? SearchUi.Done)?.hits?.map { it.hit.itemId }?.filter { it in selected }.orEmpty()
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            if (com.lsa.app.service.Malbotdari.open(ctx, ids)) { askChat = false; selected = emptySet() }
         }
+        if (!com.lsa.app.service.Malbotdari.isInstalled(ctx)) androidx.compose.material3.AlertDialog(
+            onDismissRequest = { askChat = false },
+            title = { Text(stringResource(R.string.malbot_title)) },
+            text = { Text(stringResource(R.string.malbot_needed)) },
+            confirmButton = { TextButton(onClick = { com.lsa.app.service.Malbotdari.openReleases(ctx); askChat = false }) { Text(stringResource(R.string.malbot_get)) } },
+            dismissButton = { TextButton(onClick = { askChat = false }) { Text(stringResource(R.string.action_cancel)) } },
+        )
     }
     detailId?.let { ItemDetailSheet(it) { detailId = null } }
 }
