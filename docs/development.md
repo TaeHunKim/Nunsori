@@ -29,7 +29,7 @@ A release APK cannot be installed over a debug build (different signing key): un
 
 ## OndolSaem SDK
 
-Model hosting is moving to the separate **OndolSaem** app (roadmap item 2), which lives in its own repository, `taehunkim/ondolsaem`. Nunsori reaches it through that repository's client SDK, `com.github.taehunkim.ondolsaem:sdk` (published on JitPack from git tags).
+Model hosting lives in the separate **OndolSaem** app, in its own repository, `TaeHunKim/ondolsaem`. Nunsori reaches it through that repository's client SDK, published on JitPack from git tags as `com.github.TaeHunKim:ondolsaem:<tag>` (for example `sdk-v0.2.0`, set in `gradle/libs.versions.toml` as `ondolsaemSdk`). JitPack renames a repository's only artifact to the repository, so the SDK's own coordinates (`com.github.taehunkim.ondolsaem:sdk`) are not what clients use; `settings.gradle.kts` therefore substitutes `com.github.TaeHunKim:ondolsaem` with the checkout's `:sdk` project explicitly when `ondolsaem.dir` is set. Checked 2026-11-03: Nunsori builds and passes its unit tests from the JitPack artifact without `ondolsaem.dir`.
 
 To change the SDK and Nunsori together, check OndolSaem out next to this repository and add `ondolsaem.dir=../ondolsaem` to `local.properties`. `settings.gradle.kts` then adds it as a Gradle composite build, so the SDK is built from that source and edits there show up in the next Nunsori build. Without the line the published artifact is used.
 

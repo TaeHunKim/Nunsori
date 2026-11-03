@@ -5,7 +5,7 @@ Code package and Gradle `namespace` `com.lsa.app` (Kotlin, Jetpack Compose); the
 ## 1. Goals and principles
 
 - **On-device only.** Embedding, OCR, speech recognition and chat run on the phone. Nunsori has no network permission ([privacy](privacy.md)).
-- **Models live in the companion app OndolSaem.** It downloads them, keeps them in memory and serves them over a bound service (SDK `com.github.taehunkim.ondolsaem:sdk`); `ml/ModelHost` is the only place that talks to it ([models](models.md)).
+- **Models live in the companion app OndolSaem.** It downloads them, keeps them in memory and serves them over a bound service (SDK `com.github.TaeHunKim:ondolsaem` on JitPack); `ml/ModelHost` is the only place that talks to it ([models](models.md)).
 - **One data model for every file type.** A file is an `item`; what is searched is a `segment`. New file types only add extractors and segment types.
 - **Resumable.** Work is committed per file and checkpointed per segment batch, so a killed process resumes where it stopped.
 
