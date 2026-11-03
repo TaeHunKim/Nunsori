@@ -18,13 +18,11 @@ import com.lsa.app.data.db.ItemStatus
 import com.lsa.app.data.db.SegmentEntity
 import com.lsa.app.data.db.SegmentType
 import com.lsa.app.data.prefs.SettingsStore
-import com.lsa.app.ml.ModelResidency
+import com.lsa.app.ml.ModelHost
 import com.lsa.app.ml.llm.ChatEvent
 import com.lsa.app.ml.llm.ChatModel
 import com.lsa.app.ml.llm.ChatTool
 import com.lsa.app.ml.llm.ChatTurn
-import com.lsa.app.models.ModelCatalog
-import com.lsa.app.models.ModelManager
 import com.lsa.app.search.SearchEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -77,9 +75,9 @@ class ChatTest {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var db: AppDatabase
     private lateinit var settings: SettingsStore
-    private lateinit var modelsDir: File
-    private lateinit var manager: ModelManager
-    private lateinit var residency: ModelResidency
+    private lateinit var residency: ModelHost
+    /** Whether the (fake) chat model is available, as OndolSaem would report it. */
+    private var modelPresent = true
     private lateinit var search: SearchEngine
     private lateinit var controller: ChatController
     private var model = FakeChatModel()
@@ -91,17 +89,14 @@ class ChatTest {
     private var judgeFirstOn = true
     private val notified = ArrayList<Triple<Long, String, Boolean>>()
     private val enqueued = ArrayList<Long>()
-    private val chatSpec = ModelCatalog.byId("chat-qwen25-1.5b")!!
 
     @Before fun setUp() = runBlocking {
         db = Room.inMemoryDatabaseBuilder(ctx, AppDatabase::class.java).build()
         settings = SettingsStore(ctx)
-        settings.setChatModelId(chatSpec.id); settings.setChatContextTokens(4096); settings.setEmbeddingModelId("test-model")
-        modelsDir = File(ctx.cacheDir, "chat-test-models").also { it.deleteRecursively() }
-        manager = ModelManager(ctx, settings, modelsDir = modelsDir)
-        installModel(true)
-        residency = ModelResidency(ctx, manager, settings, scope)
-        residency.chatFactory = { _, _, _ -> model }
+        settings.setChatModelId("chat-qwen25-1.5b"); settings.setEmbeddingModelId("test-model")
+        residency = ModelHost(ctx, settings, scope)
+        residency.chatOverride = { if (modelPresent) model else null }
+        residency.contextTokensOverride = 4096
         search = SearchEngine(db.itemDao(), { null }, settings)
         alarms = FakeAlarms(ctx)
         actionManager = com.lsa.app.chat.actions.ActionManager(db.actionDao(), clock = { now })
@@ -115,14 +110,11 @@ class ChatTest {
 
     @After fun tearDown() = runBlocking {
         scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
-        db.close(); modelsDir.deleteRecursively()
+        db.close()
         settings.setChatModelId(SettingsStore.DEFAULT_CHAT); settings.setEmbeddingModelId(SettingsStore.DEFAULT_EMBEDDING)
     }
 
-    private fun installModel(present: Boolean) {
-        val f = manager.file(chatSpec)!!
-        if (present) { f.parentFile!!.mkdirs(); f.writeText("x") } else f.delete()
-    }
+    private fun installModel(present: Boolean) { modelPresent = present }
 
     private suspend fun awaitIdle() = withTimeout(10_000) { while (controller.busy) kotlinx.coroutines.delay(20) }
 
@@ -167,7 +159,7 @@ class ChatTest {
     }
 
     @Test fun historyIsTrimmedToTheContextBudget() = runBlocking {
-        settings.setChatContextTokens(2048)
+        residency.contextTokensOverride = 2048
         val id = controller.newSession()
         val big = "word ".repeat(1500) // about 2500 tokens: never fits next to the new question
         sendAndWait(id, big); sendAndWait(id, "short follow-up")

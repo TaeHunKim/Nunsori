@@ -53,17 +53,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.lsa.app.R
-import com.lsa.app.models.DownloadException
-import com.lsa.app.models.ModelCatalog
-import com.lsa.app.models.ModelKind
-import com.lsa.app.models.ModelSource
-import com.lsa.app.models.ModelSpec
-import com.lsa.app.models.ModelState
 import com.lsa.app.rememberContainer
 import com.lsa.app.ui.common.displayFolder
 import com.lsa.app.ui.index.hasPhotoPermission
 import com.lsa.app.ui.onboarding.AutoIndexOptions
-import com.lsa.app.indexing.ResidencyPolicy
 import com.lsa.app.indexing.KindSupport
 import com.lsa.app.data.db.ItemKind
 import com.lsa.app.ui.common.WarningCard
@@ -76,7 +69,7 @@ fun KindsSection(vm: SettingsViewModel) {
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) { allFiles = Environment.isExternalStorageManager() }
     val mediaPermLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val kinds by vm.kinds.collectAsStateWithLifecycle()
-    val embId by vm.embeddingModelId.collectAsStateWithLifecycle()
+    val host by rememberContainer().models.state.collectAsStateWithLifecycle()
         // --- What to index
         Section(R.string.kinds_title, R.string.kinds_desc)
         listOf(
@@ -114,7 +107,7 @@ fun KindsSection(vm: SettingsViewModel) {
                 }
                 Switch(checked = skipMusic, onCheckedChange = vm::setSkipMusic)
             }
-            if (ModelCatalog.byId(embId)?.audio != true) WarningCard(stringResource(R.string.audio_needs_740m))
+            if (host.model(io.github.taehunkim.ondolsaem.sdk.OndolSaem.Categories.EMBEDDING)?.audio != true) WarningCard(stringResource(R.string.audio_needs_740m))
         }
         if (ItemKind.VIDEO in kinds) {
             val detail by vm.videoDetail.collectAsStateWithLifecycle()
@@ -225,30 +218,6 @@ fun FoldersSection(vm: SettingsViewModel) {
         }
 }
 
-/** Embedding model choice with download buttons and the "re-create the index?" confirmation. */
-@Composable
-fun EmbeddingModelsSection(vm: SettingsViewModel) {
-    val states by vm.modelStates.collectAsStateWithLifecycle()
-    val embId by vm.embeddingModelId.collectAsStateWithLifecycle()
-        // --- Models
-        Section(R.string.settings_embedding_models, R.string.settings_embedding_desc)
-        ModelCatalog.ofKind(ModelKind.EMBEDDING).forEach { spec ->
-            ModelCard(spec, states[spec.id], selected = spec.id == embId, vm = vm, onSelect = { vm.selectEmbedding(spec.id) })
-        }
-        val pendingSwitch by vm.pendingSwitch.collectAsStateWithLifecycle()
-        pendingSwitch?.let { sw ->
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = vm::cancelSwitch,
-                title = { Text(stringResource(R.string.model_switch_title)) },
-                text = {
-                    Text(pluralStringResource(R.plurals.model_switch_body, sw.files, sw.files, ModelCatalog.byId(sw.modelId)?.displayName ?: sw.modelId))
-                },
-                confirmButton = { TextButton(onClick = { vm.confirmSwitch() }) { Text(stringResource(R.string.model_switch_confirm)) } },
-                dismissButton = { TextButton(onClick = vm::cancelSwitch) { Text(stringResource(R.string.action_cancel)) } },
-            )
-        }
-}
-
 /** Usual places on a phone, as MediaStore-style relative paths. */
 private class FolderPreset(val label: Int, val paths: List<String>, val recursive: Boolean)
 
@@ -257,14 +226,3 @@ private val FOLDER_PRESETS = listOf(
     FolderPreset(R.string.folder_preset_screenshots, listOf("Pictures/Screenshots/", "DCIM/Screenshots/"), true),
     FolderPreset(R.string.folder_preset_downloads, listOf("Download/"), true),
 )
-
-/** Speech recognition model choice (audio and video transcripts); shared by Settings and the first-run wizard. */
-@Composable
-fun SpeechModelsSection(vm: SettingsViewModel) {
-    val states by vm.modelStates.collectAsStateWithLifecycle()
-    val asrId by vm.asrModelId.collectAsStateWithLifecycle()
-    Section(R.string.settings_asr_models, R.string.settings_asr_desc)
-    ModelCatalog.ofKind(ModelKind.ASR).forEach { spec ->
-        ModelCard(spec, states[spec.id], selected = spec.id == asrId, vm = vm, onSelect = { vm.selectAsr(spec.id) })
-    }
-}

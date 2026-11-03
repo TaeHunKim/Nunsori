@@ -5,7 +5,7 @@ plugins {
 }
 
 // Single place to bump the app version: major.minor.patch, versionCode = major*10000 + minor*100 + patch.
-val appVersionName = "0.7.1"
+val appVersionName = "0.8.0"
 val appVersionCode = appVersionName.split(".").let { (a, b, c) -> a.toInt() * 10000 + b.toInt() * 100 + c.toInt() }
 
 android {
@@ -75,24 +75,18 @@ dependencies {
     implementation(libs.commonmark.tables)
     implementation(libs.jsoup)
     implementation(libs.pdfbox.android)
-    implementation(libs.commons.compress)
-    implementation(libs.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.coil.svg)
     implementation(libs.androidsvg)
-    implementation(libs.litertlm.android)
-    implementation(libs.mlkit.text.recognition.korean)
-    // Not on Maven Central: scripts/fetch-sherpa-onnx.sh downloads it into app/libs (git-ignored).
-    implementation(files("libs/sherpa-onnx-2.0.1.aar"))
+    // AI models run in the OndolSaem app; this is its client SDK (JitPack, or ../ondolsaem as a composite build).
+    implementation(libs.ondolsaem.sdk)
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.coroutines.play.services)
     // Room reads its schema bundle with kotlinx.serialization; an older runtime pulled in transitively breaks migration tests.
     implementation(libs.kotlinx.serialization.core)
 
     testImplementation(libs.junit)
     testImplementation("net.sf.kxml:kxml2:2.3.0") // XmlPullParser implementation for JVM unit tests
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.okhttp.mockwebserver)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.test.ext.junit)

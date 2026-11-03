@@ -17,7 +17,6 @@ import com.lsa.app.chat.actions.MoveFilesTool
 import com.lsa.app.chat.schedule.TaskManager
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.BitmapLoader
-import com.lsa.app.ml.ModelResidency
 import com.lsa.app.ml.llm.ChatEvent
 import com.lsa.app.ml.llm.ChatTool
 import com.lsa.app.ml.llm.ChatTurn
@@ -69,7 +68,7 @@ class ChatController(
     private val context: Context,
     private val chat: ChatDao,
     private val items: ItemDao,
-    private val residency: ModelResidency,
+    private val residency: com.lsa.app.ml.ModelHost,
     private val search: SearchEngine,
     private val settings: SettingsStore,
     private val scope: CoroutineScope,
@@ -166,7 +165,7 @@ class ChatController(
             val embedderLease = if (needsEmbedder) runCatching { residency.embedder() }.getOrNull() else null
             (embedderLease ?: AutoCloseable { }).use { lease.use { l ->
                 val model = l.value
-                val contextTokens = settings.chatContextTokens.first()
+                val contextTokens = residency.chatContextTokens() // set in OndolSaem with the chat model
                 val custom = settings.chatCustomPrompt.first().trim()
 
                 // Everything the model needs besides the question: attached files, search results, photos.

@@ -11,10 +11,8 @@
 
     <!-- Notifications -->
     <string name="channel_indexing">Indexing</string>
-    <string name="channel_download">Model downloads</string>
     <string name="notif_indexing_title">Indexing files</string>
     <string name="notif_indexing_preparing">Preparing…</string>
-    <string name="notif_download_title">Downloading %1$s</string>
 
     <string name="dialog_ok">OK</string>
 
@@ -37,26 +35,13 @@
     <string name="onboarding_step">Step %1$d of %2$d</string>
     <string name="onboarding_files_title">What should be indexed?</string>
     <string name="onboarding_files_desc">Choose the kinds of files and the folders to search. Everything stays on your phone.</string>
-    <string name="onboarding_model_title">Choose a search model</string>
-    <string name="onboarding_model_desc">The model is downloaded once and runs on your phone. 440M is recommended; 740M also understands audio. You can skip this and download one later.</string>
+    <string name="onboarding_model_title">Set up the AI models</string>
+    <string name="onboarding_model_desc">The models run on your phone, in the companion app OndolSaem. Install it and download a search model there (EmbeddingGemma 440M is recommended; 740M also understands audio). You can skip this and do it later.</string>
     <string name="onboarding_back">Back</string>
     <string name="onboarding_next">Next</string>
     <string name="onboarding_finish">Finish</string>
 
     <!-- Model memory -->
-    <string name="model_switch_title">Re-create the index?</string>
-    <plurals name="model_switch_body">
-        <item quantity="one">%1$d indexed file has to be embedded again with %2$s. Searching only finds files that were already processed until this is done, and it can take a long time. Continue?</item>
-        <item quantity="other">All %1$d indexed files have to be embedded again with %2$s. Searching only finds files that were already processed until this is done, and it can take a long time. Continue?</item>
-    </plurals>
-    <string name="model_switch_confirm">Re-create</string>
-    <string name="model_chat_gemma4_e2b_desc">Google\'s multimodal chat model (text and images), about 2 B effective parameters. Recommended default.</string>
-    <string name="model_chat_gemma4_e4b_desc">Larger and more capable than E2B (text and images). Needs more memory.</string>
-    <string name="model_chat_qwen_desc">Smaller text-only chat model; faster on weak phones, weaker at using tools.</string>
-    <string name="settings_chat_models">Chat model</string>
-    <string name="settings_chat_desc">Used by the Chat screen. Runs on your phone; larger models answer better but need more memory and time.</string>
-    <string name="chat_context_title">Context size</string>
-    <string name="chat_context_desc">How much text the model can see at once (question, history, files and answer). Larger is slower and uses more memory.</string>
     <string name="nav_chat">Chat</string>
     <string name="chat_empty">No chats yet. Start one to ask questions about your files.</string>
     <string name="chat_new">New chat</string>
@@ -76,7 +61,7 @@
     <string name="chat_stop">Stop</string>
     <string name="chat_dismiss">Dismiss</string>
     <string name="chat_error">The chat model failed: %1$s</string>
-    <string name="chat_model_missing">No chat model installed. Download one in Settings.</string>
+    <string name="chat_model_missing">No chat model available. Download one in OndolSaem (Settings › Models).</string>
     <string name="chat_loading_model">Loading the model… the first answer takes longer.</string>
     <string name="chat_thinking">Thinking…</string>
     <string name="chat_trimmed">Earlier messages did not fit in the context and were left out.</string>
@@ -95,14 +80,6 @@
     <string name="about_version">Version %1$s (database v%2$d)</string>
     <string name="about_tagline">Nunsori (눈소리): eye and sound. Native, Unified, Natural-language Search, Offline Recall &amp; Index.</string>
     <string name="about_places_credit">Place names: GeoNames (CC BY 4.0).</string>
-    <string name="residency_title">Model memory</string>
-    <string name="residency_desc">How long the AI models (search, chat, text recognition, speech) stay loaded in memory after use. During a chat answer the models it needs always stay loaded.</string>
-    <string name="residency_idle">Unload after 2 minutes idle</string>
-    <string name="residency_idle_desc">Balanced. Searches and chat messages right after each other stay fast.</string>
-    <string name="residency_keep">Keep loaded</string>
-    <string name="residency_keep_desc">Fastest, but holds the models in memory while the app process is alive: about 0.5 GB for search plus 2–4 GB once the chat model has been used.</string>
-    <string name="residency_immediate">Unload right after use</string>
-    <string name="residency_immediate_desc">Lowest memory use; every search, indexing run or chat message reloads its models first (the chat model takes a while).</string>
 
     <!-- Index -->
     <string name="index_status_idle">Ready to index</string>
@@ -121,12 +98,12 @@
     <string name="index_empty">Nothing indexed yet.</string>
     <string name="warn_no_permission">Storage access is required (photos and media, or all files). Grant it in Settings.</string>
     <string name="warn_no_folders">Choose the folders to index in Settings.</string>
-    <string name="warn_no_model">Download an embedding model in Settings first.</string>
+    <string name="warn_no_model">No search model available: install OndolSaem and download an embedding model there (Settings › Models).</string>
     <plurals name="warn_stale">
         <item quantity="one">%d file was indexed with a different model. Start indexing to re-index it.</item>
         <item quantity="other">%d files were indexed with a different model. Start indexing to re-index them.</item>
     </plurals>
-    <string name="err_model_missing">The selected embedding model is not installed.</string>
+    <string name="err_model_missing">No embedding model is available in OndolSaem.</string>
     <string name="err_no_folders">No folders selected.</string>
     <string name="err_load_failed">The embedding model could not be loaded.</string>
 
@@ -179,7 +156,7 @@
     <string name="search_hint">Search your files…</string>
     <string name="search_idle">Describe what you are looking for, or type words, a place or a file name.</string>
     <string name="search_no_results">No results.</string>
-    <string name="search_model_missing">Embedding model not installed — showing keyword matches only.</string>
+    <string name="search_model_missing">No search model available in OndolSaem — showing keyword matches only.</string>
     <string name="filter_documents">Documents</string>
     <string name="filter_images">Images</string>
     <string name="filter_audio">Audio</string>
@@ -210,33 +187,10 @@
         <item quantity="one">%d image</item>
         <item quantity="other">%d images</item>
     </plurals>
-    <string name="settings_embedding_models">Embedding model</string>
-    <string name="settings_embedding_desc">Models are downloaded on demand. Changing the model requires re-indexing.</string>
-    <string name="settings_ocr_models">OCR model</string>
-    <string name="model_download">Download</string>
-    <string name="model_retry">Retry</string>
-    <string name="model_delete">Delete</string>
-    <string name="model_installed">Installed</string>
-    <string name="model_bundled">Built in</string>
-    <string name="model_coming_soon">Coming soon</string>
-    <string name="model_downloading">Downloading… %1$d%%</string>
-    <string name="model_err_auth">Access denied. Add a Hugging Face token below and accept the model license on huggingface.co.</string>
-    <string name="model_err_not_found">Model file not found on Hugging Face.</string>
-    <string name="model_err_network">Network error. Retry to resume the download.</string>
-    <string name="model_err_http">Download failed.</string>
-    <string name="model_eg2_440m_desc">Multimodal (text + image) embeddings, 768 dims. Recommended default.</string>
-    <string name="model_eg2_740m_desc">Larger multimodal model that also supports audio.</string>
-    <string name="model_mobileclip2_desc">Very small English-only image–text model.</string>
-    <string name="model_mlkit_desc">Google ML Kit text recognition for Korean and Latin scripts. Runs offline.</string>
-    <string name="model_ppocr_desc">PaddleOCR mobile model for Korean text.</string>
     <string name="storage_title">Storage</string>
     <string name="storage_previews">Previews: %1$s</string>
     <string name="storage_clear">Clear previews</string>
-    <string name="model_sensevoice_desc">Recognises Korean, English, Chinese and Japanese speech offline. Used for voice files and the audio of videos.</string>
-    <string name="model_moonshine_desc">Very small speech recognition model, one language per model.</string>
-    <string name="settings_asr_models">Speech recognition model</string>
-    <string name="settings_asr_desc">Turns speech into text so recordings can be found by what was said.</string>
-    <string name="audio_needs_740m">Audio embeddings need the EmbeddingGemma 2 740M model. Without it, audio is only searchable through speech recognition.</string>
+    <string name="audio_needs_740m">Audio embeddings need the EmbeddingGemma 2 740M model (choose it in OndolSaem). Without it, audio is only searchable through speech recognition.</string>
     <string name="skip_music">Skip music files</string>
     <string name="skip_music_desc">Songs from your music library are not indexed; voice recordings are.</string>
     <string name="video_detail_title">Video detail</string>
@@ -245,8 +199,6 @@
     <string name="video_detail_high">Detailed (a frame every second)</string>
     <string name="video_speech">Transcribe speech in videos</string>
     <string name="video_speech_desc">Makes what is said in a video searchable. Needs a speech recognition model.</string>
-    <string name="settings_token">Hugging Face token</string>
-    <string name="settings_token_desc">Optional. Only needed for gated models or to avoid rate limits.</string>
     <string name="settings_language">Language</string>
     <string name="lang_system">System</string>
     <string name="lang_en">English</string>
@@ -264,11 +216,10 @@
     <string name="folder_preset_screenshots">Screenshots</string>
     <string name="folder_preset_downloads">Downloads</string>
     <string name="folder_presets_media_only">Without "All files access", only photos, audio and video in these folders are indexed.</string>
-    <string name="onboarding_ocr_note">Text in images is read with the built-in on-device OCR (Google ML Kit); nothing to download.</string>
     <string name="index_low_power">Low-power mode</string>
     <string name="index_low_power_desc">For manual runs: slower, but uses the CPU only with fewer threads, pauses between files and stops if the phone gets hot.</string>
     <string name="resource_unloaded">–</string>
-    <string name="resource_models">Embed %1$s · Chat %2$s</string>
+    <string name="resource_models">Models %1$s</string>
     <string name="resource_usage">RAM %1$d MB · CPU %2$d%%</string>
     <string name="settings_resource_title">Resource indicator</string>
     <string name="settings_resource_desc">Show the backend (GPU or CPU) of loaded models, app memory and CPU use in the top bar. GPU load itself cannot be read by apps.</string>
@@ -366,4 +317,21 @@
     <string name="about_github">GitHub repository</string>
     <string name="about_licenses">Open-source licenses</string>
     <string name="about_licenses_close">Close</string>
+    <string name="host_title">AI models (OndolSaem)</string>
+    <string name="host_desc">Nunsori\'s AI models (search, text recognition, speech, chat) are downloaded and run by the separate OndolSaem app, which other apps can share. Choose and download models there.</string>
+    <string name="host_checking">Checking OndolSaem…</string>
+    <string name="host_not_installed">OndolSaem is not installed. Install it to search by meaning, read text in images, transcribe speech and chat.</string>
+    <string name="host_not_allowed">OndolSaem refused the connection: this build of Nunsori is signed with a key OndolSaem does not trust.</string>
+    <string name="host_unreachable">OndolSaem did not answer. Open it once, then check again.</string>
+    <string name="host_connected">Connected to OndolSaem.</string>
+    <string name="host_cat_embedding">Search (embedding)</string>
+    <string name="host_cat_ocr">Text in images</string>
+    <string name="host_cat_asr">Speech recognition</string>
+    <string name="host_cat_llm">Chat</string>
+    <string name="host_model_none">none selected</string>
+    <string name="host_model_not_downloaded">%1$s (not downloaded)</string>
+    <string name="host_install">Install OndolSaem</string>
+    <string name="host_open">Open OndolSaem</string>
+    <string name="host_check">Check again</string>
+    <string name="host_note">When the search model changes in OndolSaem, Nunsori indexes the affected files again.</string>
 </resources>

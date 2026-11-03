@@ -4,7 +4,7 @@
 
 *Local Search Anything.* **N**ative **U**nified **N**atural-language **S**earch, **O**ffline **R**ecall & **I**ndex. The name is Korean for "eye" (눈) and "sound" (소리): it sees and hears your files.
 
-An Android app that indexes the files on your phone with on-device multimodal embedding models and lets you search them by meaning and by keyword. Nothing leaves the device; models are downloaded by you, never bundled.
+An Android app that indexes the files on your phone with on-device multimodal embedding models and lets you search them by meaning and by keyword. Nothing leaves the device. The AI models run in the companion app [OndolSaem / 온돌샘](https://github.com/taehunkim/ondolsaem), which downloads them once and shares them with other apps.
 
 <p>
 <img src="docs/images/demo-search.gif" width="260" alt="Files are indexed on the phone, then found by meaning ('italian food' finds a pizza photo)">
@@ -23,7 +23,7 @@ An Android app that indexes the files on your phone with on-device multimodal em
 | Audio | Speech transcript (SenseVoice); audio clip embeddings (740M model) | Spoken words, sound, time |
 | Video | Scene clips (up to 8 frames each) + speech transcript | Visual content, speech, time |
 
-Also: a chat that answers from your files with an on-device Gemma 4 model (it searches the index and reads files itself, per-chat history with pinning, scheduled tasks that run later or when matching files are indexed and post to the chat, approval cards that open your calendar or contacts app prefilled or move/trash files, Markdown answers with copy/share and file thumbnails, your own instructions, "Ask in chat" from search results), a failed-file list with retry, low-power indexing, an optional resource indicator (GPU/CPU, memory), hybrid ranking (meaning + exact words + photo place names such as "Dubai"), filters by file kind and date, share/open results, automatic indexing (manual, immediate, scheduled, idle), model memory control, English and Korean UI, dark mode.
+Also: a chat that answers from your files with an on-device Gemma 4 model (it searches the index and reads files itself, per-chat history with pinning, scheduled tasks that run later or when matching files are indexed and post to the chat, approval cards that open your calendar or contacts app prefilled or move/trash files, Markdown answers with copy/share and file thumbnails, your own instructions, "Ask in chat" from search results), a failed-file list with retry, low-power indexing, an optional resource indicator (GPU/CPU, memory), hybrid ranking (meaning + exact words + photo place names such as "Dubai"), filters by file kind and date, share/open results, automatic indexing (manual, immediate, scheduled, idle), English and Korean UI, dark mode. Choosing models and how long they stay in memory happens in OndolSaem.
 
 ## How it works
 
@@ -31,20 +31,20 @@ Files become *segments* (a chunk, a page, a clip) with an int8 embedding, stored
 
 ## Requirements
 
-Android 10+ (minSdk 29). Models: EmbeddingGemma 2 440M (388 MB) or 740M (adds audio), a chat model (Gemma 4 E2B 2.6 GB, E4B 3.7 GB or Qwen2.5 1.5B 1.6 GB), SenseVoice (163 MB) for speech. Text and documents need "All files access".
+Android 10+ (minSdk 29) and the **OndolSaem** app (models are downloaded there):  EmbeddingGemma 2 440M (388 MB) or 740M (adds audio), a chat model (Gemma 4 E2B 2.6 GB, E4B 3.7 GB or Qwen2.5 1.5B 1.6 GB), SenseVoice (163 MB) for speech. Text and documents need "All files access".
 
 ## Quick start
 
 ```bash
-source scripts/env.sh && scripts/fetch-sherpa-onnx.sh
-./gradlew assembleDebug && scripts/emu-start.sh && scripts/run.sh
+source scripts/env.sh && ./gradlew assembleDebug && scripts/emu-start.sh && scripts/run.sh
+# plus OndolSaem (separate repository): build and install it, then download models in it
 ```
 
-Then in the app: the first-run wizard asks what to index (kinds, folders), which model to download and when to index automatically; then press Start indexing and search. Details: [getting-started](docs/getting-started.md).
+Then in the app: the first-run wizard asks what to index (kinds, folders), checks the connection to OndolSaem and when to index automatically; then press Start indexing and search. Details: [getting-started](docs/getting-started.md).
 
 ## Privacy
 
-Everything runs on the device. The only network use is downloading models from Hugging Face and GitHub. See [privacy](docs/privacy.md).
+Everything runs on the device; Nunsori has no network permission. Models are downloaded by OndolSaem. See [privacy](docs/privacy.md).
 
 ## Limits
 
@@ -56,4 +56,4 @@ Office files are not rendered (text and a generated card only); old .doc/.ppt/.x
 
 ## License
 
-[Apache-2.0](LICENSE). Copyright 2026 Taehun Kim. Downloaded models keep their own licenses.
+[Apache-2.0](LICENSE). Copyright 2026 Taehun Kim. Models keep their own licenses (see OndolSaem).

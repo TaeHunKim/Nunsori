@@ -76,6 +76,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             return if (auto) Result.success() else Result.failure()
         }
 
+        c.models.refresh() // pipeline keys and availability follow OndolSaem's current models
         val keys = ctl.pipelineKeys()
         val full = c.indexRunner.sync(folders, ctl.enabledKinds(), keys)
         // "Retry failed" touches only the failed files; paused work stays paused.
@@ -93,7 +94,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 
         // Low-power mode is a manual-run option; automatic runs have their own battery rules.
         val low = !auto && c.settings.indexLowPower.first()
-        val embLease = try { c.residency.embedder(low) } catch (e: Exception) {
+        val embLease = try { c.models.embedder(low, background = true) } catch (e: Exception) {
             Log.w(TAG, "model load failed", e)
             outcome = AutoOutcome.LOAD_FAILED
             if (!auto) ctl.update(IndexProgress(error = IndexError.LOAD_FAILED))
@@ -104,12 +105,12 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
             if (!auto) ctl.update(IndexProgress(error = IndexError.MODEL_MISSING))
             return if (auto) Result.success() else Result.failure()
         }
-        val ocrLease = c.residency.ocr(c.settings.ocrModelId.first())
+        val ocrLease = c.models.ocr()
         var lastNotify = 0L
         val passStart = System.currentTimeMillis()
         var result = IndexProgress()
         try {
-            val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, { c.residency.speech(low) }, java.io.File(applicationContext.cacheDir, "audio"),
+            val session = ItemSession(applicationContext, embLease.value, ocrLease.value, c.thumbs, { c.models.speech(low) }, java.io.File(applicationContext.cacheDir, "audio"),
                 VideoOptions(c.settings.videoDetail.first(), c.settings.videoTranscribe.first()))
             var rounds = 0
             while (true) {

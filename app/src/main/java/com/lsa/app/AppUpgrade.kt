@@ -14,12 +14,19 @@ import com.lsa.app.data.prefs.SettingsStore
 object AppUpgrade {
     private const val TAG = "LSA.Upgrade"
 
-    suspend fun run(settings: SettingsStore, dao: ItemDao, current: Int) {
+    suspend fun run(context: android.content.Context, settings: SettingsStore, dao: ItemDao, current: Int) {
         val from = settings.lastVersionCode()
         if (from >= current) return
         Log.i(TAG, "upgrading from $from to $current")
         // 0.2.0: place names gained aliases (countries, regions); look them up again for photos indexed earlier.
         if (from < 200) dao.resetPlaces()
+        // 0.8.0: models are downloaded and run by the OndolSaem app; delete the copies this app downloaded
+        // (up to several GB) and the settings that went with them. Model ids stay the same, so the index stays valid.
+        if (from in 1 until 800) {
+            java.io.File(context.filesDir, "models").deleteRecursively()
+            java.io.File(context.cacheDir, "litertlm").deleteRecursively()
+            settings.removeModelHostingKeys()
+        }
         settings.setLastVersionCode(current)
     }
 }

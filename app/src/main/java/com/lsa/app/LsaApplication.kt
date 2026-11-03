@@ -21,13 +21,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import com.lsa.app.models.ModelState
 import com.lsa.app.indexing.AutoIndexScheduler
 import com.lsa.app.indexing.docs.ThumbStore
 import com.lsa.app.indexing.IndexRunner
 import com.lsa.app.indexing.places.PlaceFinder
-import com.lsa.app.ml.ModelResidency
-import com.lsa.app.models.ModelManager
+import com.lsa.app.ml.ModelHost
 import com.lsa.app.search.SearchEngine
 
 class AppContainer(val context: Context) {
@@ -38,10 +36,10 @@ class AppContainer(val context: Context) {
             // The index is derived data: after a downgrade (older build installed over a newer one) rebuilding beats crashing.
             .fallbackToDestructiveMigrationOnDowngrade(true).build() }
     val settings = SettingsStore(context)
-    val modelManager = ModelManager(context, settings)
     val mediaRepo = MediaStoreRepository(context).also { repo -> appScope.launch { settings.skipMusic.collect { repo.skipMusic = it } } }
     val thumbs = ThumbStore(context)
-    val residency = ModelResidency(context, modelManager, settings, appScope)
+    /** AI models, served by the OndolSaem app. */
+    val models = ModelHost(context, settings, appScope)
     private val source = CompositeSource(
         listOf(
             mediaRepo,
@@ -51,15 +49,16 @@ class AppContainer(val context: Context) {
     )
     val places by lazy { PlaceFinder.fromAssets(context) }
     val indexRunner by lazy { IndexRunner(db.itemDao(), source, places = places) }
-    val indexing by lazy { IndexingController(context, db.itemDao(), indexRunner, settings, modelManager) }
+    val indexing by lazy { IndexingController(context, db.itemDao(), indexRunner, settings) }
     val autoIndex = AutoIndexScheduler(
         context, settings, appScope,
         catchUpSignals = combine(
             db.itemDao().observeFolders().map { f -> f.filter { it.enabled }.map { it.relativePath }.toSet() },
             settings.embeddingModelId,
             settings.enabledKinds,
-            modelManager.states.map { st -> st.filterValues { it is ModelState.Installed }.keys },
-        ) { folders, model, kinds, installed -> listOf(folders, model, kinds, installed) },
+            // OCR / speech models becoming available (or changing) in OndolSaem
+            combine(settings.ocrModelId, settings.asrModelId) { ocr, asr -> "$ocr|$asr" },
+        ) { folders, model, kinds, others -> listOf(folders, model, kinds, others) },
     )
     val taskAlarms by lazy { com.lsa.app.chat.schedule.TaskAlarms(context) }
     val taskManager: com.lsa.app.chat.schedule.TaskManager by lazy {
@@ -67,8 +66,8 @@ class AppContainer(val context: Context) {
     }
     val actions: com.lsa.app.chat.actions.ActionManager by lazy { com.lsa.app.chat.actions.ActionManager(db.actionDao(), fileOps = fileOps) }
     val fileOps: com.lsa.app.chat.actions.FileOps by lazy { com.lsa.app.chat.actions.FileOps(context, db.itemDao(), folders = { indexing.folderSpecs() }) }
-    val chat: com.lsa.app.chat.ChatController by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), residency, search, settings, appScope, taskManager = taskManager, actions = actions) }
-    val search by lazy { SearchEngine(db.itemDao(), { q -> residency.embedder()?.use { it.value.embedQuery(q) } }, settings) }
+    val chat: com.lsa.app.chat.ChatController by lazy { com.lsa.app.chat.ChatController(context, db.chatDao(), db.itemDao(), models, search, settings, appScope, taskManager = taskManager, actions = actions) }
+    val search by lazy { SearchEngine(db.itemDao(), { q -> models.embedder()?.use { it.value.embedQuery(q) } }, settings) }
 }
 
 class LsaApplication : Application() {
@@ -81,15 +80,15 @@ class LsaApplication : Application() {
         Notifications.ensureChannels(this)
         container.autoIndex.start()
         container.appScope.launch { runCatching { container.taskManager.rearmAll() } }
-        container.appScope.launch { AppUpgrade.run(container.settings, container.db.itemDao(), BuildConfig.VERSION_CODE) }
+        container.appScope.launch {
+            AppUpgrade.run(this@LsaApplication, container.settings, container.db.itemDao(), BuildConfig.VERSION_CODE)
+            // Mirror OndolSaem's active models into the settings (a change there re-indexes what it affects).
+            container.models.refresh()
+        }
+        // OndolSaem announces model changes by broadcast too (also when this app is not running): re-check.
+        io.github.taehunkim.ondolsaem.sdk.ModelChangedReceiver.handler = { container.appScope.launch { container.models.refresh() } }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onTrimMemory(level: Int) {
-        super.onTrimMemory(level)
-        android.util.Log.i("LSA.Residency", "onTrimMemory level=$level")
-        if (level >= TRIM_MEMORY_BACKGROUND) container.appScope.launch { container.residency.trim() }
-    }
 }
 
 @Composable

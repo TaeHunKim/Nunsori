@@ -35,7 +35,7 @@ An exception during extraction marks the item `FAILED` with the message in `item
 
 ## Low-power mode
 
-A manual-run option (`indexLowPower`): `ModelResidency.embedder(lowPower = true)` loads the embedder on 2 CPU threads (no GPU; resident under its own key so switching reloads it), sherpa-onnx uses 1 thread, `IndexingWorker` waits 300 ms between files and stops on a thermal status of MODERATE or higher. Automatic runs ignore it.
+A manual-run option (`indexLowPower`): `IndexingWorker` waits 300 ms between files and stops on a thermal status of MODERATE or higher. Since 0.8.0 the models run in OndolSaem, which picks their backend itself; indexing requests are sent with background priority, so searches and chat go first. Automatic runs ignore it.
 
 ## PDF (`PdfExtractor`, `PdfText`)
 

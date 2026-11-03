@@ -33,6 +33,6 @@ class AutoIndexSchedulerTest {
     @Test fun enumParsingFallsBackToDefault() {
         assertEquals(AutoIndexMode.IDLE, SettingsStore.parseEnum("IDLE", AutoIndexMode.MANUAL))
         assertEquals(AutoIndexMode.MANUAL, SettingsStore.parseEnum("garbage", AutoIndexMode.MANUAL))
-        assertEquals(ResidencyPolicy.IDLE_2M, SettingsStore.parseEnum(null, ResidencyPolicy.IDLE_2M))
+        assertEquals(com.lsa.app.indexing.video.VideoDetail.MEDIUM, SettingsStore.parseEnum(null, com.lsa.app.indexing.video.VideoDetail.MEDIUM))
     }
 }

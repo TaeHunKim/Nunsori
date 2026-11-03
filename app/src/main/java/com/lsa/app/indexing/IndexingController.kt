@@ -24,7 +24,6 @@ class IndexingController(
     private val dao: ItemDao,
     private val runner: IndexRunner,
     private val settings: SettingsStore,
-    private val models: com.lsa.app.models.ModelManager,
 ) {
     private val wm = WorkManager.getInstance(context)
 
@@ -56,8 +55,8 @@ class IndexingController(
     suspend fun pipelineKeys(): (ItemKind) -> String {
         val emb = settings.embeddingModelId.first()
         val ocr = settings.ocrModelId.first()
-        val asrId = settings.asrModelId.first()
-        val asr = if (com.lsa.app.models.ModelCatalog.byId(asrId)?.let(models::isReady) == true) asrId else "none"
+        // mirrored from OndolSaem: "none" while it has no speech recognition model
+        val asr = settings.asrModelId.first().ifEmpty { "none" }
         val detail = settings.videoDetail.first().name
         val speech = settings.videoTranscribe.first()
         return { PipelineKeys.of(it, emb, ocr, asr, detail, speech) }

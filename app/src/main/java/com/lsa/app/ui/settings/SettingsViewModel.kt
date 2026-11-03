@@ -56,69 +56,25 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
 
     fun refreshPhotoFolders() = viewModelScope.launch { _photoFolders.value = c.mediaRepo.listFolders() }
 
-    val modelStates = c.modelManager.states
-    val embeddingModelId = c.settings.embeddingModelId
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_EMBEDDING)
-    val ocrModelId = c.settings.ocrModelId
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_OCR)
-    val asrModelId = c.settings.asrModelId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_ASR)
     val skipMusic = c.settings.skipMusic.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-    val chatModelId = c.settings.chatModelId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_CHAT)
-    val chatContextTokens = c.settings.chatContextTokens.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_CHAT_CONTEXT)
-    fun selectChat(id: String) = viewModelScope.launch { c.residency.closeChat(); c.settings.setChatModelId(id) }
-    fun setChatContext(tokens: Int) = viewModelScope.launch { c.residency.closeChat(); c.settings.setChatContextTokens(tokens) }
-    fun selectAsr(id: String) = viewModelScope.launch { c.settings.setAsrModelId(id) }
     fun setSkipMusic(v: Boolean) = viewModelScope.launch { c.settings.setSkipMusic(v) }
     val videoDetail = c.settings.videoDetail.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lsa.app.indexing.video.VideoDetail.MEDIUM)
     val videoTranscribe = c.settings.videoTranscribe.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     fun setVideoDetail(d: com.lsa.app.indexing.video.VideoDetail) = viewModelScope.launch { c.settings.setVideoDetail(d) }
     fun setVideoTranscribe(v: Boolean) = viewModelScope.launch { c.settings.setVideoTranscribe(v) }
-    val hfToken = c.settings.hfToken.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     val autoMode = c.settings.autoMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lsa.app.indexing.AutoIndexMode.MANUAL)
     val scheduleMinutes = c.settings.scheduleMinutes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsStore.DEFAULT_SCHEDULE_MINUTES)
     val chargingOnly = c.settings.scheduleChargingOnly.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-    val residency = c.settings.residency.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.lsa.app.indexing.ResidencyPolicy.IDLE_2M)
 
     fun setAutoMode(m: com.lsa.app.indexing.AutoIndexMode) = viewModelScope.launch { c.settings.setAutoMode(m) }
     fun setScheduleMinutes(v: Int) = viewModelScope.launch { c.settings.setScheduleMinutes(v) }
     fun setChargingOnly(v: Boolean) = viewModelScope.launch { c.settings.setScheduleChargingOnly(v) }
-    fun setResidency(p: com.lsa.app.indexing.ResidencyPolicy) = viewModelScope.launch { c.settings.setResidency(p) }
 
-    fun refreshModels() = c.modelManager.refresh()
-    fun download(id: String) = c.modelManager.startDownload(id)
-    fun cancelDownload(id: String) = c.modelManager.cancelDownload(id)
-    fun deleteModel(id: String) = viewModelScope.launch {
-        c.residency.closeAll()
-        c.modelManager.delete(id)
-    }
-    /** An embedding model switch waiting for the user's confirmation: every indexed file has to be embedded again. */
-    data class ModelSwitch(val modelId: String, val files: Int)
-    private val _pendingSwitch = MutableStateFlow<ModelSwitch?>(null)
-    val pendingSwitch: StateFlow<ModelSwitch?> = _pendingSwitch.asStateFlow()
-
-    /** Switches right away when nothing is indexed yet; otherwise asks first ([confirmSwitch] / [cancelSwitch]). */
-    fun selectEmbedding(id: String) = viewModelScope.launch {
-        if (id == c.settings.embeddingModelId.first()) return@launch
-        val files = dao.doneCount()
-        if (files == 0) c.settings.setEmbeddingModelId(id) else _pendingSwitch.value = ModelSwitch(id, files)
-    }
-
-    /** Applies the switch and starts re-indexing everything with the new model. */
-    fun confirmSwitch() = viewModelScope.launch {
-        val s = _pendingSwitch.value ?: return@launch
-        _pendingSwitch.value = null
-        c.settings.setEmbeddingModelId(s.modelId)
-        c.indexing.start()
-    }
-
-    fun cancelSwitch() { _pendingSwitch.value = null }
-    fun selectOcr(id: String) = viewModelScope.launch { c.settings.setOcrModelId(id) }
     val showResourceIndicator = c.settings.showResourceIndicator.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     val taskJudgeFirst = c.settings.taskJudgeFirst.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     fun setTaskJudgeFirst(on: Boolean) = viewModelScope.launch { c.settings.setTaskJudgeFirst(on) }
     fun setShowResourceIndicator(on: Boolean) = viewModelScope.launch { c.settings.setShowResourceIndicator(on) }
     val chatCustomPrompt = c.settings.chatCustomPrompt.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     fun saveChatPrompt(s: String) = viewModelScope.launch { c.settings.setChatCustomPrompt(s) }
-    fun saveToken(token: String) = viewModelScope.launch { c.settings.setHfToken(token) }
 }

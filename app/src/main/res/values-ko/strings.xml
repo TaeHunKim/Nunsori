@@ -11,10 +11,8 @@
 
     <!-- Notifications -->
     <string name="channel_indexing">인덱싱</string>
-    <string name="channel_download">모델 다운로드</string>
     <string name="notif_indexing_title">파일 인덱싱 중</string>
     <string name="notif_indexing_preparing">준비 중…</string>
-    <string name="notif_download_title">%1$s 다운로드 중</string>
 
     <string name="dialog_ok">확인</string>
 
@@ -37,25 +35,13 @@
     <string name="onboarding_step">%1$d / %2$d 단계</string>
     <string name="onboarding_files_title">무엇을 인덱싱할까요?</string>
     <string name="onboarding_files_desc">검색할 파일 종류와 폴더를 고르세요. 모든 데이터는 폰 안에만 있습니다.</string>
-    <string name="onboarding_model_title">검색 모델을 고르세요</string>
-    <string name="onboarding_model_desc">모델은 한 번만 내려받고 폰에서 실행됩니다. 440M을 추천하며 740M은 오디오도 이해합니다. 건너뛰고 나중에 받아도 됩니다.</string>
+    <string name="onboarding_model_title">AI 모델 준비</string>
+    <string name="onboarding_model_desc">모델은 동반 앱인 온돌샘에서 폰 안에서 실행됩니다. 온돌샘을 설치하고 검색 모델을 받으세요(EmbeddingGemma 440M 추천, 740M은 오디오도 이해). 건너뛰고 나중에 해도 됩니다.</string>
     <string name="onboarding_back">이전</string>
     <string name="onboarding_next">다음</string>
     <string name="onboarding_finish">완료</string>
 
     <!-- Model memory -->
-    <string name="model_switch_title">인덱스를 다시 만들까요?</string>
-    <plurals name="model_switch_body">
-        <item quantity="other">색인된 %1$d개 파일을 모두 %2$s(으)로 다시 임베딩해야 합니다. 끝날 때까지는 이미 처리된 파일만 검색되고, 시간이 오래 걸릴 수 있습니다. 계속할까요?</item>
-    </plurals>
-    <string name="model_switch_confirm">다시 만들기</string>
-    <string name="model_chat_gemma4_e2b_desc">구글의 멀티모달 채팅 모델(텍스트·이미지), 유효 파라미터 약 20억. 추천 기본값.</string>
-    <string name="model_chat_gemma4_e4b_desc">E2B보다 크고 성능이 좋습니다(텍스트·이미지). 메모리를 더 씁니다.</string>
-    <string name="model_chat_qwen_desc">더 작은 텍스트 전용 채팅 모델. 약한 폰에서 빠르지만 도구 사용 능력은 낮습니다.</string>
-    <string name="settings_chat_models">채팅 모델</string>
-    <string name="settings_chat_desc">채팅 화면에서 쓰입니다. 폰에서 실행되며, 큰 모델일수록 답이 좋지만 메모리와 시간이 더 듭니다.</string>
-    <string name="chat_context_title">컨텍스트 크기</string>
-    <string name="chat_context_desc">모델이 한 번에 볼 수 있는 텍스트 양(질문, 대화 기록, 파일, 답변)입니다. 클수록 느리고 메모리를 더 씁니다.</string>
     <string name="nav_chat">채팅</string>
     <string name="chat_empty">아직 채팅이 없습니다. 새 채팅을 시작해 내 파일에 대해 물어보세요.</string>
     <string name="chat_new">새 채팅</string>
@@ -75,7 +61,7 @@
     <string name="chat_stop">중지</string>
     <string name="chat_dismiss">닫기</string>
     <string name="chat_error">채팅 모델 오류: %1$s</string>
-    <string name="chat_model_missing">설치된 채팅 모델이 없습니다. 설정에서 내려받으세요.</string>
+    <string name="chat_model_missing">사용할 수 있는 채팅 모델이 없습니다. 온돌샘에서 받으세요 (설정 › 모델).</string>
     <string name="chat_loading_model">모델을 불러오는 중… 첫 답변은 더 오래 걸립니다.</string>
     <string name="chat_thinking">생각하는 중…</string>
     <string name="chat_trimmed">이전 메시지 일부는 컨텍스트에 들어가지 않아 제외되었습니다.</string>
@@ -94,14 +80,6 @@
     <string name="about_version">버전 %1$s (데이터베이스 v%2$d)</string>
     <string name="about_tagline">눈소리(Nunsori): 보고 듣는 내 폰 검색. Native, Unified, Natural-language Search, Offline Recall &amp; Index.</string>
     <string name="about_places_credit">장소 이름: GeoNames (CC BY 4.0).</string>
-    <string name="residency_title">모델 메모리</string>
-    <string name="residency_desc">AI 모델(검색, 채팅, 글자 인식, 음성 인식)을 사용한 뒤 메모리에 얼마나 올려 둘지 정합니다. 채팅 답변 중에는 필요한 모델이 항상 올라가 있습니다.</string>
-    <string name="residency_idle">2분간 안 쓰면 해제</string>
-    <string name="residency_idle_desc">균형형입니다. 연달아 검색하거나 채팅하면 빠르게 유지됩니다.</string>
-    <string name="residency_keep">항상 메모리에 유지</string>
-    <string name="residency_keep_desc">가장 빠르지만 앱 프로세스가 살아 있는 동안 모델을 메모리에 둡니다. 검색용 약 0.5GB, 채팅 모델을 쓰면 2~4GB가 더해집니다.</string>
-    <string name="residency_immediate">사용 직후 해제</string>
-    <string name="residency_immediate_desc">메모리 사용이 가장 적지만 검색, 인덱싱, 채팅 메시지마다 모델을 다시 불러옵니다(채팅 모델은 시간이 걸립니다).</string>
 
     <!-- Index -->
     <string name="index_status_idle">인덱싱 준비됨</string>
@@ -119,11 +97,11 @@
     <string name="index_empty">아직 인덱싱된 파일이 없습니다.</string>
     <string name="warn_no_permission">저장소 접근 권한(사진·미디어 또는 모든 파일)이 필요합니다. 설정에서 허용해 주세요.</string>
     <string name="warn_no_folders">설정에서 인덱싱할 폴더를 선택해 주세요.</string>
-    <string name="warn_no_model">먼저 설정에서 임베딩 모델을 다운로드해 주세요.</string>
+    <string name="warn_no_model">사용할 수 있는 검색 모델이 없습니다. 온돌샘을 설치하고 임베딩 모델을 받으세요 (설정 › 모델).</string>
     <plurals name="warn_stale">
         <item quantity="other">%d개 파일이 다른 모델로 인덱싱되어 있습니다. 인덱싱을 시작하면 다시 처리합니다.</item>
     </plurals>
-    <string name="err_model_missing">선택한 임베딩 모델이 설치되어 있지 않습니다.</string>
+    <string name="err_model_missing">온돌샘에 사용할 수 있는 임베딩 모델이 없습니다.</string>
     <string name="err_no_folders">선택된 폴더가 없습니다.</string>
     <string name="err_load_failed">임베딩 모델을 불러오지 못했습니다.</string>
 
@@ -175,7 +153,7 @@
     <string name="search_hint">파일 검색…</string>
     <string name="search_idle">찾고 싶은 내용을 설명하거나, 단어·장소·파일 이름을 입력해 보세요.</string>
     <string name="search_no_results">검색 결과가 없습니다.</string>
-    <string name="search_model_missing">임베딩 모델이 설치되어 있지 않아 키워드 일치 결과만 표시합니다.</string>
+    <string name="search_model_missing">온돌샘에 검색 모델이 없어 키워드 일치 결과만 표시합니다.</string>
     <string name="filter_documents">문서</string>
     <string name="filter_images">이미지</string>
     <string name="filter_audio">오디오</string>
@@ -204,33 +182,10 @@
     <plurals name="image_count">
         <item quantity="other">이미지 %d장</item>
     </plurals>
-    <string name="settings_embedding_models">임베딩 모델</string>
-    <string name="settings_embedding_desc">모델은 필요할 때 직접 다운로드합니다. 모델을 바꾸면 다시 인덱싱해야 합니다.</string>
-    <string name="settings_ocr_models">OCR 모델</string>
-    <string name="model_download">다운로드</string>
-    <string name="model_retry">다시 시도</string>
-    <string name="model_delete">삭제</string>
-    <string name="model_installed">설치됨</string>
-    <string name="model_bundled">앱에 내장</string>
-    <string name="model_coming_soon">곧 지원 예정</string>
-    <string name="model_downloading">다운로드 중… %1$d%%</string>
-    <string name="model_err_auth">접근이 거부되었습니다. 아래에 Hugging Face 토큰을 입력하고 huggingface.co에서 모델 라이선스에 동의해 주세요.</string>
-    <string name="model_err_not_found">Hugging Face에서 모델 파일을 찾을 수 없습니다.</string>
-    <string name="model_err_network">네트워크 오류입니다. 다시 시도하면 이어서 받습니다.</string>
-    <string name="model_err_http">다운로드에 실패했습니다.</string>
-    <string name="model_eg2_440m_desc">텍스트와 이미지를 함께 다루는 멀티모달 임베딩(768차원). 기본 추천 모델입니다.</string>
-    <string name="model_eg2_740m_desc">음성까지 지원하는 더 큰 멀티모달 모델입니다.</string>
-    <string name="model_mobileclip2_desc">영어 전용의 아주 작은 이미지–텍스트 모델입니다.</string>
-    <string name="model_mlkit_desc">한국어와 라틴 문자를 인식하는 Google ML Kit 텍스트 인식. 오프라인으로 동작합니다.</string>
-    <string name="model_ppocr_desc">한국어용 PaddleOCR 모바일 모델입니다.</string>
     <string name="storage_title">저장 공간</string>
     <string name="storage_previews">미리보기: %1$s</string>
     <string name="storage_clear">미리보기 지우기</string>
-    <string name="model_sensevoice_desc">한국어, 영어, 중국어, 일본어 음성을 오프라인으로 인식합니다. 음성 파일과 영상의 소리에 사용합니다.</string>
-    <string name="model_moonshine_desc">아주 작은 음성 인식 모델입니다. 모델마다 한 가지 언어만 지원합니다.</string>
-    <string name="settings_asr_models">음성 인식 모델</string>
-    <string name="settings_asr_desc">말소리를 텍스트로 바꿔서 녹음 내용을 검색할 수 있게 합니다.</string>
-    <string name="audio_needs_740m">오디오 임베딩에는 EmbeddingGemma 2 740M 모델이 필요합니다. 없으면 음성 인식으로만 검색할 수 있습니다.</string>
+    <string name="audio_needs_740m">오디오 임베딩에는 EmbeddingGemma 2 740M 모델이 필요합니다(온돌샘에서 선택). 없으면 음성 인식으로만 검색할 수 있습니다.</string>
     <string name="skip_music">음악 파일 제외</string>
     <string name="skip_music_desc">음악 보관함의 노래는 인덱싱하지 않고, 녹음한 음성은 인덱싱합니다.</string>
     <string name="video_detail_title">영상 분석 정밀도</string>
@@ -239,8 +194,6 @@
     <string name="video_detail_high">자세히 (1초마다 한 장면)</string>
     <string name="video_speech">영상 속 음성 인식</string>
     <string name="video_speech_desc">영상에서 말한 내용도 검색할 수 있게 합니다. 음성 인식 모델이 필요합니다.</string>
-    <string name="settings_token">Hugging Face 토큰</string>
-    <string name="settings_token_desc">선택 사항입니다. 접근이 제한된 모델이나 요청 제한을 피할 때만 필요합니다.</string>
     <string name="settings_language">언어</string>
     <string name="lang_system">시스템</string>
     <string name="lang_en">English</string>
@@ -258,11 +211,10 @@
     <string name="folder_preset_screenshots">스크린샷</string>
     <string name="folder_preset_downloads">다운로드</string>
     <string name="folder_presets_media_only">"모든 파일 접근"을 허용하지 않으면 이 폴더의 사진·음성·영상만 인덱싱됩니다.</string>
-    <string name="onboarding_ocr_note">이미지 속 글자는 내장 온디바이스 OCR(Google ML Kit)로 읽습니다. 따로 받을 것이 없습니다.</string>
     <string name="index_low_power">저전력 모드</string>
     <string name="index_low_power_desc">수동 인덱싱용: 느리지만 CPU만 적은 스레드로 쓰고, 파일 사이에 쉬며, 폰이 뜨거워지면 멈춥니다.</string>
     <string name="resource_unloaded">–</string>
-    <string name="resource_models">임베딩 %1$s · 채팅 %2$s</string>
+    <string name="resource_models">모델 %1$s</string>
     <string name="resource_usage">RAM %1$d MB · CPU %2$d%%</string>
     <string name="settings_resource_title">리소스 표시</string>
     <string name="settings_resource_desc">불러온 모델의 실행 장치(GPU/CPU), 앱 메모리, CPU 사용률을 상단 바에 표시합니다. GPU 사용률 자체는 앱에서 읽을 수 없습니다.</string>
@@ -360,4 +312,21 @@
     <string name="about_github">GitHub 저장소</string>
     <string name="about_licenses">오픈소스 라이선스</string>
     <string name="about_licenses_close">닫기</string>
+    <string name="host_title">AI 모델 (온돌샘)</string>
+    <string name="host_desc">눈소리의 AI 모델(검색, 글자 인식, 음성 인식, 채팅)은 별도 앱인 온돌샘이 내려받고 실행합니다. 다른 앱과도 함께 씁니다. 모델 선택과 다운로드는 온돌샘에서 하세요.</string>
+    <string name="host_checking">온돌샘 확인 중…</string>
+    <string name="host_not_installed">온돌샘이 설치되어 있지 않습니다. 의미로 검색하기, 사진 속 글자 읽기, 음성 받아쓰기, 채팅을 쓰려면 설치하세요.</string>
+    <string name="host_not_allowed">온돌샘이 연결을 거부했습니다. 이 눈소리 빌드의 서명 키를 온돌샘이 신뢰하지 않습니다.</string>
+    <string name="host_unreachable">온돌샘이 응답하지 않습니다. 온돌샘을 한 번 연 뒤 다시 확인하세요.</string>
+    <string name="host_connected">온돌샘에 연결되었습니다.</string>
+    <string name="host_cat_embedding">검색 (임베딩)</string>
+    <string name="host_cat_ocr">사진 속 글자</string>
+    <string name="host_cat_asr">음성 인식</string>
+    <string name="host_cat_llm">채팅</string>
+    <string name="host_model_none">선택 안 됨</string>
+    <string name="host_model_not_downloaded">%1$s (받지 않음)</string>
+    <string name="host_install">온돌샘 설치</string>
+    <string name="host_open">온돌샘 열기</string>
+    <string name="host_check">다시 확인</string>
+    <string name="host_note">온돌샘에서 검색 모델이 바뀌면 눈소리가 영향을 받는 파일을 다시 인덱싱합니다.</string>
 </resources>

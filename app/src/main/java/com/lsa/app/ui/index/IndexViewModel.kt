@@ -3,7 +3,6 @@ package com.lsa.app.ui.index
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lsa.app.AppContainer
-import com.lsa.app.models.ModelState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,9 +27,10 @@ class IndexViewModel(private val c: AppContainer) : ViewModel() {
     val progress = c.indexing.progress
     val running = c.indexing.running.state(false)
     val enabledFolderCount = dao.observeFolders().map { f -> f.count { it.enabled } }.state(0)
-    val modelReady = combine(c.settings.embeddingModelId, c.modelManager.states) { id, st ->
-        st[id] is ModelState.Installed
-    }.state(false)
+    val modelReady = c.models.state.map { it.status == com.lsa.app.ml.HostState.Status.UNKNOWN || it.ready(io.github.taehunkim.ondolsaem.sdk.OndolSaem.Categories.EMBEDDING) }.state(true)
+    /** Why the models are unavailable (OndolSaem missing, not allowed, ...). */
+    val host = c.models.state
+    fun refreshHost() { viewModelScope.launch { c.models.refresh() } }
     val staleCount = c.settings.embeddingModelId.flatMapLatest { dao.observeStaleCount(it) }.state(0)
 
     /** Runs only the failed files (a normal run also retries them, together with everything still pending). */

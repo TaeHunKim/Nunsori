@@ -34,7 +34,7 @@
 *.webp
 *.heic
 
-# Third-party binaries fetched by scripts (see scripts/fetch-sherpa-onnx.sh)
+# Leftovers of builds before 0.8.0 (models moved to OndolSaem)
 /app/libs/*.aar
 /app/src/main/assets/*.onnx
 

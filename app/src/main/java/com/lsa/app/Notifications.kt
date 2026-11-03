@@ -14,7 +14,6 @@ import java.util.UUID
 
 object Notifications {
     const val CH_INDEXING = "indexing"
-    const val CH_DOWNLOAD = "download"
     const val CH_TASKS = "tasks"
     const val ID_INDEXING = 1001
     const val ID_DOWNLOAD = 1002
@@ -25,9 +24,6 @@ object Notifications {
         val nm = ctx.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(
             NotificationChannel(CH_INDEXING, ctx.getString(R.string.channel_indexing), NotificationManager.IMPORTANCE_LOW),
-        )
-        nm.createNotificationChannel(
-            NotificationChannel(CH_DOWNLOAD, ctx.getString(R.string.channel_download), NotificationManager.IMPORTANCE_LOW),
         )
         nm.createNotificationChannel(
             NotificationChannel(CH_TASKS, ctx.getString(R.string.channel_tasks), NotificationManager.IMPORTANCE_DEFAULT),

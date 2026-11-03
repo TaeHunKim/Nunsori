@@ -9,7 +9,7 @@ A three-step wizard appears on the first launch. Everything in it can be changed
 ![Step 1](images/onboarding-1.png) ![Step 2](images/onboarding-2.png) ![Step 3](images/onboarding-3.png)
 
 1. **What to index:** the kinds of files and the folders (the permissions they need are requested here).
-2. **Model:** pick and download an embedding model (440M recommended, 740M also understands audio). You can skip it and download later; Search and Index tell you when no model is installed.
+2. **AI models:** shows whether the companion app OndolSaem is installed and which model it uses for search, text in images, speech and chat, with buttons to install or open it. Models are downloaded and chosen in OndolSaem (embedding 440M recommended, 740M also understands audio). You can skip this; Search, Index and Chat tell you when a model is missing.
 3. **Automatic indexing:** immediately, at a set time, when idle and charging, or manually.
 
 ## Index
@@ -49,18 +49,13 @@ See [chat.md](chat.md) for how the context is built.
 
 ## Settings
 
-Five tabs: **Index** (what to index, folders, automatic indexing), **Models** (embedding, OCR, speech and chat models, model memory, Hugging Face token), **Chat** (context size, your instructions, background tasks), **App** (storage, resource indicator, language) and **About** (app name, version, GitHub link, open-source licenses).
+Five tabs: **Index** (what to index, folders, automatic indexing), **Models** (connection to OndolSaem and the model of each category), **Chat** (your instructions, background tasks), **App** (storage, resource indicator, language) and **About** (app name, version, GitHub link, open-source licenses).
 
 - **What to index:** Images, Text files, Documents, Audio, Video.
 - **Folders:** quick-add chips for Camera, Screenshots and Downloads, or pick any folder; choose whether to include subfolders. (Without "All files access" only photos, audio and video in a folder are indexed.)
-- **Speech recognition and OCR:** the first-run wizard offers the SenseVoice download when Audio or Video is on. OCR is Google ML Kit, built in, nothing to download. Android has no OCR API of its own, and its speech recognizer is meant for the microphone, so it is not used for files.
+- **AI models (OndolSaem):** the models run in the companion app OndolSaem: choosing and downloading them, the memory policy, the Hugging Face token and the chat context size are all there (**Open OndolSaem**). Nunsori shows the connection and the model of each category; **Check again** after changing something there. When the search model changes in OndolSaem, the files indexed with the old model are marked for re-indexing (Index shows how many; automatic indexing picks them up).
 - **Chat instructions:** your own text added to the chat's system prompt for every conversation (up to 2,000 characters).
-- **Resource indicator:** a top-bar readout of the backend (GPU/CPU) of the loaded models, app memory and CPU use. GPU load itself cannot be read by apps.
-- **Embedding model:** download or delete 440M (text+image) or 740M (adds audio). Switching to another model asks for confirmation first, because every indexed file has to be embedded again; on "Re-create" the new model is applied and indexing starts. Until it finishes only the files already processed are searchable (Search shows a banner). Nothing is asked when nothing has been indexed yet.
-
-![Re-create the index?](images/model-switch.png)
-- **Speech recognition:** needed for transcripts of audio and video.
-- **Chat model:** download and select Gemma 4 E2B (default), E4B or Qwen2.5 1.5B, and choose the context size (2K, 4K, 8K).
+- **Resource indicator:** a top-bar readout of the connection to OndolSaem, this app's memory and CPU use. The models' memory is on OndolSaem's dashboard.
 - **Calendar and contacts:** with *Calendar & contacts* checked, ask the assistant to put an event or a person into your calendar or contacts (for example after it read an invitation photo). It shows a card with the details; **Open in Calendar/Contacts** opens the system app with the fields filled in and you press Save there. Nothing is added without you, and the app needs no calendar or contacts permission. Chats created before this version have the chip off; switch it on above the conversation.
 - **Moving and deleting files:** with *Move & delete files* checked, ask for example "move last year's receipts to Documents/Receipts" or "delete the blurry photos from yesterday". The assistant finds the files, then shows a card with their names; nothing happens until you press the button. Deleting goes to the trash (gallery trash for photos and videos, the hidden `.LSA_Trash` folder for documents); *Delete permanently* is a separate button. Needs "All files access". In scheduled tasks the assistant can only propose; the cards wait in the chat until you approve.
 - **Automatic indexing:** Manual; Immediately (new files are picked up in the background); Scheduled (a time, optionally only while charging); When idle (charging and idle).
@@ -77,7 +72,8 @@ See [privacy.md](privacy.md#permissions-androidmanifestxml).
 |---|---|
 | Nothing found | Is the file `DONE` on the Index screen? Is the folder added and the kind enabled? Text/documents need All files access. |
 | Documents or text never appear | Grant "All files access" in system settings. |
-| Model download stalls | Retry; downloads resume. Hugging Face may need a token (Settings). |
+| "No search model available" | Install OndolSaem, download a model there, then **Check again** in Settings › Models. |
+| "OndolSaem refused the connection" | Nunsori and OndolSaem must be signed with the same key (or an allowed one), e.g. both debug builds from the same machine. |
 | Slow indexing | Emulators use CPU. On phones, a hot device pauses automatic runs. |
-| Audio never matches by sound | Audio embedding needs the 740M model; transcripts need the speech model. |
+| Audio never matches by sound | Audio embedding needs the 740M model; transcripts need the speech model (both chosen in OndolSaem). |
 | Old .doc/.ppt/.xls or hwp | Unsupported; convert to the modern format or PDF. |

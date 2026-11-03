@@ -15,7 +15,6 @@ import com.lsa.app.indexing.docs.OfficeExtractor
 import com.lsa.app.indexing.docs.PdfExtractor
 import com.lsa.app.indexing.docs.TextCard
 import com.lsa.app.indexing.docs.ThumbStore
-import com.lsa.app.ml.ocr.MlKitOcrEngine
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -36,7 +35,11 @@ class DocExtractorsTest {
     private lateinit var dir: File
     private lateinit var thumbs: ThumbStore
     private val embedder = FakeEmbedder()
-    private val ocr = MlKitOcrEngine()
+    /** OCR runs in OndolSaem; here it only has to be called for the scanned page (its result is what we check for). */
+    private val ocr = object : com.lsa.app.ml.ocr.OcrEngine {
+        override val modelId = "fake-ocr"
+        override suspend fun recognize(bitmap: android.graphics.Bitmap) = "Budget table 20481"
+    }
 
     @Before fun setUp() {
         dir = File(ctx.cacheDir, "docs-test").also { it.deleteRecursively(); it.mkdirs() }

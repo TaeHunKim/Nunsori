@@ -25,7 +25,7 @@ class OnboardingTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
     private val store = SettingsStore(ApplicationProvider.getApplicationContext())
     private val filesTitle = "What should be indexed?"
-    private val modelTitle = "Choose a search model"
+    private val modelTitle = "Set up the AI models"
     private val autoTitle = "When should files be indexed?"
 
     @Before fun showAgain() {
@@ -42,13 +42,13 @@ class OnboardingTest {
         rule.onNodeWithText(autoTitle).assertIsDisplayed()
     }
 
-    @Test fun threeStepsLeadToTheAutoIndexChoice() {
-        rule.onNodeWithText("Step 1 of 3").assertIsDisplayed()
+    @Test fun stepsLeadToTheAutoIndexChoice() {
+        rule.onNodeWithText("Step 1 of 4").assertIsDisplayed()
         rule.onNodeWithText("Back").assertIsNotEnabled()
         rule.onNodeWithText("Folders to index").assertIsDisplayed()
         rule.onNodeWithText("Next").performClick()
-        rule.onNodeWithText("Step 2 of 3").assertIsDisplayed()
-        rule.onNodeWithText("Embedding model").assertIsDisplayed()
+        rule.onNodeWithText("Step 2 of 4").assertIsDisplayed()
+        rule.onNodeWithText("AI models (OndolSaem)").assertIsDisplayed()
         rule.onNodeWithText("Back").assertIsEnabled().performClick()
         rule.onNodeWithText(filesTitle).assertIsDisplayed()
         toAutoStep()
@@ -57,8 +57,9 @@ class OnboardingTest {
 
     @Test fun mustChooseAnAutoIndexModeBeforeFinishing() {
         toAutoStep()
-        rule.onNodeWithText("Finish").assertIsNotEnabled()
+        rule.onNodeWithText("Next").assertIsNotEnabled()
         rule.onNodeWithText("Manual only").performClick()
+        rule.onNodeWithText("Next").assertIsEnabled().performClick()
         rule.onNodeWithText("Finish").assertIsEnabled().performClick()
         waitGone(autoTitle)
         assertEquals(AutoIndexMode.MANUAL, runBlocking { store.autoMode.first() })
@@ -70,6 +71,7 @@ class OnboardingTest {
         rule.onNodeWithText("At a set time").performClick()
         rule.onNodeWithText("Only while charging").assertIsDisplayed()
         rule.onNodeWithText("Change").assertIsDisplayed()
+        rule.onNodeWithText("Next").assertIsEnabled().performClick()
         rule.onNodeWithText("Finish").assertIsEnabled().performClick()
         waitGone(autoTitle)
         assertEquals(AutoIndexMode.SCHEDULED, runBlocking { store.autoMode.first() })

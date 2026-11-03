@@ -58,18 +58,17 @@ fun resourceSamples(context: android.content.Context, periodMs: Long = 1000): Fl
     }
 }.flowOn(Dispatchers.IO)
 
-/** Small top-bar readout: which backend the loaded models use, process memory, CPU share, heat. */
+/** Small top-bar readout: whether OndolSaem (which runs the models) is connected, process memory, CPU share, heat. */
 @Composable
 fun ResourceIndicator(modifier: Modifier = Modifier) {
     val container = rememberContainer()
     val ctx = LocalContext.current
     val sample by remember(ctx) { resourceSamples(ctx) }.collectAsStateWithLifecycle(null)
-    val emb by container.residency.embedderBackend.collectAsStateWithLifecycle()
-    val chat by container.residency.chatBackend.collectAsStateWithLifecycle()
+    val host by container.models.embedderBackend.collectAsStateWithLifecycle(null)
     val none = stringResource(R.string.resource_unloaded)
     Column(modifier.padding(end = 12.dp)) {
         Text(
-            stringResource(R.string.resource_models, emb ?: none, chat ?: none),
+            stringResource(R.string.resource_models, host ?: none),
             style = MaterialTheme.typography.labelSmall,
         )
         sample?.let {

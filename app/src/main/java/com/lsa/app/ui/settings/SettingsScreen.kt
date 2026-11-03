@@ -60,17 +60,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.lsa.app.R
-import com.lsa.app.models.DownloadException
-import com.lsa.app.models.ModelCatalog
-import com.lsa.app.models.ModelKind
-import com.lsa.app.models.ModelSource
-import com.lsa.app.models.ModelSpec
-import com.lsa.app.models.ModelState
 import com.lsa.app.rememberContainer
 import com.lsa.app.ui.common.displayFolder
 import com.lsa.app.ui.index.hasPhotoPermission
 import com.lsa.app.ui.onboarding.AutoIndexOptions
-import com.lsa.app.indexing.ResidencyPolicy
 import com.lsa.app.indexing.KindSupport
 import com.lsa.app.data.db.ItemKind
 import com.lsa.app.ui.common.WarningCard
@@ -82,7 +75,7 @@ fun SettingsScreen() {
 
     // Both permissions can change while we are in the system settings screen: re-check when coming back.
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-        vm.refreshModels(); vm.refreshThumbBytes()
+        vm.refreshThumbBytes()
     }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = listOf(R.string.settings_tab_index, R.string.settings_tab_models, R.string.settings_tab_chat, R.string.settings_tab_app, R.string.settings_tab_about)
@@ -126,65 +119,11 @@ private fun IndexTab(vm: SettingsViewModel) {
 
 @Composable
 private fun ModelsTab(vm: SettingsViewModel) {
-    val states by vm.modelStates.collectAsStateWithLifecycle()
-    val ocrId by vm.ocrModelId.collectAsStateWithLifecycle()
-    val savedToken by vm.hfToken.collectAsStateWithLifecycle()
-        EmbeddingModelsSection(vm)
-        Section(R.string.settings_ocr_models, null)
-        ModelCatalog.ofKind(ModelKind.OCR).forEach { spec ->
-            ModelCard(spec, states[spec.id], selected = spec.id == ocrId, vm = vm, onSelect = { vm.selectOcr(spec.id) })
-        }
-        SpeechModelsSection(vm)
-        HorizontalDivider()
-
-        // --- Chat model
-        Section(R.string.settings_chat_models, R.string.settings_chat_desc)
-        val chatId by vm.chatModelId.collectAsStateWithLifecycle()
-        ModelCatalog.ofKind(ModelKind.LLM).forEach { spec ->
-            ModelCard(spec, states[spec.id], selected = spec.id == chatId, vm = vm, onSelect = { vm.selectChat(spec.id) })
-        }
-        HorizontalDivider()
-
-        // --- Model memory
-        Section(R.string.residency_title, R.string.residency_desc)
-        val residency by vm.residency.collectAsStateWithLifecycle()
-        listOf(
-            Triple(ResidencyPolicy.IDLE_2M, R.string.residency_idle, R.string.residency_idle_desc),
-            Triple(ResidencyPolicy.KEEP, R.string.residency_keep, R.string.residency_keep_desc),
-            Triple(ResidencyPolicy.IMMEDIATE, R.string.residency_immediate, R.string.residency_immediate_desc),
-        ).forEach { (p, title, desc) ->
-            Row(Modifier.fillMaxWidth().selectable(residency == p, role = Role.RadioButton) { vm.setResidency(p) }, verticalAlignment = Alignment.Top) {
-                RadioButton(selected = residency == p, onClick = null, modifier = Modifier.padding(top = 4.dp, end = 12.dp))
-                Column(Modifier.padding(vertical = 4.dp)) {
-                    Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
-                    Text(stringResource(desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-        HorizontalDivider()
-
-        // --- HF token
-        Section(R.string.settings_token, R.string.settings_token_desc)
-        var token by remember(savedToken) { mutableStateOf(savedToken) }
-        OutlinedTextField(
-            value = token, onValueChange = { token = it }, singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            label = { Text("hf_…") }, modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedButton(onClick = { vm.saveToken(token) }, enabled = token != savedToken) { Text(stringResource(R.string.btn_save)) }
+    OndolSaemSection()
 }
 
 @Composable
 private fun ChatTab(vm: SettingsViewModel) {
-        val chatContext by vm.chatContextTokens.collectAsStateWithLifecycle()
-        Text(stringResource(R.string.chat_context_title), style = MaterialTheme.typography.titleSmall)
-        Text(stringResource(R.string.chat_context_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(2048, 4096, 8192).forEach { n ->
-                FilterChip(selected = chatContext == n, onClick = { vm.setChatContext(n) }, label = { Text("${n / 1024}K") })
-            }
-        }
         val savedPrompt by vm.chatCustomPrompt.collectAsStateWithLifecycle()
         var prompt by remember(savedPrompt) { mutableStateOf(savedPrompt) }
         Text(stringResource(R.string.chat_prompt_title), style = MaterialTheme.typography.titleSmall)
@@ -271,67 +210,6 @@ internal fun Section(title: Int, desc: Int?) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(stringResource(title), style = MaterialTheme.typography.titleMedium)
         if (desc != null) Text(stringResource(desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-internal fun ModelCard(spec: ModelSpec, state: ModelState?, selected: Boolean, vm: SettingsViewModel, onSelect: () -> Unit) {
-    val ctx = LocalContext.current
-    val installed = state is ModelState.Installed
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = selected, onClick = onSelect, enabled = installed)
-                Column(Modifier.weight(1f)) {
-                    Text(spec.displayName, style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        listOfNotNull(
-                            spec.sizeBytes?.let { Formatter.formatShortFileSize(ctx, it) },
-                            spec.license,
-                        ).joinToString(" · "),
-                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            Text(stringResource(spec.descriptionRes), style = MaterialTheme.typography.bodySmall)
-            when (state) {
-                is ModelState.Downloading -> {
-                    val pct = if (state.total > 0) (state.downloaded * 100 / state.total).toInt() else 0
-                    LinearProgressIndicator(
-                        progress = { if (state.total > 0) state.downloaded.toFloat() / state.total else 0f },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.model_downloading, pct), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                        TextButton(onClick = { vm.cancelDownload(spec.id) }) { Text(stringResource(R.string.action_cancel)) }
-                    }
-                }
-                is ModelState.Failed -> {
-                    Text(
-                        stringResource(
-                            when (state.kind) {
-                                DownloadException.Kind.AUTH -> R.string.model_err_auth
-                                DownloadException.Kind.NOT_FOUND -> R.string.model_err_not_found
-                                DownloadException.Kind.NETWORK -> R.string.model_err_network
-                                else -> R.string.model_err_http
-                            },
-                        ),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
-                    )
-                    Button(onClick = { vm.download(spec.id) }) { Text(stringResource(R.string.model_retry)) }
-                }
-                ModelState.Installed -> {
-                    if (spec.source is ModelSource.HuggingFace || spec.source is ModelSource.Archive) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.model_installed), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                            TextButton(onClick = { vm.deleteModel(spec.id) }) { Text(stringResource(R.string.model_delete)) }
-                        }
-                    } else Text(stringResource(R.string.model_bundled), style = MaterialTheme.typography.bodySmall)
-                }
-                ModelState.Unavailable -> Text(stringResource(R.string.model_coming_soon), style = MaterialTheme.typography.bodySmall)
-                else -> Button(onClick = { vm.download(spec.id) }) { Text(stringResource(R.string.model_download)) }
-            }
-        }
     }
 }
 

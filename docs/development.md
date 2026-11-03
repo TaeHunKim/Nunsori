@@ -11,8 +11,8 @@ Setup: [getting-started.md](getting-started.md). Design: [architecture.md](archi
 | Level | Command | Notes |
 |---|---|---|
 | Unit | `./gradlew assembleDebug testDebugUnitTest` | Chunkers, fusion, keyword matching, DB logic |
-| Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. `ChatTest` runs the chat controller and tools against a fake `ChatModel`. **It uninstalls the app at the end, deleting downloaded models.** Write tests that do not depend on the app's settings. Uses fake embedders and speech engines. |
-| Real-model E2E | manual, emulator | Download the real model in the app, index fixtures, query. Drive the UI with mobile-mcp; `adb uiautomator` is blocked while mobile-mcp is attached, so `scripts/e2e-setup.sh` may not work. |
+| Instrumented | `./gradlew connectedDebugAndroidTest` | Needs a device. `ChatTest` runs the chat controller and tools against a fake `ChatModel` (`ModelHost.chatOverride`). `ModelHostTest` talks to the real OndolSaem when it is installed on the device (connection, model-id mirroring, a real embedding; skipped otherwise). It uninstalls Nunsori at the end; models live in OndolSaem and stay. Write tests that do not depend on the app's settings. |
+| Real-model E2E | manual, emulator | Install OndolSaem and download the models there, index fixtures, query. Drive the UI with mobile-mcp; `adb uiautomator` is blocked while mobile-mcp is attached, so `scripts/e2e-setup.sh` may not work. |
 
 ## Release build
 
@@ -25,7 +25,7 @@ The release APK is signed with a release keystore that is **not in the repo**. W
 4. Check: `$ANDROID_HOME/build-tools/<version>/apksigner verify --print-certs app-release.apk`.
 5. Publish: `git tag -a vX.Y.Z -m "Nunsori X.Y.Z"`, `git push origin vX.Y.Z`, `gh release create vX.Y.Z app-release.apk#Nunsori-X.Y.Z.apk --title ... --notes ...` (put the SHA-256 in the notes).
 
-A release APK cannot be installed over a debug build (different signing key): uninstall first, which deletes the index, thumbnails and downloaded models. `adb run-as` does not work on release builds, so app data cannot be copied into one.
+A release APK cannot be installed over a debug build (different signing key): uninstall first, which deletes the index and thumbnails. `adb run-as` does not work on release builds, so app data cannot be copied into one.
 
 ## OndolSaem SDK
 
@@ -43,7 +43,6 @@ To change the SDK and Nunsori together, check OndolSaem out next to this reposit
 | `logcat.sh [N]` | Logs of the app process (error log if it died) |
 | `screenshot.sh` | Screenshot to `build/screens/` |
 | `push-fixtures.sh` | `test-fixtures/images` to `/sdcard/Pictures/fixtures` and MediaStore scan |
-| `fetch-sherpa-onnx.sh` | sherpa-onnx AAR and Silero VAD |
 | `goto-search.sh`, `ui-search.sh`, `ui-tap.sh`, `search-result.sh`, `e2e-search.sh`, `e2e-setup.sh` | UI automation helpers for E2E |
 | `make-places.py` | Rebuild `app/src/main/assets/places.bin` from GeoNames (downloads about 210 MB to `build/places-src`; the result is committed) |
 | `fetch-photo-fixtures.sh`, `make-text-fixtures.py`, `make-doc-fixtures.py`, `make-office-fixtures.py`, `make-audio-fixtures.sh`, `make-card-fixture.py` (fictional business card), `make-demo-docs.py` (README demo documents) | Generate fixtures |
@@ -64,7 +63,7 @@ Push documents, audio and video to `/sdcard/Documents|Recordings|Movies/fixtures
 
 ## Debugging
 
-- Log tags: `LSA.Residency`, `LSA.Auto`, `LSA.Search`.
+- Log tags: `LSA.ModelHost`, `LSA.Auto`, `LSA.Search`; OndolSaem logs under `OndolSaem.*` (`OndolSaem.Residency`, `OndolSaem.Notify`, ...).
 - Inspect the DB: `adb shell "run-as io.github.taehunkim.nunsori sqlite3 databases/lsa.db 'select status,count(*) from items group by status'"`.
 - mobile-mcp (`.mcp.json`) lists screen elements and taps; system permission dialogs are separate windows and may need coordinate taps.
 

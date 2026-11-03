@@ -32,14 +32,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.AutoIndexMode
 import com.lsa.app.rememberContainer
-import com.lsa.app.ui.settings.EmbeddingModelsSection
+import com.lsa.app.ui.settings.OndolSaemSection
 import com.lsa.app.ui.settings.FoldersSection
 import com.lsa.app.ui.settings.KindsSection
 import com.lsa.app.ui.settings.SettingsViewModel
-import com.lsa.app.ui.settings.SpeechModelsSection
 
 /**
- * First run: what to index (kinds and folders), which model, and when to index automatically.
+ * First run: what to index (kinds and folders), the OndolSaem model app, and when to index automatically.
  * Everything chosen here lives in the same settings as the Settings screen and can be changed there.
  */
 @Composable
@@ -71,13 +70,7 @@ fun OnboardingScreen(onDone: (AutoIndexMode, Int, Boolean) -> Unit) {
                     }
                     1 -> {
                         Text(stringResource(R.string.onboarding_model_desc), style = MaterialTheme.typography.bodyMedium)
-                        EmbeddingModelsSection(vm)
-                        val kinds by vm.kinds.collectAsStateWithLifecycle()
-                        if (ItemKind.AUDIO in kinds || ItemKind.VIDEO in kinds) SpeechModelsSection(vm)
-                        Text(
-                            stringResource(R.string.onboarding_ocr_note),
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        OndolSaemSection()
                     }
                     2 -> AutoIndexOptions(mode, minutes, chargingOnly, { mode = it }, { minutes = it }, { chargingOnly = it })
                     else -> {

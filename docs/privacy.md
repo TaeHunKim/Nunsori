@@ -8,20 +8,19 @@ All in the app's private storage (removed on uninstall or "Clear data"):
 
 - Room database `lsa.db`: file names, paths, metadata (EXIF date and location of photos), extracted text (OCR, document text, transcripts) and embedding vectors.
 - Thumbnails (`ThumbStore`, 360 px) of images, document pages and text cards.
-- Downloaded models under `files/models/`.
+- No models: since 0.8.0 they are downloaded and kept by the companion app OndolSaem (see below).
 - Chat sessions and messages in the same database (`chat_sessions`, `chat_messages`) and photos attached to a chat under `files/chat/<session>/`; deleting a chat removes them. The chat model runs on the phone; no question or answer is sent anywhere.
-- Settings (DataStore), including the optional Hugging Face token and your chat instructions (system prompt text; they are only given to the local chat model).
+- Settings (DataStore), including your chat instructions (system prompt text; they are only given to the on-device chat model).
 
 Your original files are only read, never modified.
 
 ## Network
 
-The app contacts the network only to download models you ask for:
+Since 0.8.0 Nunsori has **no `INTERNET` permission**: it cannot reach the network at all. Models are downloaded by OndolSaem (from Hugging Face and GitHub, as you ask there).
 
-- `https://huggingface.co/litert-community/...` (EmbeddingGemma 2 and the chat models; the token, if any, is sent only here)
-- `https://github.com/k2-fsa/sherpa-onnx/releases/...` (SenseVoice)
+## The OndolSaem model app
 
-Search queries and file contents never leave the device. `INTERNET` is used for nothing else.
+The AI models run in the separate app OndolSaem on the same phone. Nunsori sends it what the models need, over Android's on-device Binder IPC: search queries, file contents to embed (photos, text chunks, audio clips, video frames), images for text recognition, recorded audio for transcription, and chat messages with tool results. OndolSaem processes them in memory and returns vectors, text and answers; it does not store them and has no account or analytics. It accepts calls only from apps signed with the same developer key (or an allowed one). OndolSaem's own privacy notes are in its repository.
 
 Place names for photo locations come from a small dataset bundled in the app (GeoNames, offline); coordinates are never sent anywhere.
 
@@ -32,7 +31,6 @@ Place names for photo locations come from a small dataset bundled in the app (Ge
 | `READ_MEDIA_IMAGES/AUDIO/VIDEO` (`READ_EXTERNAL_STORAGE` up to API 32) | Index photos, audio, video |
 | `ACCESS_MEDIA_LOCATION` | Read photo location from EXIF |
 | `MANAGE_EXTERNAL_STORAGE` (All files access) | Read text files and documents, which MediaStore does not list reliably; optional, only needed for those kinds |
-| `INTERNET` | Model download |
 | `POST_NOTIFICATIONS`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC` | Progress notification, long indexing runs and scheduled-task runs, and scheduled-task results |
 | `SCHEDULE_EXACT_ALARM` | Run time-based chat tasks at the chosen time (the user grants it in system settings) |
 | `RECEIVE_BOOT_COMPLETED` | Set the task alarms again after a restart |
@@ -44,11 +42,11 @@ Android Auto Backup is disabled, so the index, thumbnails and settings are not c
 
 ## Deleting your data
 
-Remove one model in Settings, remove a folder to drop its items, or clear app data / uninstall to delete everything.
+Remove a folder to drop its items, or clear app data / uninstall to delete everything. Models are deleted in OndolSaem.
 
 ## Scheduled tasks
 
-Tasks, their schedule and their results live in the same private database as the chats (`scheduled_tasks`, `chat_messages`) and are deleted with the chat. Notifications show the beginning of an answer on the lock screen according to the system notification settings. Nothing is sent anywhere: tasks run on-device with the same local models.
+Tasks, their schedule and their results live in the same private database as the chats (`scheduled_tasks`, `chat_messages`) and are deleted with the chat. Notifications show the beginning of an answer on the lock screen according to the system notification settings. Nothing is sent anywhere: tasks run on-device with the same models (in OndolSaem).
 
 Action cards (`pending_actions`) keep the proposed event or contact fields in the same database until the chat is deleted. The app has no calendar or contacts permission: approving a card only opens the system calendar or contacts app with the fields filled in, and you save there.
 

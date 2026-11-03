@@ -8,7 +8,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.lsa.app.data.db.ItemKind
 import com.lsa.app.indexing.AutoIndexMode
-import com.lsa.app.indexing.ResidencyPolicy
 import com.lsa.app.indexing.video.VideoDetail
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -19,16 +18,13 @@ private val Context.dataStore by preferencesDataStore("settings")
 class SettingsStore(private val context: Context) {
     private val kEmbedding = stringPreferencesKey("embedding_model_id")
     private val kOcr = stringPreferencesKey("ocr_model_id")
-    private val kToken = stringPreferencesKey("hf_token")
     private val kAutoMode = stringPreferencesKey("auto_index_mode")
     private val kScheduleMinutes = intPreferencesKey("schedule_minutes")
     private val kChargingOnly = booleanPreferencesKey("schedule_charging_only")
-    private val kResidency = stringPreferencesKey("residency_policy")
     private val kOnboarding = booleanPreferencesKey("onboarding_done")
     private val kLastVersion = intPreferencesKey("last_version_code")
     private val kAsr = stringPreferencesKey("asr_model_id")
     private val kChat = stringPreferencesKey("chat_model_id")
-    private val kChatContext = intPreferencesKey("chat_context_tokens")
     private val kChatPrompt = stringPreferencesKey("chat_custom_prompt")
     private val kLowPower = booleanPreferencesKey("index_low_power")
     private val kResourceUi = booleanPreferencesKey("show_resource_indicator")
@@ -39,11 +35,10 @@ class SettingsStore(private val context: Context) {
     private val kVideoSpeech = booleanPreferencesKey("video_transcribe")
     private fun kindKey(k: ItemKind) = booleanPreferencesKey("kind_" + k.name.lowercase())
 
+    // The model ids below mirror OndolSaem's active models (see ModelHost.refresh); empty / "none" = not available.
     val embeddingModelId: Flow<String> = context.dataStore.data.map { it[kEmbedding] ?: DEFAULT_EMBEDDING }
     val ocrModelId: Flow<String> = context.dataStore.data.map { it[kOcr] ?: DEFAULT_OCR }
     val chatModelId: Flow<String> = context.dataStore.data.map { it[kChat] ?: DEFAULT_CHAT }
-    /** Total context window (prompt + answer) given to the chat model. */
-    val chatContextTokens: Flow<Int> = context.dataStore.data.map { it[kChatContext] ?: DEFAULT_CHAT_CONTEXT }
     /** The user's own instructions, appended to the chat system prompt. */
     val chatCustomPrompt: Flow<String> = context.dataStore.data.map { it[kChatPrompt] ?: "" }
     /** Manual indexing in low-power mode: CPU only, fewer threads, pauses between files, stops when hot. */
@@ -57,13 +52,11 @@ class SettingsStore(private val context: Context) {
     val skipMusic: Flow<Boolean> = context.dataStore.data.map { it[kSkipMusic] ?: true }
     val videoDetail: Flow<VideoDetail> = context.dataStore.data.map { parseEnum(it[kVideoDetail], VideoDetail.MEDIUM) }
     val videoTranscribe: Flow<Boolean> = context.dataStore.data.map { it[kVideoSpeech] ?: true }
-    val hfToken: Flow<String> = context.dataStore.data.map { it[kToken] ?: "" }
 
     val autoMode: Flow<AutoIndexMode> = context.dataStore.data.map { parseEnum(it[kAutoMode], AutoIndexMode.MANUAL) }
     /** Minutes after local midnight. */
     val scheduleMinutes: Flow<Int> = context.dataStore.data.map { it[kScheduleMinutes] ?: DEFAULT_SCHEDULE_MINUTES }
     val scheduleChargingOnly: Flow<Boolean> = context.dataStore.data.map { it[kChargingOnly] ?: true }
-    val residency: Flow<ResidencyPolicy> = context.dataStore.data.map { parseEnum(it[kResidency], ResidencyPolicy.IDLE_2M) }
     val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[kOnboarding] ?: false }
 
     /** Which kinds of files are indexed. Images are on by default, everything else is opt-in. */
@@ -80,16 +73,20 @@ class SettingsStore(private val context: Context) {
     suspend fun setLastAutoRun(run: com.lsa.app.indexing.LastAutoRun) { context.dataStore.edit { it[kLastAutoRun] = run.encode() } }
     suspend fun setTaskJudgeFirst(on: Boolean) { context.dataStore.edit { it[kTaskJudgeFirst] = on } }
     suspend fun setShowResourceIndicator(on: Boolean) { context.dataStore.edit { it[kResourceUi] = on } }
-    suspend fun setChatContextTokens(n: Int) { context.dataStore.edit { it[kChatContext] = n } }
     suspend fun setAsrModelId(id: String) { context.dataStore.edit { it[kAsr] = id } }
     suspend fun setSkipMusic(v: Boolean) { context.dataStore.edit { it[kSkipMusic] = v } }
     suspend fun setVideoDetail(d: VideoDetail) { context.dataStore.edit { it[kVideoDetail] = d.name } }
     suspend fun setVideoTranscribe(v: Boolean) { context.dataStore.edit { it[kVideoSpeech] = v } }
-    suspend fun setHfToken(token: String) { context.dataStore.edit { it[kToken] = token.trim() } }
     suspend fun setAutoMode(mode: AutoIndexMode) { context.dataStore.edit { it[kAutoMode] = mode.name } }
     suspend fun setScheduleMinutes(minutes: Int) { context.dataStore.edit { it[kScheduleMinutes] = minutes.coerceIn(0, 24 * 60 - 1) } }
     suspend fun setScheduleChargingOnly(v: Boolean) { context.dataStore.edit { it[kChargingOnly] = v } }
-    suspend fun setResidency(p: ResidencyPolicy) { context.dataStore.edit { it[kResidency] = p.name } }
+    /** 0.8.0: models moved to OndolSaem; drops the settings that went with them. */
+    suspend fun removeModelHostingKeys() {
+        context.dataStore.edit { p ->
+            listOf("hf_token", "residency_policy").forEach { p.remove(stringPreferencesKey(it)) }
+            p.remove(intPreferencesKey("chat_context_tokens"))
+        }
+    }
 
     /** Saves the first-run choice in one atomic edit. */
     suspend fun completeOnboarding(mode: AutoIndexMode, minutes: Int, chargingOnly: Boolean) {
@@ -114,7 +111,6 @@ class SettingsStore(private val context: Context) {
         const val DEFAULT_OCR = "mlkit-ko"
         const val DEFAULT_ASR = "asr-sensevoice"
         const val DEFAULT_CHAT = "chat-gemma4-e2b"
-        const val DEFAULT_CHAT_CONTEXT = 4096
         const val DEFAULT_SCHEDULE_MINUTES = 3 * 60
 
         inline fun <reified E : Enum<E>> parseEnum(raw: String?, default: E): E =

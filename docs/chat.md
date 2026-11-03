@@ -17,7 +17,7 @@ For each question `ChatController.runTurn` builds the context:
 3. **The question**, preceded by attachments: for an attached indexed file the first 3,000 characters of its indexed text and its `item_id`; with **Auto search** on, the top 3 search results (800 characters each).
 4. **Photos** picked with the attach button are passed as images to vision models (Gemma 4) and ignored by text-only models.
 
-The context window (2K, 4K default, 8K) is set in Settings. LiteRT-LM keeps the model's own state between turns of a session; it starts over from the stored history when the tools change, an answer was cancelled, or the state reaches 70 % of the window.
+The context window (2K, 4K default, 8K) is set in OndolSaem and reported to Nunsori, which trims prompts to it (`ModelHost.chatContextTokens()`). The model runs in OndolSaem; the tools run in Nunsori, called back through the OndolSaem SDK. LiteRT-LM keeps the model's own state between turns of a session; it starts over from the stored history when the tools change, an answer was cancelled, or the state reaches 70 % of the window.
 
 ## Rendering
 
@@ -73,7 +73,7 @@ In Search, long-press a result to select files, then **Ask in chat** and pick a 
 
 ## Models and limits
 
-Models are chosen and downloaded in Settings ([models.md](models.md#chat-models)); the first answer after loading a model takes longer (about a minute for Gemma 4 E2B on the emulator CPU). The chat model and the embedding model are in memory together while you chat (the search tool needs the embedder), and both follow the model memory policy.
+Models are chosen and downloaded in OndolSaem ([models.md](models.md)); the first answer after loading a model takes longer (about a minute for Gemma 4 E2B on the emulator CPU). The chat model and the embedding model are in memory together while you chat (the search tool needs the embedder), and both follow OndolSaem's memory policy for their category; a chat turn holds leases on both until the answer is done.
 
 - Small models can pick the wrong tool or arguments; Gemma 4 E2B called `search_index` and `read_file` correctly in the emulator test.
 - Answers are only as good as the index: files that are not indexed, or indexed without text, cannot be read.

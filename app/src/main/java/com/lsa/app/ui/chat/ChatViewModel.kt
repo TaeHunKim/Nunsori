@@ -13,8 +13,7 @@ import com.lsa.app.chat.ChatToolNames
 import com.lsa.app.chat.PendingAttachment
 import com.lsa.app.data.db.ChatMessageEntity
 import com.lsa.app.data.db.ChatSessionEntity
-import com.lsa.app.models.ModelCatalog
-import com.lsa.app.models.ModelState
+import io.github.taehunkim.ondolsaem.sdk.OndolSaem.Categories.LLM
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -64,11 +63,13 @@ class ChatViewModel(private val c: AppContainer, val sessionId: Long) : ViewMode
     fun dismissAction(id: Long) { viewModelScope.launch { c.actions.dismiss(id) } }
     fun pauseTask(id: Long, paused: Boolean) { viewModelScope.launch { c.taskManager.setPaused(id, paused) } }
 
-    val modelReady: StateFlow<Boolean> = combine(c.settings.chatModelId, c.modelManager.states) { id, st ->
-        ModelCatalog.byId(id)?.let { st[id] is ModelState.Installed } == true
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-    val supportsImages: StateFlow<Boolean> = c.settings.chatModelId.map { ModelCatalog.byId(it)?.vision == true }
+    val modelReady: StateFlow<Boolean> = c.models.state.map { it.status == com.lsa.app.ml.HostState.Status.UNKNOWN || it.ready(LLM) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    /** Why the chat model is unavailable, for the hint. */
+    val host = c.models.state
+    val supportsImages: StateFlow<Boolean> = c.models.state.map { it.model(LLM)?.vision == true }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    fun refreshHost() { viewModelScope.launch { c.models.refresh() } }
 
     var draft by mutableStateOf("")
     /** Attachments waiting for the next send. */

@@ -4,8 +4,8 @@ Code package and Gradle `namespace` `com.lsa.app` (Kotlin, Jetpack Compose); the
 
 ## 1. Goals and principles
 
-- **On-device only.** Embedding, OCR and speech recognition run on the phone. The only network traffic is model download ([privacy](privacy.md)).
-- **Models live outside the APK.** The user downloads them in Settings. Only ML Kit OCR and the 0.6 MB Silero VAD ship with the app.
+- **On-device only.** Embedding, OCR, speech recognition and chat run on the phone. Nunsori has no network permission ([privacy](privacy.md)).
+- **Models live in the companion app OndolSaem.** It downloads them, keeps them in memory and serves them over a bound service (SDK `com.github.taehunkim.ondolsaem:sdk`); `ml/ModelHost` is the only place that talks to it ([models](models.md)).
 - **One data model for every file type.** A file is an `item`; what is searched is a `segment`. New file types only add extractors and segment types.
 - **Resumable.** Work is committed per file and checkpointed per segment batch, so a killed process resumes where it stopped.
 
@@ -23,17 +23,17 @@ flowchart TD
     RUN --> SRC[CompositeSource: MediaStore + FileSource]
     RUN --> SESS[ItemSession]
     SESS --> X[Extractors: image, text, pdf, office, audio, video]
-    X --> EMB[Embedder: LiteRT-LM EmbeddingGemma 2]
-    X --> OCR[OcrEngine: ML Kit]
-    X --> ASR[SpeechTools: sherpa-onnx VAD + SenseVoice]
+    X --> EMB[Embedder: EmbeddingGemma 2 in OndolSaem]
+    X --> OCR[OcrEngine: ML Kit in OndolSaem]
+    X --> ASR[SpeechTools: VAD + SenseVoice in OndolSaem]
     X --> DB[(Room: items, segments)]
     X --> TH[ThumbStore: thumbnails]
     SE --> DB
     SE --> EMB
     CHAT[ChatController] --> SE
-    CHAT --> LLM[LiteRtChatModel: LiteRT-LM LLM]
+    CHAT --> LLM[ChatModel: LLM in OndolSaem]
     CHAT --> DB
-    RES[ModelResidency] -.leases.-> EMB
+    RES[ModelHost] -.leases.-> EMB
     RES -.leases.-> OCR
     RES -.leases.-> ASR
     RES -.leases.-> LLM
@@ -45,7 +45,7 @@ flowchart TD
 |---|---|
 | `data/db` | Room entities, `ItemDao`, `Migrations.kt` |
 | `data/media` | `MediaStoreRepository` (images, audio, video), `FileSource` (text and documents, needs All files access), `CompositeSource` |
-| `data/prefs` | `SettingsStore` (DataStore): kinds, folders, model, auto-index mode, residency policy |
+| `data/prefs` | `SettingsStore` (DataStore): kinds, folders, mirrored model ids, auto-index mode |
 | `indexing` | `IndexRunner`, `ItemSession`, `IndexingController`, `IndexingWorker`, `AutoIndexScheduler`, `PipelineKeys`, `ImageExtractor` |
 | `indexing/text` | `TextExtractor`, `TextChunker`, `MarkdownChunker`, `TextFormats`, `TextDecoder`, `TextRouting` |
 | `indexing/docs` | `PdfExtractor`, `PdfText`, `OfficeExtractor`, `OfficeParsers`, `TextCard`, `ThumbStore`, `ZipSource` |
@@ -54,9 +54,8 @@ flowchart TD
 | `indexing/video` | `VideoExtractor`, `VideoClips` |
 | `chat/actions` | `ActionManager` (proposals, approve/dismiss, intents), `ActionPayloads` (validation), `ActionTools` (`add_calendar_event`, `add_contact`, `move_files`, `delete_files`), `FileOps` (move, trash, delete + index update) |
 | `chat/schedule` | `TaskManager` (propose, confirm, run, file matching), `Schedule` (next run), `TaskAlarms` + receivers + `TaskRunWorker` |
-| `ml`, `ml/embedding`, `ml/ocr`, `ml/llm` | `ModelResidency`, `Embedder` and `EmbeddingGemma2Embedder`, `OcrEngine` and `MlKitOcrEngine`, `ChatModel` and `LiteRtChatModel` |
+| `ml`, `ml/embedding`, `ml/ocr`, `ml/llm` | `ModelHost` (OndolSaem client: leases, remote engines, model-id mirroring), interfaces `Embedder`, `OcrEngine`, `ChatModel` (`SpeechTools` is in `indexing/audio`) |
 | `chat` | `ChatController` (turns, context, attachments), `ChatTools` (`search_index`, `read_file`), `ContextBudget`: [chat.md](chat.md) |
-| `models` | `ModelCatalog`, `ModelManager`, `ModelDownloader` (resumable), `ModelDownloadWorker`, `ArchiveExtractor` |
 | `search` | `SearchEngine`, `Fusion`, `KeywordMatcher` |
 | `ui` | `AppScaffold` (shows `OnboardingScreen` until `onboarding_done`), screens (`index`, `search`, `settings`, `onboarding`), `theme`; `settings/SettingsSections.kt` holds the kinds, folders and embedding-model sections shared by Settings and the wizard |
 
@@ -114,10 +113,7 @@ Automatic runs cannot start foreground services from the background on recent An
 
 ## 7. Model lifetime
 
-Each `LeasedResource` also publishes what is loaded (`label`: GPU/CPU), used by the optional resource indicator (`ui/common/ResourceIndicator.kt`: `/proc/self/status` VmRSS and `/proc/self/stat` CPU ticks once a second while shown; GPU load is not available to apps).
-
-
-`ModelResidency` leases models through `LeasedResource`. Policy (`ResidencyPolicy`): `KEEP`, `IDLE_2M` (default, unload 2 minutes after the last lease), `IMMEDIATE`. `onTrimMemory` also releases models. One policy covers all four resources: embedding, OCR, ASR and the chat LLM. A chat turn also holds an embedder lease from start to finish (when search or auto search is on), so the idle timer cannot unload it while the LLM is still answering. Log tag `LSA.Residency`.
+Models are loaded and unloaded by OndolSaem, with a residency policy per category set there (keep loaded, unload right after use, or after 1 to 15 minutes). `ModelHost.embedder()/ocr()/speech()/chat()` return a `Lease` that also holds a lease in OndolSaem, so a model stays loaded while Nunsori uses it: an indexing pass holds the embedder and OCR leases for the whole pass, and a chat turn holds the embedder (when search or auto search is on) and the chat model from start to finish. When OndolSaem is not installed, refuses the connection or has no model for a category, the lease is null and the screens show a hint (`HostState`). The optional resource indicator (`ui/common/ResourceIndicator.kt`) shows whether OndolSaem is connected plus this process's memory and CPU; the models' memory is on OndolSaem's dashboard. Log tag `LSA.ModelHost`.
 
 ## 8. Search (summary)
 
