@@ -6,6 +6,10 @@ import androidx.test.core.app.ApplicationProvider
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.AutoIndexMode
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Before
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.hasClickAction
@@ -51,6 +55,22 @@ class NavigationTest {
         item("People").assertIsDisplayed()
         item("People").performClick()
         rule.onNodeWithContentDescription("Open menu").assertIsDisplayed()
+    }
+
+    @Test fun theGroupingThresholdOpensFromSettings() {
+        val settings = SettingsStore(ApplicationProvider.getApplicationContext())
+        val wasOn = runBlocking { settings.faceGrouping.first() }
+        runBlocking { settings.setFaceGrouping(true); settings.setKindEnabled(com.lsa.app.data.db.ItemKind.IMAGE, true) }
+        try {
+            openMenu()
+            item("Settings").performClick()
+            rule.onNodeWithTag("face_threshold_open").performScrollTo().performClick()
+            rule.onNodeWithTag("face_threshold_dialog").assertIsDisplayed()
+            rule.onNodeWithTag("face_threshold_slider").assertIsDisplayed()
+            rule.waitUntil(10_000) { rule.onAllNodesWithText("groups (now", substring = true).fetchSemanticsNodes().isNotEmpty() }
+            rule.onNodeWithText("Cancel").performClick()
+            rule.onAllNodesWithTag("face_threshold_dialog").assertCountEquals(0)
+        } finally { runBlocking { settings.setFaceGrouping(wasOn) } }
     }
 
     @Test fun aDetailScreenHasAnUpArrowToItsList() {

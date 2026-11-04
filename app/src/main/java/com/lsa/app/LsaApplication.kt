@@ -91,6 +91,8 @@ class LsaApplication : Application() {
         container.autoIndex.start()
         container.appScope.launch {
             AppUpgrade.run(this@LsaApplication, container.settings, container.db.itemDao(), BuildConfig.VERSION_CODE)
+            // Groups made with an older threshold or method (0.11.0 raised the default) are made again from the stored vectors.
+            runCatching { container.faces.ensureGrouping() }.onFailure { android.util.Log.w("LSA", "regrouping faces failed", it) }
             // Mirror OndolSaem's active models into the settings (a change there re-indexes what it affects).
             container.models.refresh()
         }

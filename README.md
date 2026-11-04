@@ -23,7 +23,7 @@ The assistant chat that answers from these files is the companion app [Malbotdar
 | Documents | PDF pages (text, OCR fallback, page image); docx/pptx/xlsx and ODF as text + text card image | Meaning, keywords, page |
 | Audio | Speech transcript (SenseVoice); audio clip embeddings (740M model) | Spoken words, sound, time |
 | Video | Scene clips (up to 8 frames each) + speech transcript | Visual content, speech, time |
-| People | Faces in photos (detected and recognized by OndolSaem), grouped by person on the phone | People menu (name, merge, "not this person"); in Malbotdari: "move all photos of Mina to Pictures/Mina" |
+| People | Faces in photos (detected and recognized by OndolSaem), grouped by person on the phone | People menu (name, merge, "not this person", grouping looser or stricter); in Malbotdari: "move all photos of Mina to Pictures/Mina" |
 
 Also: an index other apps can use with your permission (search, read, move/trash after your approval there; Settings › App › Connected apps), "Ask in chat" from search results (opens Malbotdari with the files attached), a failed-file list with retry, an optional resource indicator (GPU/CPU, memory), hybrid ranking (meaning + exact words + photo place names such as "Dubai"), filters by file kind and date, share/open results, automatic indexing (manual, immediate, scheduled, idle), English and Korean UI, dark mode. Choosing models and how long they stay in memory happens in OndolSaem.
 

@@ -18,6 +18,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.min
 
@@ -38,8 +42,10 @@ class FaceIndexer(
     private val thumbs: ThumbStore,
     private val models: ModelHost,
     private val settings: SettingsStore,
-    private val clusterer: FaceClusterer = FaceClusterer(),
 ) {
+    /** Grouping (incremental or from scratch) runs one at a time; scanning does not hold it. */
+    private val grouping = Mutex()
+
     private val _progress = MutableStateFlow(FaceProgress())
     val progress: StateFlow<FaceProgress> = _progress.asStateFlow()
 
@@ -58,6 +64,7 @@ class FaceIndexer(
      */
     suspend fun pass(gate: suspend () -> Boolean): Int {
         if (!settings.faceGrouping.first()) return 0
+        ensureGrouping()
         val lease = models.faces() ?: return 0
         var scanned = 0
         try {
@@ -128,7 +135,8 @@ class FaceIndexer(
     }
 
     /** Puts ungrouped faces into groups and merges groups that turned out to be the same person. */
-    suspend fun regroup() {
+    suspend fun regroup() = grouping.withLock {
+        val clusterer = FaceClusterer(settings.faceThreshold.first())
         val now = System.currentTimeMillis()
         val all = dao.allVectors()
         val people = dao.allPeople().associateBy { it.personId }
@@ -159,11 +167,56 @@ class FaceIndexer(
         dao.deleteEmptyPeople()
     }
 
+    private val _regrouping = MutableStateFlow(false)
+    /** True while every face is being grouped again (a new threshold or grouping method). */
+    val regrouping: StateFlow<Boolean> = _regrouping.asStateFlow()
+
+    private suspend fun regroupInput(): Pair<List<FaceClusterer.FaceInput>, Set<Long>> {
+        val faces = dao.allVectors().map { FaceClusterer.FaceInput(it.faceId, Quant.decode(it.vector), it.score, it.personId, it.blockedPersonId) }
+        val named = dao.allPeople().filter { it.name != null }.mapTo(HashSet()) { it.personId }
+        return faces to named
+    }
+
+    /** How many groups [threshold] would make (and how many there are now), without changing anything. */
+    suspend fun previewGroups(threshold: Float): Pair<Int, Int> = withContext(Dispatchers.Default) {
+        val (faces, named) = regroupInput()
+        val now = faces.mapNotNullTo(HashSet()) { it.oldPerson }.size
+        FaceClusterer(threshold).regroupAll(faces, named).groups.size to now
+    }
+
+    /**
+     * Groups every face again from the stored vectors with [threshold] (no scan), keeping names, covers and
+     * "not this person" (see [FaceClusterer.regroupAll]), and remembers the threshold.
+     */
+    suspend fun regroupAll(threshold: Float) = grouping.withLock {
+        val t = FaceClusterer.clampThreshold(threshold)
+        _regrouping.value = true
+        try {
+            withContext(Dispatchers.Default) {
+                val (faces, named) = regroupInput()
+                val r = FaceClusterer(t).regroupAll(faces, named)
+                dao.applyRegroup(r.groups.map { it.inherits to it.faceIds }, r.blockedGroup, System.currentTimeMillis())
+                Log.i(TAG, "regrouped ${faces.size} face(s) at $t: ${r.groups.size} group(s)")
+            }
+            settings.setFaceThreshold(t)
+            settings.setFaceGroupingKey(FaceClusterer.groupingKey(t))
+        } finally { _regrouping.value = false }
+    }
+
+    /** Groups made with another threshold or method (an upgrade): group everything again once. */
+    suspend fun ensureGrouping() {
+        val t = settings.faceThreshold.first()
+        val key = FaceClusterer.groupingKey(t)
+        if (settings.faceGroupingKey.first() == key) return
+        if (dao.faceCount() > 0) regroupAll(t) else settings.setFaceGroupingKey(key)
+    }
+
     /** Face grouping turned off (or a new face model): faces, people and crops go; every photo needs a new scan. */
     suspend fun deleteAll() {
         dao.allThumbs().forEach { thumbs.file(it).delete() }
         dao.deleteAll()
         dao.clearFaceKeys()
+        settings.setFaceGroupingKey("")
     }
 
     companion object {

@@ -50,7 +50,7 @@ flowchart TD
 | `indexing/places` | `PlaceFinder`: offline GPS to place name (GeoNames cities, English and Korean) |
 | `indexing/audio` | `AudioExtractor`, `AudioDecoder`, `Pcm` (window planning), `SpeechTools` |
 | `indexing/video` | `VideoExtractor`, `VideoClips` |
-| `indexing/faces` | `FaceIndexer` (face pass after indexing, crops, off/on), `FaceClusterer` (grouping, merging) |
+| `indexing/faces` | `FaceIndexer` (face pass after indexing, crops, off/on), `FaceClusterer` (grouping, merging, grouping everything again with a new threshold while keeping names), `ui/people/FaceThresholdDialog` |
 | `ml`, `ml/embedding`, `ml/ocr`, `ml/faces` | `ModelHost` (OndolSaem client: leases, remote engines, model-id mirroring), interfaces `Embedder`, `OcrEngine`, `FaceDetector` (`SpeechTools` is in `indexing/audio`) |
 | `service` | The index for other apps: `IndexService` (bound service), `IndexApi`, `CallerCheck` + `Approvals`, `IndexEvents` (index-changed hints), `OpenItemActivity`, `Malbotdari` (opening the chat app) |
 | `service/tools` | `SearchIndexTool`, `ReadFileTool` (`search_index`, `read_file`), `FileActionPrep` + `FileActionTools` (`move_files`, `delete_files`), `FileOps` (move, trash, delete + index update), `PeopleDirectory` (names for the `person` arguments) |

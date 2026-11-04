@@ -243,6 +243,17 @@
     <string name="people_not_this_person">이 사람 아님</string>
     <string name="face_grouping">사진을 인물별로 묶기</string>
     <string name="face_grouping_desc">사진을 인덱싱할 때 얼굴을 찾아 인물별로 묶습니다(인물 메뉴). 얼굴 데이터는 이 폰에만 있습니다.</string>
+    <string name="face_threshold">묶기 기준: 느슨하게·엄격하게</string>
+    <string name="face_threshold_desc">두 얼굴이 얼마나 닮아야 같은 사람으로 볼지 정합니다.</string>
+    <string name="face_threshold_value">유사도 %1$s (기본 %2$s)</string>
+    <string name="face_threshold_looser">느슨하게</string>
+    <string name="face_threshold_stricter">엄격하게</string>
+    <string name="face_threshold_counting">그룹 세는 중…</string>
+    <string name="face_threshold_preview">그룹 %1$d개 (지금 %2$d개)</string>
+    <string name="face_threshold_applying">모든 얼굴을 다시 묶는 중…</string>
+    <string name="face_threshold_hint">엄격하게 하면 한 사람이 여러 그룹으로 나뉩니다(합치기로 고칩니다). 느슨하게 하면 여러 사람이 섞입니다(얼굴마다 고쳐야 합니다). 이름, 대표 얼굴, ‘이 사람 아님’은 유지됩니다.</string>
+    <string name="face_threshold_default">기본값으로</string>
+    <string name="face_threshold_apply">적용</string>
     <string name="face_grouping_off_title">얼굴 묶기를 끌까요?</string>
     <string name="face_grouping_off_text">모든 얼굴, 그룹, 이름이 지워집니다. 다시 켜면 사진의 얼굴을 새로 찾습니다(나머지 인덱스는 그대로입니다).</string>
     <string name="face_grouping_off_confirm">끄고 삭제</string>

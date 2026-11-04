@@ -65,18 +65,47 @@ data class PersonSummary(
 data class FaceTodo(val itemId: Long, val sourceKey: String, val uri: String, val displayName: String)
 
 /** What clustering needs of a face. */
-data class FaceVector(val faceId: Long, val personId: Long?, val blockedPersonId: Long?, val vector: ByteArray)
+data class FaceVector(val faceId: Long, val personId: Long?, val blockedPersonId: Long?, val vector: ByteArray, val score: Float)
 
 @Dao
 interface FaceDao {
     @Insert suspend fun insertFaces(faces: List<FaceEntity>): List<Long>
     @Insert suspend fun insertPerson(p: PersonEntity): Long
 
-    @Query("SELECT faceId, personId, blockedPersonId, vector FROM faces")
+    @Query("SELECT faceId, personId, blockedPersonId, vector, score FROM faces")
     suspend fun allVectors(): List<FaceVector>
 
-    @Query("SELECT faceId, personId, blockedPersonId, vector FROM faces WHERE personId IS NULL")
+    @Query("SELECT faceId, personId, blockedPersonId, vector, score FROM faces WHERE personId IS NULL")
     suspend fun ungroupedVectors(): List<FaceVector>
+
+    /**
+     * Puts the result of grouping everything again in place: each group keeps the id it inherits (name, cover) or
+     * gets a new person; [blocked] maps faces taken out of a group to the group index that stands for it now (others
+     * lose their block); covers that left their group are reset; people left without faces are deleted.
+     */
+    @Transaction
+    suspend fun applyRegroup(groups: List<Pair<Long?, List<Long>>>, blocked: Map<Long, Int>, now: Long) {
+        val ids = groups.map { (inherits, faceIds) ->
+            val id = inherits ?: insertPerson(PersonEntity(createdAt = now, updatedAt = now))
+            faceIds.chunked(500).forEach { assign(it, id) }
+            id
+        }
+        clearBlocks()
+        blocked.entries.groupBy({ it.value }, { it.key }).forEach { (gi, faceIds) -> faceIds.chunked(500).forEach { setBlocked(it, ids[gi]) } }
+        resetLostCovers()
+        deleteEmptyPeople()
+    }
+
+    @Query("UPDATE faces SET blockedPersonId = NULL WHERE blockedPersonId IS NOT NULL")
+    suspend fun clearBlocks()
+
+    @Query("UPDATE faces SET blockedPersonId = :personId WHERE faceId IN (:faceIds)")
+    suspend fun setBlocked(faceIds: List<Long>, personId: Long)
+
+    @Query("UPDATE people SET coverFaceId = NULL WHERE coverFaceId IS NOT NULL AND coverFaceId NOT IN (SELECT faceId FROM faces f WHERE f.personId = people.personId)")
+    suspend fun resetLostCovers()
+
+    @Query("SELECT COUNT(*) FROM faces") suspend fun faceCount(): Int
 
     @Query("UPDATE faces SET personId = :personId WHERE faceId IN (:faceIds)")
     suspend fun assign(faceIds: List<Long>, personId: Long?)

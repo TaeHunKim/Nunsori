@@ -45,6 +45,8 @@ class FaceIndexerTest {
     private lateinit var settings: SettingsStore
     private lateinit var faces: FaceIndexer
     private var savedGrouping = true
+    private var savedThreshold = 0f
+    private var savedKey = ""
     private val detected = mutableListOf<Int>() // photo sizes the detector saw
 
     /** Unit vector pointing at axis [person] with a little of axis 15: the same person scores ~1, different ~0. */
@@ -82,6 +84,7 @@ class FaceIndexerTest {
         db = Room.inMemoryDatabaseBuilder(ctx, AppDatabase::class.java).build()
         settings = SettingsStore(ctx)
         savedGrouping = settings.faceGrouping.first()
+        savedThreshold = settings.faceThreshold.first(); savedKey = settings.faceGroupingKey.first()
         settings.setFaceGrouping(true)
         val host = ModelHost(ctx, settings, scope).apply { faceOverride = { detector } }
         faces = FaceIndexer(ctx, db.faceDao(), ThumbStore(ctx), host, settings)
@@ -89,6 +92,7 @@ class FaceIndexerTest {
 
     @After fun tearDown() = runBlocking<Unit> {
         settings.setFaceGrouping(savedGrouping)
+        settings.setFaceThreshold(savedThreshold); settings.setFaceGroupingKey(savedKey)
         db.close(); scope.cancel()
         File(ctx.cacheDir, "faces-test").deleteRecursively()
     }
@@ -150,5 +154,41 @@ class FaceIndexerTest {
         var allowed = 3 // checked once per batch and once per photo
         assertEquals(2, faces.pass { allowed-- > 0 })
         assertEquals(2, faces.pass { true })
+    }
+
+    @Test fun anotherThresholdGroupsEverythingAgainAndKeepsTheName() = runBlocking<Unit> {
+        // one named group holding two people whose faces are 0.5 alike (mixed at a loose threshold)
+        val a = FloatArray(16).also { it[0] = 1f }
+        val b = com.lsa.app.indexing.faces.FaceClusterer.normalize(FloatArray(16).also { it[0] = 0.5f; it[1] = 0.866f })
+        val dao = db.faceDao()
+        val mina = dao.insertPerson(com.lsa.app.data.db.PersonEntity(name = "Mina", createdAt = 1, updatedAt = 1))
+        val ids = listOf(a, a, b, b).mapIndexed { i, v ->
+            val item = photo("p$i", 110)
+            dao.insertFaces(listOf(com.lsa.app.data.db.FaceEntity(itemId = item, left = 0f, top = 0f, right = 1f, bottom = 1f, score = 0.9f - i / 10f,
+                vector = com.lsa.app.ml.embedding.Quant.encode(v), personId = mina, thumbPath = null))).single()
+        }
+        dao.setCover(mina, ids[3], 1)
+        assertEquals(2 to 1, faces.previewGroups(0.55f))
+        assertEquals("a preview changes nothing", 1, people().size)
+
+        faces.regroupAll(0.55f)
+        val split = people()
+        assertEquals(2, split.size)
+        val named = split.single { it.name == "Mina" }
+        assertEquals("the name keeps its id", mina, named.personId)
+        assertEquals(listOf(ids[0], ids[1]), dao.observeFacesOf(mina).first().map { it.faceId }.sorted())
+        assertEquals("a cover that left the group is reset", null, dao.person(mina)!!.coverFaceId)
+        assertEquals(0.55f, settings.faceThreshold.first())
+        assertEquals("g2|t0.55", settings.faceGroupingKey.first())
+
+        faces.regroupAll(0.40f)
+        assertEquals(listOf(mina), people().map { it.personId })
+        assertEquals(4, people().single().faceCount)
+
+        // an install from before 0.11.0 has no grouping key: the next pass groups everything again
+        settings.setFaceGroupingKey("")
+        faces.ensureGrouping()
+        assertEquals("g2|t0.40", settings.faceGroupingKey.first())
+        assertEquals(listOf(mina), people().map { it.personId })
     }
 }

@@ -97,6 +97,8 @@ fun PeopleScreen(onOpen: (Long) -> Unit, onOpenSettings: () -> Unit) {
     val progress by vm.progress.collectAsState()
     val showSmall by vm.showSmall.collectAsState()
     val hidden by vm.hiddenCount.collectAsState()
+    var thresholdOpen by remember { mutableStateOf(false) }
+    if (thresholdOpen) FaceThresholdDialog(onDismiss = { thresholdOpen = false })
 
     LazyVerticalGrid(
         GridCells.Adaptive(104.dp), Modifier.fillMaxSize().testTag("people"),
@@ -121,6 +123,9 @@ fun PeopleScreen(onOpen: (Long) -> Unit, onOpenSettings: () -> Unit) {
                         Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
                     )
                     Switch(showSmall, vm::setShowSmall)
+                }
+                if (availability != FaceAvailability.OFF && !people.isNullOrEmpty()) {
+                    TextButton(onClick = { thresholdOpen = true }, modifier = Modifier.testTag("face_threshold_open")) { Text(stringResource(R.string.face_threshold)) }
                 }
             }
         }

@@ -144,6 +144,13 @@ fun KindsSection(vm: SettingsViewModel) {
             }
             Switch(checked = faces, onCheckedChange = { on -> if (on) vm.setFaceGrouping(true) else confirmOff = true }, modifier = Modifier.testTag("face_grouping"))
         }
+        if (faces) {
+            var thresholdOpen by remember { mutableStateOf(false) }
+            androidx.compose.material3.TextButton(onClick = { thresholdOpen = true }, modifier = Modifier.padding(start = 28.dp).testTag("face_threshold_open")) {
+                Text(stringResource(R.string.face_threshold))
+            }
+            if (thresholdOpen) com.lsa.app.ui.people.FaceThresholdDialog(onDismiss = { thresholdOpen = false })
+        }
         if (confirmOff) androidx.compose.material3.AlertDialog(
             onDismissRequest = { confirmOff = false },
             title = { Text(stringResource(R.string.face_grouping_off_title)) },

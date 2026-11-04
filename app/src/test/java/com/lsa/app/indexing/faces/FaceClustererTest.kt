@@ -70,4 +70,68 @@ class FaceClustererTest {
         assertEquals("one of the two joins the third group, the other cannot follow", 1, merged.size)
         assertEquals(3L, merged.single().second)
     }
+
+    // ---- grouping everything again (a new threshold) ----
+
+    private fun input(id: Long, v: FloatArray, old: Long? = null, blocked: Long? = null, score: Float = 0.9f) =
+        FaceClusterer.FaceInput(id, v, score, old, blocked)
+
+    /** Two people whose faces are about [sim] alike: a looser threshold puts them together, a stricter one not. */
+    private fun twoClosePeople(): List<FaceClusterer.FaceInput> {
+        val a = FloatArray(16).also { it[0] = 1f }
+        val b = FaceClusterer.normalize(FloatArray(16).also { it[0] = 0.5f; it[1] = 0.866f }) // cosine 0.5 with a
+        return listOf(input(1, a, old = 10), input(2, a, old = 10), input(3, b, old = 10), input(4, b, old = 10))
+    }
+
+    @Test fun aStricterThresholdSplitsAMixedGroup() {
+        val faces = twoClosePeople()
+        assertEquals(1, FaceClusterer(0.40f).regroupAll(faces, emptySet()).groups.size)
+        val strict = FaceClusterer(0.55f).regroupAll(faces, emptySet())
+        assertEquals(2, strict.groups.size)
+        assertEquals("the old id goes to one of the two halves only", 1, strict.groups.count { it.inherits == 10L })
+    }
+
+    @Test fun theNameGoesToTheGroupWithMostOfItsFaces() {
+        val a = FloatArray(16).also { it[0] = 1f }; val b = FloatArray(16).also { it[1] = 1f }
+        val faces = listOf(input(1, a, old = 10), input(2, a, old = 10), input(3, a, old = 10), input(4, b, old = 10))
+        val r = FaceClusterer(0.45f).regroupAll(faces, namedOld = setOf(10L))
+        assertEquals(2, r.groups.size)
+        assertEquals(listOf(1L, 2L, 3L), r.groups.single { it.inherits == 10L }.faceIds.sorted())
+        assertNull(r.groups.single { 4L in it.faceIds }.inherits)
+    }
+
+    @Test fun twoNamesNeverEndUpInOneGroup() {
+        val a = FloatArray(16).also { it[0] = 1f }
+        val faces = listOf(input(1, a, old = 10), input(2, a, old = 11), input(3, a))
+        val r = FaceClusterer(0.30f).regroupAll(faces, namedOld = setOf(10L, 11L))
+        assertEquals(2, r.groups.size)
+        assertEquals(setOf(10L, 11L), r.groups.mapNotNull { it.inherits }.toSet())
+    }
+
+    @Test fun aFaceTakenOutOfAGroupStaysOutAndKeepsItsBlock() {
+        val a = FloatArray(16).also { it[0] = 1f }
+        val faces = listOf(input(1, a, old = 10), input(2, a, old = 10), input(3, a, blocked = 10))
+        val r = FaceClusterer(0.30f).regroupAll(faces, emptySet())
+        assertEquals(2, r.groups.size)
+        val home = r.groups.indexOfFirst { it.inherits == 10L }
+        assertTrue(3L !in r.groups[home].faceIds)
+        assertEquals("the block now points at the group that stands for the old one", home, r.blockedGroup[3L])
+    }
+
+    @Test fun unchangedFacesKeepTheirIdsAndTheResultIsStable() {
+        val people = (0 until 5).map { person() }
+        val faces = people.flatMapIndexed { pi, p -> (0 until 4).map { k -> input(pi * 10L + k, faceOf(p), old = 100L + pi, score = 0.5f + k / 10f) } }
+        val r1 = FaceClusterer().regroupAll(faces, emptySet())
+        val r2 = FaceClusterer().regroupAll(faces.shuffled(Random(3)), emptySet())
+        assertEquals(5, r1.groups.size)
+        assertEquals((100L..104L).toSet(), r1.groups.mapNotNull { it.inherits }.toSet())
+        assertEquals(r1.groups.map { it.inherits to it.faceIds.sorted() }.toSet(), r2.groups.map { it.inherits to it.faceIds.sorted() }.toSet())
+    }
+
+    @Test fun thresholdKeyAndRange() {
+        assertEquals("g2|t0.45", FaceClusterer.groupingKey(0.45f))
+        assertEquals(0.30f, FaceClusterer.clampThreshold(0.1f))
+        assertEquals(0.60f, FaceClusterer.clampThreshold(0.9f))
+        assertEquals(0.42f, FaceClusterer.clampThreshold(0.4213f))
+    }
 }

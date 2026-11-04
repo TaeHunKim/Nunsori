@@ -40,6 +40,7 @@ Faces are found when photos are indexed (Settings › Index › *Group photos by
 - Tap a group to see its photos (tap a photo to open it), give it a name and save. Giving a name that another group already has offers to **merge** the two; *Merge* also lets you pick the other group from a list.
 - Tap a face in the row of faces to use it as the cover or to say **Not this person**: the face leaves the group and is never put back into it.
 - In the chat app Malbotdari, use the names: "show me photos of Mina from last summer", "move all photos of Mina to Pictures/Mina" (a card lists the files; nothing moves before you approve it).
+- **Grouping: looser or stricter** (on the People screen and under *Group photos by person* in Settings) sets how alike two faces must be to count as one person (similarity 0.30 to 0.60, default 0.45). Moving the slider shows how many groups it would make; *Apply* groups all faces again at once without scanning the photos. Names, covers and "Not this person" are kept: a name goes to the group with most of its faces. Stricter splits one person into several groups (fix with *Merge*); looser mixes people (fixed face by face).
 - Turning face grouping off deletes every face, group and name. Turning it on again scans only the faces of the photos already indexed; the search index is kept.
 
 ## Chat

@@ -31,6 +31,8 @@ class SettingsStore(private val context: Context) {
     private val kVideoSpeech = booleanPreferencesKey("video_transcribe")
     private val kFaceModel = stringPreferencesKey("face_model_id")
     private val kFaceGrouping = booleanPreferencesKey("face_grouping")
+    private val kFaceThreshold = androidx.datastore.preferences.core.floatPreferencesKey("face_threshold")
+    private val kFaceGroupingKey = stringPreferencesKey("face_grouping_key")
     private val kShowSmallGroups = booleanPreferencesKey("people_show_small")
     private val kApiApprovals = stringPreferencesKey("api_approvals")
     private fun kindKey(k: ItemKind) = booleanPreferencesKey("kind_" + k.name.lowercase())
@@ -48,6 +50,14 @@ class SettingsStore(private val context: Context) {
     /** Find and group faces when indexing photos (on by default; turning it off deletes the face data). */
     val faceGrouping: Flow<Boolean> = context.dataStore.data.map { it[kFaceGrouping] ?: true }
     suspend fun setFaceGrouping(on: Boolean) { context.dataStore.edit { it[kFaceGrouping] = on } }
+    /** Similarity at which two faces count as the same person (Grouping: looser … stricter). */
+    val faceThreshold: Flow<Float> = context.dataStore.data.map {
+        com.lsa.app.indexing.faces.FaceClusterer.clampThreshold(it[kFaceThreshold] ?: com.lsa.app.indexing.faces.FaceClusterer.DEFAULT_THRESHOLD)
+    }
+    suspend fun setFaceThreshold(t: Float) { context.dataStore.edit { it[kFaceThreshold] = t } }
+    /** [com.lsa.app.indexing.faces.FaceClusterer.groupingKey] the stored groups were made with; empty = before 0.11.0. */
+    val faceGroupingKey: Flow<String> = context.dataStore.data.map { it[kFaceGroupingKey] ?: "" }
+    suspend fun setFaceGroupingKey(key: String) { context.dataStore.edit { it[kFaceGroupingKey] = key } }
 
     /** Other apps the user allowed or denied to use the index (service/Approvals, JSON). */
     val apiApprovalsJson: Flow<String> = context.dataStore.data.map { it[kApiApprovals] ?: "" }
