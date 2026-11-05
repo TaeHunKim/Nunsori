@@ -12,7 +12,7 @@ An Android app that indexes the files on your phone with on-device multimodal em
 
 *Files are indexed on the phone and found by meaning.*
 
-The assistant chat that answers from these files is the companion app [Malbotdari / 말벗다리](https://github.com/TaeHunKim/malbotdari) (since 0.10.0): it uses this index through Nunsori's SDK.
+The assistant chat that answers from these files is the companion app [Malbotdari / 말벗다리](https://github.com/TaeHunKim/malbotdari) (since 0.10.0): it uses this index through Nunsori's SDK. Notes (memos, saved pages and videos, recordings with summaries) live in the companion app [Jogakbo / 조각보](https://github.com/TaeHunKim/jogakbo), which Malbotdari reads too.
 
 ## Features
 

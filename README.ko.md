@@ -12,7 +12,7 @@
 
 *폰 안에서 파일을 인덱싱하고 의미로 검색합니다.*
 
-이 파일로 답하는 채팅 비서는 0.10.0부터 동반 앱 [말벗다리 / Malbotdari](https://github.com/TaeHunKim/malbotdari)입니다. 눈소리 SDK로 이 인덱스를 씁니다.
+이 파일로 답하는 채팅 비서는 0.10.0부터 동반 앱 [말벗다리 / Malbotdari](https://github.com/TaeHunKim/malbotdari)입니다. 눈소리 SDK로 이 인덱스를 씁니다. 노트(메모, 저장한 웹페이지·영상, 녹음과 그 요약)는 동반 앱 [조각보 / Jogakbo](https://github.com/TaeHunKim/jogakbo)에 있고, 말벗다리가 함께 읽습니다.
 
 ## 기능
 
