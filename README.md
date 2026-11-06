@@ -56,6 +56,12 @@ Office files are not rendered (text and a generated card only); old .doc/.ppt/.x
 
 [docs/](docs/README.md) · [Contributing](CONTRIBUTING.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
 
+## About the name
+
+**눈소리 (Nunsori)** joins two Korean nouns: **눈** (*nun*, eye) and **소리** (*sori*, sound). The app embeds what can be seen (photos, document pages, video frames, text in images) and what can be heard (speech and audio) into one index, so its name says both: it sees and hears your files. Like its sibling apps it is a pair of everyday Korean words that is easy to say in English ("noon-so-ree").
+
+The backronym spells out what it does: **N**ative (on the phone only), **U**nified (images, documents, audio and video together), **N**atural-language **S**earch, **O**ffline, **R**ecall & **I**ndex.
+
 ## License
 
 [Apache-2.0](LICENSE). Copyright 2026 Taehun Kim. Models keep their own licenses (see OndolSaem).
