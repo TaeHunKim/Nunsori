@@ -98,16 +98,11 @@ class AutoIndexScheduler(
                 wm.enqueueUniquePeriodicWork(SCHEDULED, ExistingPeriodicWorkPolicy.UPDATE, req)
             }
             AutoIndexMode.IDLE -> {
-                // CPU/GPU/NPU load is not readable by apps; "charging + device idle" is the proxy for "not in use".
-                val req = PeriodicWorkRequestBuilder<IndexingWorker>(3, TimeUnit.HOURS)
+                // "Not in use" = charging and the screen off long enough for the battery level (IdleRule, the idle
+                // preset in Settings). A check every 15 minutes while charging; the worker returns at once unless idle.
+                val req = PeriodicWorkRequestBuilder<IndexingWorker>(IDLE_CHECK_MIN, TimeUnit.MINUTES)
                     .setInputData(autoData(IndexingWorker.DETAIL_IDLE))
-                    .setConstraints(
-                        Constraints.Builder()
-                            .setRequiresBatteryNotLow(true)
-                            .setRequiresCharging(true)
-                            .setRequiresDeviceIdle(true)
-                            .build(),
-                    )
+                    .setConstraints(Constraints.Builder().setRequiresCharging(true).build())
                     .addTag(IndexingController.TAG).build()
                 wm.enqueueUniquePeriodicWork(IDLE, ExistingPeriodicWorkPolicy.UPDATE, req)
             }
@@ -156,6 +151,8 @@ class AutoIndexScheduler(
         const val BACKOFF_MIN = 2L
         const val SCHEDULED = "auto-scheduled"
         const val IDLE = "auto-idle"
+        /** Idle checks while charging (WorkManager's shortest period). */
+        const val IDLE_CHECK_MIN = 15L
         const val CATCH_UP = IndexingController.NAME
         const val TRIGGER_UPDATE_DELAY_S = 15L
         const val TRIGGER_MAX_DELAY_MIN = 2L

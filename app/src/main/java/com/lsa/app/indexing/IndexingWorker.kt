@@ -35,6 +35,14 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
     override suspend fun doWork(): Result {
         val c = (applicationContext as LsaApplication).container
         Log.i(TAG, "worker started auto=$auto")
+        if (idleRun) {
+            val preset = c.settings.idlePreset.first()
+            val s = idle.snapshot()
+            if (!io.github.taehunkim.ondolsaem.sdk.IdleRule.isIdle(preset, s.charging, s.batteryPct, s.screenOffSinceMs, System.currentTimeMillis())) {
+                Log.d(TAG, "idle check: not idle yet ($preset, $s)")
+                return Result.success()
+            }
+        }
         // Starting a foreground service from the background is not allowed on Android 12+; run silently instead.
         try { setForeground(info(IndexProgress())) } catch (e: Exception) { Log.d(TAG, "no foreground: ${e.message}") }
         // Arm the next trigger first: a photo taken during this run must not fall into a gap.
@@ -58,6 +66,10 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
     }
 
     private val detail get() = inputData.getString(KEY_SOURCE_DETAIL)
+    private val idleRun get() = detail == DETAIL_IDLE
+    private val idle by lazy { io.github.taehunkim.ondolsaem.sdk.IdleState(applicationContext) }
+    /** An idle run stops as soon as the phone is used again (screen on); the rest waits for the next idle time. */
+    private fun userBack() = idleRun && idle.screenOn()
     private var outcome = AutoOutcome.NOTHING_NEW
     private var indexed = 0
 
@@ -114,7 +126,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
                 val before = plan.done
                 result = c.indexRunner.process(
                     plan, session, keys,
-                    gate = { !ctl.stopRequested && !(auto && ctl.isHot()) },
+                    gate = { !ctl.stopRequested && !(auto && ctl.isHot()) && !userBack() },
                 ) { p ->
                     ctl.update(p)
                     val now = System.currentTimeMillis()
@@ -140,6 +152,9 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         if (!result.stoppedEarly && !ctl.stopRequested) facePass(c, ctl)
         // Other apps (Malbotdari's scheduled file tasks) ask what is new when told the index changed.
         if (indexed > 0) runCatching { com.lsa.app.service.IndexEvents.notifyChanged(applicationContext) }
+        if (indexed > 0) outcome = AutoOutcome.INDEXED
+        // The phone is in use again: done for now, the next idle check continues.
+        if (result.stoppedEarly && userBack()) { Log.i(TAG, "idle run stopped: screen on"); return Result.success() }
         // Stopped by the thermal gate (not by the user): try again later.
         if (result.stoppedEarly && !ctl.stopRequested) { outcome = AutoOutcome.HOT; return Result.retry() }
         if (indexed > 0) outcome = AutoOutcome.INDEXED
@@ -148,7 +163,7 @@ class IndexingWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 
     /** Faces of photos not scanned yet (new photos, or all of them after face grouping was turned on again). */
     private suspend fun facePass(c: com.lsa.app.AppContainer, ctl: com.lsa.app.indexing.IndexingController) {
-        runCatching { c.faces.pass { !ctl.stopRequested && !(auto && ctl.isHot()) } }
+        runCatching { c.faces.pass { !ctl.stopRequested && !(auto && ctl.isHot()) && !userBack() } }
             .onFailure { Log.w(TAG, "face pass failed", it) }
     }
 

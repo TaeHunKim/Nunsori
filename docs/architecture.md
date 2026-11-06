@@ -107,7 +107,7 @@ Details in [indexing.md](indexing.md).
 | MANUAL | User presses Start; work runs as foreground work with a notification |
 | IMMEDIATE | WorkManager content-URI trigger on MediaStore (works while the app is dead), 15 s update delay, 2 min max delay |
 | SCHEDULED | Periodic work at a chosen time, optional "charging only" |
-| IDLE | Periodic work with charging + device idle constraints |
+| IDLE | A check every 15 minutes while charging (`IDLE_CHECK_MIN`); the worker runs the pass only when OndolSaem SDK's `IdleRule` says idle: charging and the screen off for 10/30/60 min at ≥ 90 % / 70–89 % / < 70 % battery (preset Normal; Sooner 5/15/30, Later 30/60/120, Settings). Screen-off times come from `IdleState` (a runtime receiver while the app runs, else the first check that sees the screen off). The pass stops when the screen turns on and continues at the next idle check |
 
 Automatic runs cannot start foreground services from the background on recent Android, so `setForeground` is attempted inside try/catch. `IndexingController` serialises runs (`runLock`), and a thermal gate pauses automatic runs when the device is hot. The mode is chosen on first launch.
 

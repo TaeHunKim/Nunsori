@@ -56,7 +56,7 @@ Four tabs: **Index** (what to index, folders, automatic indexing), **Models** (c
 - **AI models (OndolSaem):** the models run in the companion app OndolSaem: choosing and downloading them, the memory policy and the Hugging Face token are there (**Open OndolSaem**). Nunsori shows the connection and the model of each category; **Check again** after changing something there. When the search model changes in OndolSaem, the files indexed with the old model are marked for re-indexing (Index shows how many; automatic indexing picks them up).
 - **Connected apps (App tab):** other apps that asked to use your index (search and read your files; moving or deleting always needs your OK in that app). Allow, deny or remove each one. Apps by the same developer (Malbotdari) connect without asking. A notification tells you when a new app asks.
 - **Resource indicator:** a top-bar readout of the connection to OndolSaem, this app's memory and CPU use. The models' memory is on OndolSaem's dashboard.
-- **Automatic indexing:** Manual; Immediately (new files are picked up in the background); Scheduled (a time, optionally only while charging); When idle (charging and idle).
+- **Automatic indexing:** Manual; Immediately (new files are picked up in the background); Scheduled (a time, optionally only while charging); When idle (charging and unused: the screen off for 10, 30 or 60 minutes when the battery is at 90 % or more, 70–89 % or below 70 %; *Sooner* and *Later* shorten or lengthen these; stops when you use the phone).
 - **Model memory:** keep loaded, unload after 2 minutes idle (default), or unload immediately. Lower memory use costs a reload on the next use.
 - Dark mode follows the system.
 

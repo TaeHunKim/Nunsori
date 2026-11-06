@@ -24,7 +24,7 @@ For a signed release APK see [development.md](development.md#release-build).
 
 ## First run
 
-1. Go through the **first-run wizard**: choose the kinds of files and folders (grant the media permissions when asked; text files and documents also need **All files access**), check the connection to OndolSaem (it lists the model each category uses; download them in OndolSaem: the embedding model 440M is the default, 740M adds audio embedding, SenseVoice gives audio and video transcripts), and choose automatic indexing (Manual, Immediately, Scheduled, or When idle and charging). Everything can be changed later in Settings.
+1. Go through the **first-run wizard**: choose the kinds of files and folders (grant the media permissions when asked; text files and documents also need **All files access**), check the connection to OndolSaem (it lists the model each category uses; download them in OndolSaem: the embedding model 440M is the default, 740M adds audio embedding, SenseVoice gives audio and video transcripts), and choose automatic indexing (Manual, Immediately, Scheduled, or When idle: charging and unused for a while). Everything can be changed later in Settings.
 2. Go to **Index** and press **Start indexing**.
 3. Go to **Search** and type a query.
 4. To chat about your files, install the companion app **Malbotdari** and download a chat model in OndolSaem (Gemma 4 E2B is the default, 2.6 GB); **Chat** in the menu opens it.

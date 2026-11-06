@@ -89,6 +89,8 @@ class LsaApplication : Application() {
         container = AppContainer(this)
         Notifications.ensureChannels(this)
         container.autoIndex.start()
+        // exact screen-off times for "When idle" while the app runs (IdleRule)
+        io.github.taehunkim.ondolsaem.sdk.IdleState(this).watchScreen()
         container.appScope.launch {
             AppUpgrade.run(this@LsaApplication, container.settings, container.db.itemDao(), BuildConfig.VERSION_CODE)
             // Groups made with an older threshold or method (0.11.0 raised the default) are made again from the stored vectors.

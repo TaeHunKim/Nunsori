@@ -20,7 +20,7 @@
     <string name="auto_title">Automatic indexing</string>
     <string name="auto_desc">Choose when new, changed and deleted files are picked up. You can always tap Start on the Index screen.</string>
     <string name="auto_mode_idle">When idle</string>
-    <string name="auto_mode_idle_desc">While charging and not in use. Pauses if the phone gets hot. Easiest on battery.</string>
+    <string name="auto_mode_idle_desc">While charging and not in use for a while (shorter when the battery is fuller). Pauses if the phone gets hot or you use it. Easiest on battery.</string>
     <string name="auto_mode_immediate">Right away</string>
     <string name="auto_mode_immediate_desc">New, changed or deleted files are picked up within about 2 minutes. Uses more battery.</string>
     <string name="auto_mode_scheduled">At a set time</string>
@@ -288,4 +288,8 @@
     <string name="malbot_title">Chat moved to Malbotdari</string>
     <string name="malbot_needed">The assistant chat is now its own app, Malbotdari (말벗다리). It uses your index from here: install it to ask about your files.</string>
     <string name="malbot_get">Get Malbotdari</string>
+    <string name="idle_preset_fast">Sooner</string>
+    <string name="idle_preset_normal">Normal</string>
+    <string name="idle_preset_relaxed">Later</string>
+    <string name="idle_preset_rule">Starts while charging once the screen has been off for %1$d min (battery 90%% or more), %2$d min (70–89%%) or %3$d min (below 70%%). Stops when you use the phone.</string>
 </resources>

@@ -40,6 +40,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.lsa.app.R
 import com.lsa.app.data.prefs.SettingsStore
 import com.lsa.app.indexing.AutoIndexMode
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -81,6 +82,7 @@ fun AutoIndexOptions(
                     Text(stringResource(t.desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            if (m == AutoIndexMode.IDLE && mode == AutoIndexMode.IDLE) IdlePresetChooser()
             if (m == AutoIndexMode.SCHEDULED && mode == AutoIndexMode.SCHEDULED) {
                 Column(Modifier.padding(start = 36.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -104,6 +106,36 @@ fun AutoIndexOptions(
             // The system may delay automatic runs of apps that are battery-optimized.
             com.lsa.app.ui.settings.BackgroundAccessCards(showWhenAllSet = false, batteryOnly = true)
         }
+    }
+}
+
+/** Fast / Normal / Relaxed: how long the phone must be unused before idle indexing, by battery level. */
+@Composable
+private fun IdlePresetChooser() {
+    val settings = com.lsa.app.rememberContainer().settings
+    val preset by settings.idlePreset.collectAsStateWithLifecycle(io.github.taehunkim.ondolsaem.sdk.IdlePreset.DEFAULT)
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    Column(Modifier.padding(start = 36.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            io.github.taehunkim.ondolsaem.sdk.IdlePreset.entries.forEach { p ->
+                androidx.compose.material3.FilterChip(
+                    selected = preset == p,
+                    onClick = { scope.launch { settings.setIdlePreset(p) } },
+                    label = {
+                        Text(stringResource(when (p) {
+                            io.github.taehunkim.ondolsaem.sdk.IdlePreset.FAST -> R.string.idle_preset_fast
+                            io.github.taehunkim.ondolsaem.sdk.IdlePreset.NORMAL -> R.string.idle_preset_normal
+                            io.github.taehunkim.ondolsaem.sdk.IdlePreset.RELAXED -> R.string.idle_preset_relaxed
+                        }))
+                    },
+                )
+            }
+        }
+        val (high, mid, low) = preset.minutesOff
+        Text(
+            stringResource(R.string.idle_preset_rule, high, mid, low),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

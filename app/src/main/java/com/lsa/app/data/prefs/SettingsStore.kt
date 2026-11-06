@@ -21,6 +21,7 @@ class SettingsStore(private val context: Context) {
     private val kAutoMode = stringPreferencesKey("auto_index_mode")
     private val kScheduleMinutes = intPreferencesKey("schedule_minutes")
     private val kChargingOnly = booleanPreferencesKey("schedule_charging_only")
+    private val kIdlePreset = androidx.datastore.preferences.core.stringPreferencesKey("idle_preset")
     private val kOnboarding = booleanPreferencesKey("onboarding_done")
     private val kLastVersion = intPreferencesKey("last_version_code")
     private val kAsr = stringPreferencesKey("asr_model_id")
@@ -73,6 +74,9 @@ class SettingsStore(private val context: Context) {
     /** Minutes after local midnight. */
     val scheduleMinutes: Flow<Int> = context.dataStore.data.map { it[kScheduleMinutes] ?: DEFAULT_SCHEDULE_MINUTES }
     val scheduleChargingOnly: Flow<Boolean> = context.dataStore.data.map { it[kChargingOnly] ?: true }
+    /** How long the phone must be unused (by battery level) before "When idle" indexing starts. */
+    val idlePreset: Flow<io.github.taehunkim.ondolsaem.sdk.IdlePreset> =
+        context.dataStore.data.map { io.github.taehunkim.ondolsaem.sdk.IdlePreset.of(it[kIdlePreset]) }
     val onboardingDone: Flow<Boolean> = context.dataStore.data.map { it[kOnboarding] ?: false }
 
     /** Which kinds of files are indexed. Images are on by default, everything else is opt-in. */
@@ -92,6 +96,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setAutoMode(mode: AutoIndexMode) { context.dataStore.edit { it[kAutoMode] = mode.name } }
     suspend fun setScheduleMinutes(minutes: Int) { context.dataStore.edit { it[kScheduleMinutes] = minutes.coerceIn(0, 24 * 60 - 1) } }
     suspend fun setScheduleChargingOnly(v: Boolean) { context.dataStore.edit { it[kChargingOnly] = v } }
+    suspend fun setIdlePreset(p: io.github.taehunkim.ondolsaem.sdk.IdlePreset) { context.dataStore.edit { it[kIdlePreset] = p.name } }
     /** 0.8.0: models moved to OndolSaem; drops the settings that went with them. */
     /** 0.8.1 removed the low-power indexing option (OndolSaem picks the backend now). */
     suspend fun removeLowPowerKey() { context.dataStore.edit { it.remove(booleanPreferencesKey("index_low_power")) } }

@@ -73,10 +73,13 @@ class AutoIndexSchedulerTest {
         assertFalse(info(AutoIndexScheduler.SCHEDULED)!!.constraints.requiresCharging())
     }
 
-    @Test fun idleRequiresChargingAndDeviceIdle() {
+    @Test fun idleIsAQuarterHourlyCheckWhileCharging() {
         scheduler.apply(AutoIndexScheduler.Config(AutoIndexMode.IDLE, 180, false))
-        val c = info(AutoIndexScheduler.IDLE)!!.constraints
-        assertTrue(c.requiresCharging()); assertTrue(c.requiresDeviceIdle()); assertTrue(c.requiresBatteryNotLow())
+        val w = info(AutoIndexScheduler.IDLE)!!
+        val c = w.constraints
+        // the idle rule itself (screen off long enough for the battery level) is checked by the worker
+        assertTrue(c.requiresCharging()); assertFalse(c.requiresDeviceIdle()); assertFalse(c.requiresBatteryNotLow())
+        assertEquals(AutoIndexScheduler.IDLE_CHECK_MIN * 60_000L, w.periodicityInfo!!.repeatIntervalMillis)
     }
 
     @Test fun switchingModeCancelsTheOthers() {
