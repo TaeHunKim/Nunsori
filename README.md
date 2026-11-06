@@ -7,10 +7,10 @@
 An Android app that indexes the files on your phone with on-device multimodal embedding models and lets you search them by meaning and by keyword. Nothing leaves the device. The AI models run in the companion app [OndolSaem / 온돌샘](https://github.com/sonanjip/ondolsaem), which downloads them once and shares them with other apps.
 
 <p>
-<img src="docs/images/demo-search.gif" width="260" alt="Files are indexed on the phone, then found by meaning ('italian food' finds a pizza photo)">
+<img src="docs/images/demo-search.gif" width="260" alt="Files found by meaning in English and Korean ('italian food' finds pizza photos, '회의록' finds the meeting-notes images by their text)">
 </p>
 
-*Files are indexed on the phone and found by meaning.*
+*Files on the phone found by meaning and by the words in them, in English and Korean.*
 
 The assistant chat that answers from these files is the companion app [Malbotdari / 말벗다리](https://github.com/sonanjip/malbotdari) (since 0.10.0): it uses this index through Nunsori's SDK. Notes (memos, saved pages and videos, recordings with summaries) live in the companion app [Jogakbo / 조각보](https://github.com/sonanjip/jogakbo), which Malbotdari reads too.
 
