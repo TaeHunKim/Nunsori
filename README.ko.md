@@ -4,7 +4,7 @@
 
 *Local Search Anything.* **N**ative **U**nified **N**atural-language **S**earch, **O**ffline **R**ecall & **I**ndex. 눈(보고)과 소리(듣는) 이 두 가지로 파일을 이해한다는 뜻의 이름입니다.
 
-폰에 있는 파일을 온디바이스 멀티모달 임베딩 모델로 인덱싱하고, 의미와 키워드로 검색하는 Android 앱입니다. 데이터는 기기 밖으로 나가지 않습니다. AI 모델은 동반 앱 [온돌샘 / OndolSaem](https://github.com/taehunkim/ondolsaem)에서 실행되며, 온돌샘이 모델을 한 번 내려받아 다른 앱과 함께 씁니다.
+폰에 있는 파일을 온디바이스 멀티모달 임베딩 모델로 인덱싱하고, 의미와 키워드로 검색하는 Android 앱입니다. 데이터는 기기 밖으로 나가지 않습니다. AI 모델은 동반 앱 [온돌샘 / OndolSaem](https://github.com/sonanjip/ondolsaem)에서 실행되며, 온돌샘이 모델을 한 번 내려받아 다른 앱과 함께 씁니다.
 
 <p>
 <img src="docs/images/demo-search.gif" width="260" alt="폰 안에서 파일을 인덱싱하고 의미로 검색 ('italian food'로 피자 사진을 찾음)">
@@ -12,7 +12,7 @@
 
 *폰 안에서 파일을 인덱싱하고 의미로 검색합니다.*
 
-이 파일로 답하는 채팅 비서는 0.10.0부터 동반 앱 [말벗다리 / Malbotdari](https://github.com/TaeHunKim/malbotdari)입니다. 눈소리 SDK로 이 인덱스를 씁니다. 노트(메모, 저장한 웹페이지·영상, 녹음과 그 요약)는 동반 앱 [조각보 / Jogakbo](https://github.com/TaeHunKim/jogakbo)에 있고, 말벗다리가 함께 읽습니다.
+이 파일로 답하는 채팅 비서는 0.10.0부터 동반 앱 [말벗다리 / Malbotdari](https://github.com/sonanjip/malbotdari)입니다. 눈소리 SDK로 이 인덱스를 씁니다. 노트(메모, 저장한 웹페이지·영상, 녹음과 그 요약)는 동반 앱 [조각보 / Jogakbo](https://github.com/sonanjip/jogakbo)에 있고, 말벗다리가 함께 읽습니다.
 
 ## 기능
 

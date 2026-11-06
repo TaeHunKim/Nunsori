@@ -37,11 +37,11 @@
 ## 앱 구조 (요약)
 이미지·텍스트·문서(PDF/Office)·음성·영상을 인덱싱하고 시맨틱 + 키워드로 검색한다. 모델은 동반 앱 OndolSaem(별도 레포)이 받고 실행한다. 눈소리는 `ml/ModelHost`(SDK 클라이언트)로만 접근하며 INTERNET 권한이 없다. 문자열은 `values/strings.xml`(en)과 `values-ko/strings.xml`(ko)의 키가 같아야 한다(`StringsParityTest`).
 - 데이터 `data/db`(`items` + `segments`, int8 벡터; 얼굴은 `faces` + `people`), 소스 `data/media`, 파이프라인 `indexing`(`IndexRunner.sync()`/`process()`, `pipelineKey`로 종류별 재처리), 검색 `search`(그룹별 상대 점수 + 키워드), 자동 인덱싱 `AutoIndexScheduler`, 모델 접근 `ml/ModelHost`(OndolSaem 클라이언트).
-- 채팅은 0.10.0부터 별도 레포 `TaeHunKim/malbotdari`(앱 Malbotdari/말벗다리, 형제 폴더 `../malbotdari`). 눈소리는 인덱스를 다른 앱에 서비스로 연다: `:sdk` 모듈(AIDL `INunsori`, `NunsoriClient`), `service/`(`IndexService`·`IndexApi`·`CallerCheck`+`Approvals`·`IndexEvents` 인덱스 변경 힌트), `service/tools/`(search_index·read_file·move/delete 준비와 `FileOps`). 같은 키로 서명된 앱은 바로, 그 외는 설정 › 앱 › 연결된 앱에서 승인. 자세히: `docs/architecture.md` 11절.
+- 채팅은 0.10.0부터 별도 레포 `sonanjip/malbotdari`(앱 Malbotdari/말벗다리, 형제 폴더 `../malbotdari`). 눈소리는 인덱스를 다른 앱에 서비스로 연다: `:sdk` 모듈(AIDL `INunsori`, `NunsoriClient`), `service/`(`IndexService`·`IndexApi`·`CallerCheck`+`Approvals`·`IndexEvents` 인덱스 변경 힌트), `service/tools/`(search_index·read_file·move/delete 준비와 `FileOps`). 같은 키로 서명된 앱은 바로, 그 외는 설정 › 앱 › 연결된 앱에서 승인. 자세히: `docs/architecture.md` 11절.
 - 자세히: `docs/architecture.md`, `docs/indexing.md`, `docs/search.md`, `docs/models.md`.
 
 ## OndolSaem (모델 호스트)
-모델 다운로드·로딩·상주는 별도 레포 `taehunkim/ondolsaem`(앱 OndolSaem/온돌샘)이 맡는다(0.8.0). 활성 모델 id는 `ModelHost.refresh()`가 설정에 미러링하고 `pipelineKey`에 들어가 모델 변경 시 재인덱싱된다. E2E·계측 테스트에는 기기에 OndolSaem 설치 + 모델 다운로드가 필요하다(`ModelHostTest`는 없으면 건너뜀). SDK와 같이 고칠 때는 형제 폴더 `../ondolsaem`에 체크아웃하고 `local.properties`에 `ondolsaem.dir=../ondolsaem`(composite build). 자세히: `docs/development.md`.
+모델 다운로드·로딩·상주는 별도 레포 `sonanjip/ondolsaem`(앱 OndolSaem/온돌샘)이 맡는다(0.8.0). 활성 모델 id는 `ModelHost.refresh()`가 설정에 미러링하고 `pipelineKey`에 들어가 모델 변경 시 재인덱싱된다. E2E·계측 테스트에는 기기에 OndolSaem 설치 + 모델 다운로드가 필요하다(`ModelHostTest`는 없으면 건너뜀). SDK와 같이 고칠 때는 형제 폴더 `../ondolsaem`에 체크아웃하고 `local.properties`에 `ondolsaem.dir=../ondolsaem`(composite build). 자세히: `docs/development.md`.
 
 ## 빌드 전 준비
 - 없음(0.8.0부터 네이티브 ML 의존성은 OndolSaem에 있다. OndolSaem 쪽은 그 레포의 `scripts/fetch-sherpa-onnx.sh`).

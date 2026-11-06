@@ -182,9 +182,9 @@ class ModelHost(
         private const val TAG = "LSA.ModelHost"
         const val BACKEND = "OndolSaem"
         /** Where to get the host app. */
-        const val INSTALL_URL = "https://github.com/taehunkim/ondolsaem/releases"
+        const val INSTALL_URL = "https://github.com/sonanjip/ondolsaem/releases"
         /** Where to get a newer Nunsori. */
-        const val APP_RELEASES_URL = "https://github.com/TaeHunKim/Nunsori/releases"
+        const val APP_RELEASES_URL = "https://github.com/sonanjip/nunsori/releases"
 
         fun statusFor(reason: HostUnavailableException.Reason): HostState.Status = when (reason) {
             HostUnavailableException.Reason.NOT_INSTALLED -> HostState.Status.NOT_INSTALLED

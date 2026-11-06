@@ -25,7 +25,7 @@ It uses the components below. Versions come from [`gradle/libs.versions.toml`](g
 ## Models
 
 No model is stored in this repository or bundled in the app. Since 0.8.0 the models are downloaded and run by the
-companion app OndolSaem (repository `taehunkim/ondolsaem`), whose THIRD_PARTY_NOTICES.md lists them with their
+companion app OndolSaem (repository `sonanjip/ondolsaem`), whose THIRD_PARTY_NOTICES.md lists them with their
 licenses (EmbeddingGemma 2, Gemma 4, Qwen2.5, SenseVoice, Silero VAD, ML Kit text recognition) together with the
 runtimes (LiteRT-LM, sherpa-onnx, ML Kit).
 

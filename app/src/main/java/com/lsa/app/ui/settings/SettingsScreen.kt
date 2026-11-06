@@ -179,7 +179,7 @@ private fun AboutTab() {
     }
 }
 
-private const val GITHUB_URL = "https://github.com/TaeHunKim/Nunsori"
+private const val GITHUB_URL = "https://github.com/sonanjip/nunsori"
 
 @Composable
 internal fun Section(title: Int, desc: Int?) {

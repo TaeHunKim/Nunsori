@@ -11,7 +11,7 @@ object Malbotdari {
     /** Malbotdari's MainActivity: a new chat with [EXTRA_ITEM_IDS] attached. */
     const val ACTION_NEW_CHAT = "$PACKAGE.action.NEW_CHAT"
     const val EXTRA_ITEM_IDS = "item_ids"
-    const val RELEASES_URL = "https://github.com/TaeHunKim/malbotdari/releases"
+    const val RELEASES_URL = "https://github.com/sonanjip/malbotdari/releases"
 
     fun isInstalled(ctx: Context): Boolean = runCatching { ctx.packageManager.getPackageInfo(PACKAGE, 0); true }.getOrDefault(false)
 

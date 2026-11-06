@@ -1,6 +1,6 @@
 # Models
 
-Since 0.8.0 Nunsori **does not download or run models itself**. The companion app **OndolSaem / 온돌샘** (separate repository `taehunkim/ondolsaem`) downloads the models, keeps them in memory by its own per-category policy, and serves them to Nunsori over a bound service. The model catalog, downloads, residency, memory dashboard and model licenses are documented there. Nunsori's side is `ml/ModelHost.kt`.
+Since 0.8.0 Nunsori **does not download or run models itself**. The companion app **OndolSaem / 온돌샘** (separate repository `sonanjip/ondolsaem`) downloads the models, keeps them in memory by its own per-category policy, and serves them to Nunsori over a bound service. The model catalog, downloads, residency, memory dashboard and model licenses are documented there. Nunsori's side is `ml/ModelHost.kt`.
 
 ## What Nunsori uses
 

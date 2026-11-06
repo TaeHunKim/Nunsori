@@ -6,7 +6,7 @@
 - Android SDK with platform 36 and 37, NDK 28.2, CMake 3.31.6 (`~/Library/Android/sdk` by default).
 - An emulator (AVD `lsa_api36`, 8 GB RAM, 32 GB data) or a phone running Android 10+ (minSdk 29).
 - Internet access for the first build.
-- The companion app **OndolSaem** (repository `taehunkim/ondolsaem`), which downloads and runs the models. Check it out next to this repository, build and install it (`cd ../ondolsaem && scripts/fetch-sherpa-onnx.sh && scripts/run.sh`) and download at least the embedding model in its Models tab.
+- The companion app **OndolSaem** (repository `sonanjip/ondolsaem`), which downloads and runs the models. Check it out next to this repository, build and install it (`cd ../ondolsaem && scripts/fetch-sherpa-onnx.sh && scripts/run.sh`) and download at least the embedding model in its Models tab.
 
 ## Build and run
 

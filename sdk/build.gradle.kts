@@ -4,7 +4,7 @@ plugins {
 }
 
 // Client SDK version (git tag sdk-vX.Y.Z on release). JitPack serves the only published artifact of the repository
-// as com.github.TaeHunKim:Nunsori:<tag>; clients substitute that module with this project in a composite build.
+// as com.github.sonanjip:nunsori:<tag>; clients substitute that module with this project in a composite build.
 group = "com.github.taehunkim.nunsori"
 version = "0.1.0"
 
